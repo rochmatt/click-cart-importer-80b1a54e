@@ -35,51 +35,11 @@ export function ProductCard({
   product: Product;
   onQuickView?: (product: Product) => void;
 }) {
-  const [qty, setQty] = useState(1);
-  const [justAdded, setJustAdded] = useState(false);
   const cover = useCoverImage(product.id, product.images);
   const bestseller = isBestseller(product);
   const lowStock = isLowStock(product);
   const outOfStock = isOutOfStock(product);
-  const maxQty = Math.max(1, product.stock ?? 0);
 
-  const increaseQty = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setQty((prev) => Math.min(prev + 1, maxQty));
-  };
-
-  const decreaseQty = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setQty((prev) => Math.max(prev - 1, 1));
-  };
-
-  const handleQuickAdd = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (outOfStock) return;
-
-    addToCart(
-      {
-        id: product.id,
-        title: product.title,
-        price: product.price,
-        image: cover,
-      },
-      qty,
-    );
-
-    setJustAdded(true);
-    toast.success("Ditambahkan ke keranjang", {
-      description: `${qty} × ${product.title}`,
-      duration: 1500,
-    });
-    setTimeout(() => {
-      setJustAdded(false);
-      setQty(1);
-    }, 1200);
-  };
 
   return (
     <article className="group relative">
