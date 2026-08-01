@@ -47,7 +47,7 @@ function CategoriesPage() {
         return {
           ...c,
           count: items.length,
-          thumbs: items.slice(0, 3).map((p) => ({ id: p.id, image: p.image, title: p.title })),
+          thumbs: items.slice(0, 3).map((p) => ({ id: p.id, image: p.images[0], title: p.title })),
         };
       })
       .filter((c) =>
