@@ -141,9 +141,4 @@ export function ProductCard({
       </Link>
     </article>
   );
-
-        </div>
-      </Link>
-    </article>
-  );
 }
