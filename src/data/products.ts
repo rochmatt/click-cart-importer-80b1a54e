@@ -37,6 +37,8 @@ export interface Product {
   description: string;
   specs: string[];
   detailedSpecs?: { label: string; value: string }[];
+  stock?: number;
+  sold?: number;
 }
 
 const links = {
@@ -54,6 +56,8 @@ export const products: Product[] = [
     oldPrice: "Rp 799.000",
     rating: 4.8,
     reviews: 1204,
+    stock: 4,
+    sold: 2150,
     images: [p1, p1a, p1b],
     links,
     description:
@@ -86,6 +90,8 @@ export const products: Product[] = [
     oldPrice: "Rp 1.699.000",
     rating: 4.7,
     reviews: 892,
+    stock: 32,
+    sold: 1450,
     images: [p2, p2a, p2b],
     links,
     description:
@@ -117,6 +123,8 @@ export const products: Product[] = [
     price: "Rp 129.000",
     rating: 4.9,
     reviews: 342,
+    stock: 150,
+    sold: 890,
     images: [p3, p3a, p3b],
     links,
     description:
@@ -149,6 +157,8 @@ export const products: Product[] = [
     oldPrice: "Rp 249.000",
     rating: 4.6,
     reviews: 2310,
+    stock: 0,
+    sold: 3200,
     images: [p4, p4a, p4b],
     links,
     description:
@@ -180,6 +190,8 @@ export const products: Product[] = [
     price: "Rp 899.000",
     rating: 4.5,
     reviews: 517,
+    stock: 12,
+    sold: 680,
     images: [p5, p5a, p5b],
     links,
     description:
@@ -212,6 +224,8 @@ export const products: Product[] = [
     oldPrice: "Rp 899.000",
     rating: 4.8,
     reviews: 731,
+    stock: 8,
+    sold: 1100,
     images: [p6, p6a, p6b],
     links,
     description:
@@ -243,6 +257,8 @@ export const products: Product[] = [
     price: "Rp 359.000",
     rating: 4.4,
     reviews: 268,
+    stock: 60,
+    sold: 420,
     images: [p7, p7a, p7b],
     links,
     description:
@@ -275,6 +291,8 @@ export const products: Product[] = [
     oldPrice: "Rp 419.000",
     rating: 4.7,
     reviews: 456,
+    stock: 25,
+    sold: 980,
     images: [p8, p8a, p8b],
     links,
     description:

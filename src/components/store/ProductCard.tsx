@@ -1,7 +1,23 @@
-import { ArrowRight, Eye, Heart, Star } from "lucide-react";
+import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { Product } from "@/data/products";
 import { useCoverImage } from "@/lib/cover-overrides";
+
+const BESTSELLER_THRESHOLD = 1000;
+const LOW_STOCK_THRESHOLD = 15;
+
+function isBestseller(product: Product) {
+  return (product.sold ?? 0) >= BESTSELLER_THRESHOLD;
+}
+
+function isLowStock(product: Product) {
+  const stock = product.stock ?? 0;
+  return stock > 0 && stock <= LOW_STOCK_THRESHOLD;
+}
+
+function isOutOfStock(product: Product) {
+  return (product.stock ?? 0) === 0;
+}
 
 export function ProductCard({
   product,
@@ -11,6 +27,10 @@ export function ProductCard({
   onQuickView?: (product: Product) => void;
 }) {
   const cover = useCoverImage(product.id, product.images);
+  const bestseller = isBestseller(product);
+  const lowStock = isLowStock(product);
+  const outOfStock = isOutOfStock(product);
+
   return (
     <article className="group relative">
       <Link
@@ -32,6 +52,27 @@ export function ProductCard({
               SALE
             </span>
           )}
+
+          <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-1.5">
+            {bestseller && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground shadow-sm">
+                <Flame className="h-3 w-3" />
+                Best Seller
+              </span>
+            )}
+            {outOfStock && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground shadow-sm">
+                <Package className="h-3 w-3" />
+                Habis
+              </span>
+            )}
+            {lowStock && !outOfStock && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground shadow-sm">
+                <AlertCircle className="h-3 w-3" />
+                Stok menipis
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
