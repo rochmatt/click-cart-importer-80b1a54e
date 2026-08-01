@@ -75,8 +75,8 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
         {count === 0 ? "Tidak ada filter aktif." : `${count} filter aktif.`}
       </p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
+      <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="min-w-0">
           <label
             htmlFor={`${uid}-search`}
             className="mb-1.5 block text-xs font-medium text-muted-foreground"
@@ -103,7 +103,7 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
           </p>
         </div>
 
-        <fieldset>
+        <fieldset className="min-w-0">
           <legend className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Rentang harga
           </legend>
@@ -141,14 +141,15 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
           </p>
         </fieldset>
 
-        <fieldset>
+        <fieldset className="min-w-0 sm:col-span-2 lg:col-span-1">
           <legend className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Rating minimum
           </legend>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
             {ratingOptions.map((r) => {
               const active = value.minRating === r;
               const id = `${uid}-rating-${String(r).replace(".", "-")}`;
+              const shortLabel = r === 0 ? "Semua" : `${r}+`;
               return (
                 <div key={r} className="relative">
                   <input
@@ -158,18 +159,19 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
                     value={r}
                     checked={active}
                     onChange={() => set("minRating", r)}
+                    aria-label={r === 0 ? "Semua rating" : `${r} bintang ke atas`}
                     className="peer absolute h-px w-px opacity-0"
                   />
                   <label
                     htmlFor={id}
-                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card ${
+                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg border px-2 text-xs font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card sm:px-2.5 sm:text-sm ${
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background text-foreground hover:border-primary/40 hover:text-primary"
                     }`}
                   >
                     {r === 0 ? (
-                      "Semua rating"
+                      shortLabel
                     ) : (
                       <>
                         <Star
@@ -177,7 +179,7 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
                           fill="currentColor"
                           aria-hidden="true"
                         />
-                        <span>{r}+ bintang</span>
+                        <span>{shortLabel}</span>
                       </>
                     )}
                   </label>

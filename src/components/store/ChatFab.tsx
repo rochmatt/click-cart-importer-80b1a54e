@@ -286,7 +286,7 @@ export function ChatFab() {
 
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 md:bottom-4 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6 md:bottom-6 md:right-6">
       {open && (
         <div className="animate-in fade-in slide-in-from-bottom-2 flex h-[26rem] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card-hover)]">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">

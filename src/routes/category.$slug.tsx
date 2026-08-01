@@ -154,7 +154,7 @@ function CategoryPage() {
       <AnnouncementBar />
       <Header query={query} onQueryChange={setQuery} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-36 sm:px-6 sm:pb-24 md:pb-24 lg:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
           <ol className="flex flex-wrap items-center gap-1.5">
             <li>
@@ -182,7 +182,7 @@ function CategoryPage() {
         </p>
 
         <nav aria-label="All categories" className="mt-6">
-          <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-3 [&::-webkit-scrollbar]:hidden">
+          <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-3 lg:flex-wrap lg:justify-center lg:overflow-visible [&::-webkit-scrollbar]:hidden">
             {categoryCatalog.map((c) => {
               const active = c.slug === category.slug;
               return (
@@ -204,6 +204,7 @@ function CategoryPage() {
             })}
           </ul>
         </nav>
+
 
         <CategoryFilters value={filters} onChange={setFilters} priceBounds={priceBounds} />
 
