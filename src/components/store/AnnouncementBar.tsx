@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import {
   kindMeta,
   useAnnouncements,
@@ -48,12 +47,12 @@ export function AnnouncementBar() {
           <span className="font-extrabold">{current.title}</span>
           {current.message ? <span className="opacity-90"> — {current.message}</span> : null}
           {current.link_url ? (
-            <Link
-              to={current.link_url}
+            <a
+              href={current.link_url}
               className="ml-2 whitespace-nowrap underline underline-offset-2"
             >
               {current.link_label || "Lihat"}
-            </Link>
+            </a>
           ) : null}
         </p>
         <button

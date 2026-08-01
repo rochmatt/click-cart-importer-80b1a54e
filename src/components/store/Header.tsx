@@ -2,6 +2,7 @@ import { Heart, Search, ShoppingBag, Truck, BadgeCheck, Ticket, Zap, HelpCircle,
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CartMenu } from "@/components/store/CartMenu";
 import { AccountMenu } from "@/components/store/AccountMenu";
+import { NotificationsMenu } from "@/components/store/NotificationsMenu";
 import { CategoryMegaMenu } from "@/components/store/CategoryMegaMenu";
 import { useCartSync } from "@/lib/cart";
 import { useWishlist, useWishlistSync } from "@/lib/wishlist";
@@ -120,6 +121,7 @@ export function Header({ query, onQueryChange }: HeaderProps) {
                 </span>
               )}
             </Link>
+            <NotificationsMenu />
             <CartMenu />
             <AccountMenu />
           </nav>

@@ -8,6 +8,7 @@ import {
   Users,
   BarChart3,
   Settings,
+  Megaphone,
   Search,
   Bell,
   ChevronDown,
@@ -33,6 +34,7 @@ const NAV = [
   { label: "Categories", to: "/admin/categories", icon: FolderTree, exact: false },
   { label: "Orders", to: "/admin/orders", icon: ShoppingCart, exact: false },
   { label: "Customers", to: "/admin/customers", icon: Users, exact: false },
+  { label: "Announcements", to: "/admin/announcements", icon: Megaphone, exact: false },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3, exact: false },
   { label: "Settings", to: "/admin/settings", icon: Settings, exact: false },
 ] as const;
