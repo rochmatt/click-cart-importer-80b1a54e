@@ -60,7 +60,13 @@ export const Route = createFileRoute("/products/$id")({
       // the seed catalog, so the loader returns null and we emit nothing.
       scripts: product
         ? [
-            jsonLdScript(productJsonLd(product, `/products/${params.id}`)),
+            jsonLdScript(
+              productJsonLd(
+                product,
+                `/products/${params.id}`,
+                reviewsForProduct(params.id),
+              ),
+            ),
             jsonLdScript(
               breadcrumbJsonLd([
                 { name: "Home", path: "/" },
