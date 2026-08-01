@@ -1,8 +1,9 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
 /**
- * Responsive guardrails for the product card: badges, wishlist button and the
- * quick-add stepper must stay inside the card and never overlap each other.
+ * Responsive guardrails for the product card: badges, wishlist and the CTA must
+ * stay inside the card, never overlap, leave no awkward empty space, and every
+ * card in a row must have the same height.
  */
 
 const WIDTHS = [
@@ -13,6 +14,11 @@ const WIDTHS = [
   { name: "desktop-1280", width: 1280, height: 900 },
   { name: "desktop-1536", width: 1536, height: 960 },
 ];
+
+// Max vertical gap allowed between two stacked blocks inside the card body.
+const MAX_INNER_GAP = 24;
+// Max distance allowed between the CTA bottom and the card bottom (padding only).
+const MAX_BOTTOM_SLACK = 26;
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -45,13 +51,19 @@ async function firstCard(page: Page) {
   return card;
 }
 
+function ctaOf(card: Locator) {
+  return card
+    .locator("button[aria-label*='Quick view' i]")
+    .or(card.getByText(/view product/i))
+    .first();
+}
+
 test.describe("ProductCard responsive layout", () => {
   // Layout only depends on viewport width, so run this once (desktop project).
   test.skip(
     ({}, testInfo) => testInfo.project.name !== "desktop",
     "viewport-driven layout check runs once",
   );
-
 
   for (const size of WIDTHS) {
     test(`no overlap at ${size.name}`, async ({ page }) => {
@@ -64,18 +76,23 @@ test.describe("ProductCard responsive layout", () => {
       const cardBox = await boxOf(card);
       const title = card.getByRole("heading");
       const wishlist = card.getByRole("button", { name: /wishlist/i });
-      const stepper = card.getByRole("button", { name: /keranjang|stok habis/i });
-      const cta = card.getByRole("button", { name: /quick view/i });
+      const cta = ctaOf(card);
 
       const titleBox = await boxOf(title);
       const wishlistBox = await boxOf(wishlist);
-      const stepperBox = await boxOf(stepper);
+      const ctaBox = await boxOf(cta);
+
+      // Quick add stepper was removed from the card — it must not come back.
+      await expect(
+        card.locator("button[aria-label*='keranjang' i]"),
+        `quick add stepper should not exist at ${size.name}`,
+      ).toHaveCount(0);
 
       // Everything stays inside the card.
       for (const [label, box] of [
         ["title", titleBox],
         ["wishlist", wishlistBox],
-        ["quick add", stepperBox],
+        ["cta", ctaBox],
       ] as const) {
         expect(contains(cardBox, box), `${label} escapes the card at ${size.name}`).toBe(
           true,
@@ -88,14 +105,40 @@ test.describe("ProductCard responsive layout", () => {
         `title overlaps wishlist at ${size.name}`,
       ).toBe(false);
 
-      // Quick add sits below the title block.
-      expect(stepperBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height - 2);
+      // CTA sits below the title block and never collides with it.
+      expect(ctaBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height - 2);
+      expect(overlaps(ctaBox, titleBox), `cta overlaps title at ${size.name}`).toBe(false);
       expect(
-        overlaps(stepperBox, wishlistBox),
-        `quick add overlaps wishlist at ${size.name}`,
+        overlaps(ctaBox, wishlistBox),
+        `cta overlaps wishlist at ${size.name}`,
       ).toBe(false);
 
-      // Badges (when present) never sit on top of the title.
+      // No dead space: the CTA hugs the bottom padding of the card.
+      const bottomSlack = cardBox.y + cardBox.height - (ctaBox.y + ctaBox.height);
+      expect(
+        bottomSlack,
+        `too much empty space below the cta at ${size.name} (${bottomSlack}px)`,
+      ).toBeLessThanOrEqual(MAX_BOTTOM_SLACK);
+      expect(bottomSlack, `cta clipped at ${size.name}`).toBeGreaterThanOrEqual(-2);
+
+      // No awkward vertical gaps between the stacked blocks in the card body.
+      const stacked: Array<[string, Box]> = [
+        ["title", titleBox],
+        ["cta", ctaBox],
+      ];
+      const price = card.locator("span.font-extrabold").first();
+      if (await price.count()) stacked.splice(1, 0, ["price", await boxOf(price)]);
+      for (let i = 0; i < stacked.length - 1; i += 1) {
+        const [labelA, a] = stacked[i]!;
+        const [labelB, b] = stacked[i + 1]!;
+        const gap = b.y - (a.y + a.height);
+        expect(
+          gap,
+          `gap between ${labelA} and ${labelB} too large at ${size.name} (${gap}px)`,
+        ).toBeLessThanOrEqual(MAX_INNER_GAP);
+      }
+
+      // Badges (when present) never sit on top of the title or cta.
       const badges = card.locator("span.rounded-full.uppercase");
       const badgeCount = await badges.count();
       for (let i = 0; i < badgeCount; i += 1) {
@@ -112,18 +155,29 @@ test.describe("ProductCard responsive layout", () => {
           overlaps(badgeBox, wishlistBox),
           `badge ${i} overlaps wishlist at ${size.name}`,
         ).toBe(false);
+        expect(overlaps(badgeBox, ctaBox), `badge ${i} overlaps cta at ${size.name}`).toBe(
+          false,
+        );
       }
 
-      // Secondary CTA, when rendered as a button, must not collide either.
-      if (await cta.count()) {
-        const ctaBox = await boxOf(cta.first());
+      // Cards on the same row must all be the same height.
+      const list = page.locator("article:has(a[href^='/products/'])");
+      const total = Math.min(await list.count(), 8);
+      const rows = new Map<number, number[]>();
+      for (let i = 0; i < total; i += 1) {
+        await list.nth(i).scrollIntoViewIfNeeded();
+        const box = await boxOf(list.nth(i));
+        const rowKey = Math.round(box.y / 8);
+        const existing = [...rows.keys()].find((key) => Math.abs(key - rowKey) <= 2);
+        const key = existing ?? rowKey;
+        rows.set(key, [...(rows.get(key) ?? []), box.height]);
+      }
+      for (const [rowKey, heights] of rows) {
+        const spread = Math.max(...heights) - Math.min(...heights);
         expect(
-          overlaps(ctaBox, stepperBox),
-          `quick view overlaps quick add at ${size.name}`,
-        ).toBe(false);
-        expect(contains(cardBox, ctaBox), `quick view escapes card at ${size.name}`).toBe(
-          true,
-        );
+          spread,
+          `card heights differ in row ${rowKey} at ${size.name} (${heights.join("/")})`,
+        ).toBeLessThanOrEqual(1);
       }
 
       await page.screenshot({
