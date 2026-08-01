@@ -1,0 +1,193 @@
+import { useMemo, useState } from "react";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { ArrowLeft, PackageSearch } from "lucide-react";
+import {
+  categoryCatalog,
+  findCategory,
+  productsInCategory,
+} from "@/data/categories";
+import { ProductCard } from "@/components/store/ProductCard";
+import { QuickViewModal } from "@/components/store/QuickViewModal";
+import { AnnouncementBar } from "@/components/store/AnnouncementBar";
+import { Header } from "@/components/store/Header";
+import { Footer } from "@/components/store/Footer";
+import { ChatFab } from "@/components/store/ChatFab";
+import type { Product } from "@/data/products";
+
+type SortKey = "popular" | "rating" | "price-low" | "price-high";
+
+const priceValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
+
+export const Route = createFileRoute("/category/$slug")({
+  loader: ({ params }) => {
+    const category = findCategory(params.slug);
+    if (!category) throw notFound();
+    return category;
+  },
+  head: ({ loaderData }) => {
+    const title = loaderData
+      ? `${loaderData.label} — Shop Deals on PasarPilih`
+      : "Category not found — PasarPilih";
+    const description = loaderData
+      ? `${loaderData.blurb} Compare prices across Shopee, Tokopedia and TikTok Shop.`
+      : "This category is not available on PasarPilih.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+        ...(loaderData ? [] : [{ name: "robots", content: "noindex" }]),
+      ],
+    };
+  },
+  component: CategoryPage,
+  notFoundComponent: CategoryNotFound,
+});
+
+function CategoryPage() {
+  const category = Route.useLoaderData();
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("popular");
+  const [quickView, setQuickView] = useState<Product | null>(null);
+
+  const items = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    const list = productsInCategory(category.label).filter((p) =>
+      term ? p.title.toLowerCase().includes(term) : true,
+    );
+    const sorted = [...list];
+    if (sort === "rating") sorted.sort((a, b) => b.rating - a.rating);
+    else if (sort === "price-low")
+      sorted.sort((a, b) => priceValue(a.price) - priceValue(b.price));
+    else if (sort === "price-high")
+      sorted.sort((a, b) => priceValue(b.price) - priceValue(a.price));
+    else sorted.sort((a, b) => b.reviews - a.reviews);
+    return sorted;
+  }, [category.label, query, sort]);
+
+  return (
+    <div className="min-h-screen bg-background font-sans antialiased">
+      <AnnouncementBar />
+      <Header query={query} onQueryChange={setQuery} />
+
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
+          <ol className="flex flex-wrap items-center gap-1.5">
+            <li>
+              <Link to="/" className="transition-colors hover:text-primary">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden="true">/</li>
+            <li className="font-medium text-foreground" aria-current="page">
+              {category.label}
+            </li>
+          </ol>
+        </nav>
+
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+          {category.label}
+        </h1>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{category.blurb}</p>
+
+        <nav aria-label="All categories" className="mt-5">
+          <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+            {categoryCatalog.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  to="/category/$slug"
+                  params={{ slug: c.slug }}
+                  aria-current={c.slug === category.slug ? "page" : undefined}
+                  className={`inline-flex shrink-0 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    c.slug === category.slug
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
+                  }`}
+                >
+                  {c.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {items.length} product{items.length === 1 ? "" : "s"}
+            {query.trim() ? ` matching “${query.trim()}”` : ""}
+          </p>
+          <div className="flex items-center gap-2">
+            <label htmlFor="category-sort" className="text-sm text-muted-foreground">
+              Sort by
+            </label>
+            <select
+              id="category-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+            >
+              <option value="popular">Most reviewed</option>
+              <option value="rating">Top rated</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+            </select>
+          </div>
+        </div>
+
+        {items.length > 0 ? (
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+            {items.map((product) => (
+              <ProductCard key={product.id} product={product} onQuickView={setQuickView} />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
+            <PackageSearch className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <p className="mt-3 font-semibold text-foreground">No products here yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try another category or clear your search.
+            </p>
+            <Link
+              to="/"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              Browse all products
+            </Link>
+          </div>
+        )}
+      </main>
+
+      <QuickViewModal
+        product={quickView}
+        open={quickView !== null}
+        onOpenChange={(open) => !open && setQuickView(null)}
+      />
+
+      <Footer />
+      <ChatFab />
+    </div>
+  );
+}
+
+function CategoryNotFound() {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-background px-6 text-center">
+      <div>
+        <h1 className="text-2xl font-extrabold text-foreground">Category not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The category you are looking for is no longer available.
+        </p>
+        <Link
+          to="/"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back to home
+        </Link>
+      </div>
+    </div>
+  );
+}
