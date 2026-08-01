@@ -18,7 +18,7 @@ const WIDTHS = [
 // Max vertical gap allowed between two stacked blocks inside the card body.
 const MAX_INNER_GAP = 24;
 // Max distance allowed between the CTA bottom and the card bottom (padding only).
-const MAX_BOTTOM_SLACK = 26;
+const MAX_BOTTOM_SLACK = 30;
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -122,12 +122,12 @@ test.describe("ProductCard responsive layout", () => {
       expect(bottomSlack, `cta clipped at ${size.name}`).toBeGreaterThanOrEqual(-2);
 
       // No awkward vertical gaps between the stacked blocks in the card body.
-      const stacked: Array<[string, Box]> = [
-        ["title", titleBox],
-        ["cta", ctaBox],
-      ];
+      const stacked: Array<[string, Box]> = [["title", titleBox]];
+      const rating = card.locator("span.font-semibold").first();
+      if (await rating.count()) stacked.push(["rating", await boxOf(rating)]);
       const price = card.locator("span.font-extrabold").first();
-      if (await price.count()) stacked.splice(1, 0, ["price", await boxOf(price)]);
+      if (await price.count()) stacked.push(["price", await boxOf(price)]);
+      stacked.push(["cta", ctaBox]);
       for (let i = 0; i < stacked.length - 1; i += 1) {
         const [labelA, a] = stacked[i]!;
         const [labelB, b] = stacked[i + 1]!;

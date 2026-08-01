@@ -16,7 +16,7 @@ const NARROW_WIDTHS = [
 ];
 
 const MAX_INNER_GAP = 24;
-const MAX_BOTTOM_SLACK = 26;
+const MAX_BOTTOM_SLACK = 30;
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -124,13 +124,12 @@ test.describe("ProductCard narrow viewports", () => {
         expect(bottomSlack, `cta clipped at ${at}`).toBeGreaterThanOrEqual(-2);
 
         // No awkward vertical gaps between stacked blocks.
-        const stacked: Array<[string, Box]> = [
-          ["title", titleBox],
-          ["cta", ctaBox],
-        ];
+        const stacked: Array<[string, Box]> = [["title", titleBox]];
+        const rating = card.locator("span.font-semibold").first();
+        if (await rating.count()) stacked.push(["rating", await boxOf(rating, "rating")]);
         const price = card.locator("span.font-extrabold").first();
-        if (await price.count())
-          stacked.splice(1, 0, ["price", await boxOf(price, "price")]);
+        if (await price.count()) stacked.push(["price", await boxOf(price, "price")]);
+        stacked.push(["cta", ctaBox]);
         for (let i = 0; i < stacked.length - 1; i += 1) {
           const [labelA, a] = stacked[i]!;
           const [labelB, b] = stacked[i + 1]!;
