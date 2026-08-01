@@ -145,7 +145,7 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
           <legend className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Rating minimum
           </legend>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-nowrap items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {ratingOptions.map((r) => {
               const active = value.minRating === r;
               const id = `${uid}-rating-${String(r).replace(".", "-")}`;

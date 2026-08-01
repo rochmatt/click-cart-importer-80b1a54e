@@ -154,7 +154,7 @@ function CategoryPage() {
       <AnnouncementBar />
       <Header query={query} onQueryChange={setQuery} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 pb-32 sm:px-6 sm:pb-24 md:pb-24 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-36 sm:px-6 sm:pb-24 md:pb-24 lg:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
           <ol className="flex flex-wrap items-center gap-1.5">
             <li>
