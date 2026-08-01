@@ -170,9 +170,16 @@ function CategoryPage() {
         </nav>
 
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-          {category.label}
+          {category.label}: {category.productCount} Produk Pilihan
         </h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{category.blurb}</p>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          {category.blurb}
+          {category.maxPrice > 0
+            ? ` Rentang harga Rp${idrCompact(category.minPrice)}–Rp${idrCompact(category.maxPrice)}${
+                category.topRating > 0 ? `, rating hingga ${category.topRating}` : ""
+              }.`
+            : ""}
+        </p>
 
         <nav aria-label="All categories" className="mt-5">
           <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
