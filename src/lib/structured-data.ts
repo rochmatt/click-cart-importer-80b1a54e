@@ -122,6 +122,7 @@ export function productJsonLd(
           },
         }
       : {}),
+    ...(reviews.length > 0 ? { review: reviews.map(reviewJsonLd) } : {}),
     offers: offers.length === 1 ? offers[0] : offers,
   };
 }
