@@ -47,7 +47,7 @@ export function CategoryFilters({ value, onChange, priceBounds, className }: Pro
   return (
     <section
       aria-labelledby={`${uid}-heading`}
-      className="mt-6 rounded-2xl border border-border bg-card p-4 sm:p-5"
+      className={cn("rounded-2xl border border-border bg-card p-4 sm:p-5", className)}
     >
       <div className="flex items-center justify-between gap-3">
         <h2
