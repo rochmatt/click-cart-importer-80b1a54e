@@ -2,8 +2,8 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * Narrow-viewport guardrails for the product card (320-430px).
- * Badges, wishlist, quick add stepper and quick view must stay inside the card
- * and never overlap, even on the smallest phones still in use.
+ * Badges, wishlist and the CTA must stay inside the card, never overlap, leave
+ * no awkward empty space, and all cards must keep a consistent height.
  */
 
 const NARROW_WIDTHS = [
@@ -14,6 +14,9 @@ const NARROW_WIDTHS = [
   { name: "w414", width: 414 }, // iPhone Plus
   { name: "w430", width: 430 }, // iPhone Pro Max
 ];
+
+const MAX_INNER_GAP = 24;
+const MAX_BOTTOM_SLACK = 26;
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -55,16 +58,16 @@ test.describe("ProductCard narrow viewports", () => {
   );
 
   for (const size of NARROW_WIDTHS) {
-    test(`badge, wishlist, quick add and quick view stay clear at ${size.name}`, async ({
-      page,
-    }) => {
+    test(`badge, wishlist and cta stay clear at ${size.name}`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: 900 });
       await page.goto("/");
 
       const list = await cards(page);
-      // Check several cards so sale/stock badge variants are covered.
+      // Check several cards so stock badge variants are covered.
       const total = Math.min(await list.count(), 6);
       expect(total).toBeGreaterThan(0);
+
+      const heights: number[] = [];
 
       for (let index = 0; index < total; index += 1) {
         const card = list.nth(index);
@@ -72,17 +75,24 @@ test.describe("ProductCard narrow viewports", () => {
 
         const at = `${size.name} card ${index}`;
         const cardBox = await boxOf(card, `card ${index}`);
+        heights.push(cardBox.height);
+
         const titleBox = await boxOf(card.getByRole("heading"), "title");
         const wishlistBox = await boxOf(
           card.locator("button[aria-label*='wishlist' i]").first(),
           "wishlist",
         );
-        const stepperBox = await boxOf(
-          card
-            .locator("button[aria-label*='keranjang' i], button[aria-label*='habis' i]")
-            .first(),
-          "quick add",
-        );
+        const cta = card
+          .locator("button[aria-label*='Quick view' i]")
+          .or(card.getByText(/view product/i))
+          .first();
+        const ctaBox = await boxOf(cta, "cta");
+
+        // Quick add stepper was removed from the card — it must not come back.
+        await expect(
+          card.locator("button[aria-label*='keranjang' i]"),
+          `quick add stepper should not exist at ${at}`,
+        ).toHaveCount(0);
 
         // No horizontal overflow: the card itself must fit the viewport.
         expect(cardBox.x, `card overflows left at ${at}`).toBeGreaterThanOrEqual(-1);
@@ -94,7 +104,7 @@ test.describe("ProductCard narrow viewports", () => {
         for (const [label, box] of [
           ["title", titleBox],
           ["wishlist", wishlistBox],
-          ["quick add", stepperBox],
+          ["cta", ctaBox],
         ] as const) {
           expect(contains(cardBox, box), `${label} escapes card at ${at}`).toBe(true);
         }
@@ -102,14 +112,36 @@ test.describe("ProductCard narrow viewports", () => {
         expect(overlaps(titleBox, wishlistBox), `title hits wishlist at ${at}`).toBe(
           false,
         );
-        expect(overlaps(stepperBox, wishlistBox), `quick add hits wishlist at ${at}`).toBe(
-          false,
-        );
-        expect(overlaps(stepperBox, titleBox), `quick add hits title at ${at}`).toBe(
-          false,
-        );
+        expect(overlaps(ctaBox, wishlistBox), `cta hits wishlist at ${at}`).toBe(false);
+        expect(overlaps(ctaBox, titleBox), `cta hits title at ${at}`).toBe(false);
 
-        // Badges (Sale / Best Seller / Stok menipis / Habis) sit above the title.
+        // No dead space: the CTA hugs the bottom padding of the card.
+        const bottomSlack = cardBox.y + cardBox.height - (ctaBox.y + ctaBox.height);
+        expect(
+          bottomSlack,
+          `too much empty space below the cta at ${at} (${bottomSlack}px)`,
+        ).toBeLessThanOrEqual(MAX_BOTTOM_SLACK);
+        expect(bottomSlack, `cta clipped at ${at}`).toBeGreaterThanOrEqual(-2);
+
+        // No awkward vertical gaps between stacked blocks.
+        const stacked: Array<[string, Box]> = [
+          ["title", titleBox],
+          ["cta", ctaBox],
+        ];
+        const price = card.locator("span.font-extrabold").first();
+        if (await price.count())
+          stacked.splice(1, 0, ["price", await boxOf(price, "price")]);
+        for (let i = 0; i < stacked.length - 1; i += 1) {
+          const [labelA, a] = stacked[i]!;
+          const [labelB, b] = stacked[i + 1]!;
+          const gap = b.y - (a.y + a.height);
+          expect(
+            gap,
+            `gap between ${labelA} and ${labelB} too large at ${at} (${gap}px)`,
+          ).toBeLessThanOrEqual(MAX_INNER_GAP);
+        }
+
+        // Badges (Best Seller / Stok menipis / Habis) sit above the title.
         const badges = card.locator("span.rounded-full.uppercase");
         const badgeCount = await badges.count();
         for (let b = 0; b < badgeCount; b += 1) {
@@ -124,10 +156,7 @@ test.describe("ProductCard narrow viewports", () => {
             overlaps(badgeBox, wishlistBox),
             `badge ${b} hits wishlist at ${at}`,
           ).toBe(false);
-          expect(
-            overlaps(badgeBox, stepperBox),
-            `badge ${b} hits quick add at ${at}`,
-          ).toBe(false);
+          expect(overlaps(badgeBox, ctaBox), `badge ${b} hits cta at ${at}`).toBe(false);
           for (let other = b + 1; other < badgeCount; other += 1) {
             const otherBox = await boxOf(badges.nth(other), `badge ${other}`);
             expect(
@@ -137,32 +166,27 @@ test.describe("ProductCard narrow viewports", () => {
           }
         }
 
-        // Secondary CTA (quick view button or the "View Product" pill).
-        const cta = card
-          .locator("button[aria-label*='Quick view' i]")
-          .or(card.getByText(/view product/i))
-          .first();
-        if (await cta.count()) {
-          const ctaBox = await boxOf(cta, "cta");
-          expect(contains(cardBox, ctaBox), `quick view escapes card at ${at}`).toBe(true);
-          expect(
-            overlaps(ctaBox, stepperBox),
-            `quick view hits quick add at ${at}`,
-          ).toBe(false);
-          expect(overlaps(ctaBox, titleBox), `quick view hits title at ${at}`).toBe(
-            false,
-          );
-        }
+        // SALE badge was removed — it must not reappear.
+        await expect(
+          card.getByText(/^sale$/i),
+          `sale badge should not exist at ${at}`,
+        ).toHaveCount(0);
 
         // Tap targets stay usable on the narrowest phones.
         expect(wishlistBox.width, `wishlist too small at ${at}`).toBeGreaterThanOrEqual(
           28,
         );
-        expect(stepperBox.height, `quick add too short at ${at}`).toBeGreaterThanOrEqual(
-          18,
-        );
+        expect(ctaBox.height, `cta too short at ${at}`).toBeGreaterThanOrEqual(28);
       }
 
+      // Cards keep a consistent height at this width (single-column or grid).
+      const spread = Math.max(...heights) - Math.min(...heights);
+      expect(
+        spread,
+        `card heights differ at ${size.name} (${heights.join("/")})`,
+      ).toBeLessThanOrEqual(1);
+
+      await list.first().scrollIntoViewIfNeeded();
       const firstBox = await boxOf(list.first(), "first card");
       await page.screenshot({
         path: `test-results/product-card-narrow-${size.name}.png`,
