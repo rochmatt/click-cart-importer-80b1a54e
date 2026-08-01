@@ -100,6 +100,20 @@ export function ProductCard({
               </span>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={handleQuickAdd}
+            disabled={outOfStock}
+            aria-label={outOfStock ? "Stok habis" : `Tambahkan ${product.title} ke keranjang`}
+            className="absolute bottom-3 right-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          >
+            {justAdded ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <ShoppingCart className="h-4 w-4" />
+            )}
+          </button>
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
