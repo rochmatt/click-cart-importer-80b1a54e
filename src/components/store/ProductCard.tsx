@@ -107,38 +107,38 @@ export function ProductCard({
           />
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
+        <div className="flex flex-1 flex-col gap-2.5 p-3.5 sm:p-4">
           {(product.oldPrice || bestseller || outOfStock || lowStock) && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               {product.oldPrice && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
-                  <Tag className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                  <Tag className="h-3 w-3 shrink-0" />
                   Sale
                 </span>
               )}
               {bestseller && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
-                  <Flame className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
+                  <Flame className="h-3 w-3 shrink-0" />
                   Best Seller
                 </span>
               )}
               {outOfStock && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  <Package className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Package className="h-3 w-3 shrink-0" />
                   Habis
                 </span>
               )}
               {lowStock && !outOfStock && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
-                  <AlertCircle className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
                   Stok menipis
                 </span>
               )}
             </div>
           )}
 
-          <div className="flex items-start gap-2">
-            <h3 className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-foreground">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+            <h3 className="line-clamp-2 min-w-0 text-sm font-medium leading-snug text-foreground">
               {product.title}
             </h3>
             <button
@@ -154,13 +154,13 @@ export function ProductCard({
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Star className="h-3.5 w-3.5 fill-chart-4 text-chart-4" />
+          <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <Star className="h-3.5 w-3.5 shrink-0 fill-chart-4 text-chart-4" />
             <span className="font-semibold text-foreground">{product.rating}</span>
-            <span>({product.reviews.toLocaleString()})</span>
+            <span className="truncate">({product.reviews.toLocaleString()})</span>
           </div>
 
-          <div className="mt-auto flex flex-wrap items-baseline gap-2">
+          <div className="mt-auto flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-base font-extrabold tracking-tight text-foreground sm:text-lg">
               {product.price}
             </span>
@@ -171,9 +171,9 @@ export function ProductCard({
             )}
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="grid grid-cols-1 items-center gap-2 pt-1 min-[420px]:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[auto_minmax(0,1fr)]">
             <div
-              className={`flex items-center gap-0.5 rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
+              className={`flex w-fit shrink-0 items-center gap-0.5 justify-self-start rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
             >
               <button
                 type="button"
@@ -212,7 +212,6 @@ export function ProductCard({
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
-
             {onQuickView ? (
               <button
                 type="button"
@@ -222,15 +221,15 @@ export function ProductCard({
                   onQuickView(product);
                 }}
                 aria-label={`Quick view ${product.title}`}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
               >
-                <Eye className="h-3.5 w-3.5" />
-                Quick view
+                <Eye className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Quick view</span>
               </button>
             ) : (
-              <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
-                View Product
-                <ArrowRight className="h-3.5 w-3.5" />
+              <span className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+                <span className="truncate">View Product</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" />
               </span>
             )}
           </div>
