@@ -84,7 +84,14 @@ export function CategoryFilters({
         {count === 0 ? "Tidak ada filter aktif." : `${count} filter aktif.`}
       </p>
 
-      <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={cn(
+          "mt-4 grid min-w-0 gap-4",
+          variant === "sidebar"
+            ? "grid-cols-1"
+            : "sm:grid-cols-2 lg:grid-cols-3"
+        )}
+      >
         <div className="min-w-0">
           <label
             htmlFor={`${uid}-search`}
