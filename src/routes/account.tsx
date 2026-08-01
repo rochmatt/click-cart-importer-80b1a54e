@@ -6,24 +6,28 @@ import { toast } from "sonner";
 import { z } from "zod";
 import {
   Heart,
+  KeyRound,
   Loader2,
   LogIn,
   LogOut,
   Mail,
   Package,
   Settings,
+  ShieldAlert,
   Truck,
   UserPlus,
 } from "lucide-react";
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
+import { AddressBook } from "@/components/account/AddressBook";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
+
 import {
   getMyProfile,
   listMyOrders,
@@ -103,6 +107,9 @@ function AuthForms({ initialMode }: { initialMode: "signin" | "register" }) {
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+
 
   useEffect(() => setMode(initialMode), [initialMode]);
 
@@ -259,6 +266,51 @@ function AuthForms({ initialMode }: { initialMode: "signin" | "register" }) {
             </button>
           </form>
         )}
+
+        {mode === "signin" && !sentConfirmation && (
+          <div className="mt-4">
+            {resetSent ? (
+              <p className="rounded-xl border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
+                <KeyRound className="mb-1 h-4 w-4 text-primary" />
+                We emailed a password reset link to{" "}
+                <strong className="text-foreground">{email}</strong>. Open it on this device to set
+                a new password.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  const parsed = credentialsSchema.shape.email.safeParse(email);
+                  if (!parsed.success) {
+                    setErrors({ email: "Enter your email first, then request a reset link" });
+                    return;
+                  }
+                  setResetBusy(true);
+                  try {
+                    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+                      redirectTo: window.location.origin + "/reset-password",
+                    });
+                    if (error) throw error;
+                    setResetSent(true);
+                    toast.success("Password reset link sent");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Could not send the reset link",
+                    );
+                  } finally {
+                    setResetBusy(false);
+                  }
+                }}
+                disabled={resetBusy}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:opacity-60"
+              >
+                {resetBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Forgot your password?
+              </button>
+            )}
+          </div>
+        )}
+
 
         <div className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-border" />
@@ -473,7 +525,38 @@ function SignedInView() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">
+      <div className="space-y-6">
+        {user && !user.email_confirmed_at && (
+          <div className="rounded-2xl border border-chart-4/40 bg-chart-4/10 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <ShieldAlert className="h-4 w-4 text-chart-4" />
+              Confirm your email address
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              We sent a verification link to {user.email}. Confirm it to secure your account and
+              receive order updates.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!user.email) return;
+                const { error } = await supabase.auth.resend({
+                  type: "signup",
+                  email: user.email,
+                  options: { emailRedirectTo: window.location.origin + "/account" },
+                });
+                if (error) toast.error(error.message);
+                else toast.success("Verification email sent");
+              }}
+              className="mt-3 text-xs font-semibold text-primary hover:underline"
+            >
+              Resend verification email
+            </button>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">
+
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" />
           <h2 className="text-base font-bold text-foreground">My orders</h2>
@@ -545,7 +628,11 @@ function SignedInView() {
             ))}
           </ul>
         )}
+        </div>
+
+        <AddressBook />
       </div>
+
     </div>
   );
 }
