@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { cn } from "@/lib/utils";
 import { Search, SlidersHorizontal, Star, X } from "lucide-react";
 
 export interface CategoryFilterState {
@@ -30,12 +31,20 @@ interface Props {
   value: CategoryFilterState;
   onChange: (next: CategoryFilterState) => void;
   priceBounds: { min: number; max: number };
+  className?: string;
+  variant?: "default" | "sidebar";
 }
 
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
 
-export function CategoryFilters({ value, onChange, priceBounds }: Props) {
+export function CategoryFilters({
+  value,
+  onChange,
+  priceBounds,
+  className,
+  variant = "default",
+}: Props) {
   const set = <K extends keyof CategoryFilterState>(key: K, v: CategoryFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -45,7 +54,7 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
   return (
     <section
       aria-labelledby={`${uid}-heading`}
-      className="mt-6 rounded-2xl border border-border bg-card p-4 sm:p-5"
+      className={cn("rounded-2xl border border-border bg-card p-4 sm:p-5", className)}
     >
       <div className="flex items-center justify-between gap-3">
         <h2
@@ -75,7 +84,14 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
         {count === 0 ? "Tidak ada filter aktif." : `${count} filter aktif.`}
       </p>
 
-      <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={cn(
+          "mt-4 grid min-w-0 gap-4",
+          variant === "sidebar"
+            ? "grid-cols-1"
+            : "sm:grid-cols-2 lg:grid-cols-3"
+        )}
+      >
         <div className="min-w-0">
           <label
             htmlFor={`${uid}-search`}
@@ -141,7 +157,12 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
           </p>
         </fieldset>
 
-        <fieldset className="min-w-0 sm:col-span-2 lg:col-span-1">
+        <fieldset
+          className={cn(
+            "min-w-0",
+            variant === "default" && "sm:col-span-2 lg:col-span-1"
+          )}
+        >
           <legend className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Rating minimum
           </legend>
