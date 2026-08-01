@@ -1,0 +1,279 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAdmin } from "@/lib/admin-access.server";
+
+export interface AdminOrder {
+  id: string;
+  order_number: string;
+  product_name: string;
+  quantity: number;
+  status: string;
+  courier: string | null;
+  tracking_number: string | null;
+  destination_city: string | null;
+  eta_date: string | null;
+  last_update: string | null;
+  customer_email: string;
+  shipping_name: string;
+  total: number;
+  payment_method: string;
+  created_at: string;
+}
+
+export interface AdminCustomer {
+  id: string;
+  display_name: string;
+  phone: string;
+  email: string;
+  created_at: string;
+  order_count: number;
+  lifetime_value: number;
+  last_order_at: string | null;
+  is_admin: boolean;
+}
+
+export interface StoreSettings {
+  id: string;
+  store_name: string;
+  tagline: string;
+  support_email: string;
+  support_phone: string;
+  store_address: string;
+  logo_url: string;
+  shopee_link_template: string;
+  tokopedia_link_template: string;
+  tiktok_link_template: string;
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+}
+
+export interface StaffMember {
+  user_id: string;
+  role: string;
+  email: string;
+  display_name: string;
+}
+
+export const listAdminOrders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminOrder[]> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { data, error } = await context.supabase
+      .from("orders")
+      .select(
+        "id, order_number, product_name, quantity, status, courier, tracking_number, destination_city, eta_date, last_update, customer_email, shipping_name, total, payment_method, created_at",
+      )
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    return (data ?? []) as AdminOrder[];
+  });
+
+const orderUpdateSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["processing", "packed", "shipped", "in transit", "delivered", "cancelled"]),
+  courier: z.string().trim().max(60),
+  tracking_number: z.string().trim().max(60),
+  eta_date: z.string().trim().max(10),
+  last_update: z.string().trim().max(200),
+});
+
+export const updateAdminOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => orderUpdateSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { id, ...fields } = data;
+    const { error } = await context.supabase
+      .from("orders")
+      .update({
+        status: fields.status,
+        courier: fields.courier || null,
+        tracking_number: fields.tracking_number || null,
+        eta_date: fields.eta_date || null,
+        last_update: fields.last_update || null,
+      })
+      .eq("id", id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const listAdminCustomers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminCustomer[]> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [{ data: profiles, error }, { data: users }, { data: orders }, { data: roles }] =
+      await Promise.all([
+        context.supabase
+          .from("profiles")
+          .select("id, display_name, phone, created_at")
+          .order("created_at", { ascending: false })
+          .limit(200),
+        supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
+        context.supabase.from("orders").select("customer_email, total, created_at").limit(1000),
+        context.supabase.from("user_roles").select("user_id, role"),
+      ]);
+    if (error) throw error;
+
+    const emailById = new Map<string, string>();
+    for (const u of users?.users ?? []) emailById.set(u.id, u.email ?? "");
+    const adminIds = new Set(
+      (roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id),
+    );
+
+    const stats = new Map<string, { count: number; value: number; last: string | null }>();
+    for (const o of orders ?? []) {
+      const key = (o.customer_email ?? "").trim().toLowerCase();
+      if (!key) continue;
+      const prev = stats.get(key) ?? { count: 0, value: 0, last: null };
+      stats.set(key, {
+        count: prev.count + 1,
+        value: prev.value + (o.total ?? 0),
+        last: !prev.last || o.created_at > prev.last ? o.created_at : prev.last,
+      });
+    }
+
+    return (profiles ?? []).map((p) => {
+      const email = emailById.get(p.id) ?? "";
+      const s = stats.get(email.trim().toLowerCase());
+      return {
+        id: p.id,
+        display_name: p.display_name ?? "",
+        phone: p.phone ?? "",
+        email,
+        created_at: p.created_at,
+        order_count: s?.count ?? 0,
+        lifetime_value: s?.value ?? 0,
+        last_order_at: s?.last ?? null,
+        is_admin: adminIds.has(p.id),
+      };
+    });
+  });
+
+export const getStoreSettings = createServerFn({ method: "GET" }).handler(
+  async (): Promise<StoreSettings | null> => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const client = createClient(
+      process.env["SUPABASE_URL"]!,
+      process.env["SUPABASE_PUBLISHABLE_KEY"]!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data, error } = await client
+      .from("store_settings")
+      .select(
+        "id, store_name, tagline, support_email, support_phone, store_address, logo_url, shopee_link_template, tokopedia_link_template, tiktok_link_template, utm_source, utm_medium, utm_campaign",
+      )
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return (data as StoreSettings) ?? null;
+  },
+);
+
+const settingsSchema = z.object({
+  id: z.string().uuid(),
+  store_name: z.string().trim().min(1, "Store name is required").max(80),
+  tagline: z.string().trim().max(160),
+  support_email: z.union([z.string().trim().email().max(255), z.literal("")]),
+  support_phone: z.string().trim().max(30),
+  store_address: z.string().trim().max(300),
+  logo_url: z.string().trim().max(500),
+  shopee_link_template: z.string().trim().max(300),
+  tokopedia_link_template: z.string().trim().max(300),
+  tiktok_link_template: z.string().trim().max(300),
+  utm_source: z.string().trim().max(60),
+  utm_medium: z.string().trim().max(60),
+  utm_campaign: z.string().trim().max(60),
+});
+
+export const updateStoreSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => settingsSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { id, ...fields } = data;
+    const { error } = await context.supabase.from("store_settings").update(fields).eq("id", id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const listStaff = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<StaffMember[]> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: roles, error }, { data: users }] = await Promise.all([
+      context.supabase.from("user_roles").select("user_id, role"),
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
+    ]);
+    if (error) throw error;
+    const emailById = new Map<string, string>();
+    const nameById = new Map<string, string>();
+    for (const u of users?.users ?? []) {
+      emailById.set(u.id, u.email ?? "");
+      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+      nameById.set(
+        u.id,
+        (typeof meta.display_name === "string" && meta.display_name) ||
+          (typeof meta.full_name === "string" && meta.full_name) ||
+          "",
+      );
+    }
+    return (roles ?? []).map((r) => ({
+      user_id: r.user_id,
+      role: r.role as string,
+      email: emailById.get(r.user_id) ?? "",
+      display_name: nameById.get(r.user_id) ?? "",
+    }));
+  });
+
+const grantSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address").max(255),
+  role: z.enum(["admin", "moderator", "user"]),
+});
+
+export const grantRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => grantSchema.parse(input))
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string }> => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    const target = (users?.users ?? []).find(
+      (u) => (u.email ?? "").trim().toLowerCase() === data.email.toLowerCase(),
+    );
+    if (!target) {
+      return { ok: false, message: "No account found with that email address." };
+    }
+    const { error } = await context.supabase
+      .from("user_roles")
+      .insert({ user_id: target.id, role: data.role });
+    if (error && !error.message.includes("duplicate")) throw error;
+    return { ok: true, message: `${data.email} is now a ${data.role}.` };
+  });
+
+export const revokeRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({ user_id: z.string().uuid(), role: z.enum(["admin", "moderator", "user"]) })
+      .parse(input),
+  )
+  .handler(async ({ data, context }): Promise<{ ok: boolean; message: string }> => {
+    await assertAdmin(context.supabase, context.userId);
+    if (data.user_id === context.userId && data.role === "admin") {
+      return { ok: false, message: "You cannot remove your own admin role." };
+    }
+    const { error } = await context.supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.user_id)
+      .eq("role", data.role);
+    if (error) throw error;
+    return { ok: true, message: "Role removed." };
+  });
