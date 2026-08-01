@@ -19,6 +19,8 @@ import {
   productJsonLd,
 } from "@/lib/structured-data";
 import { categorySlug } from "@/data/categories";
+import { reviewsForProduct } from "@/data/reviews";
+import { ProductReviews } from "@/components/store/ProductReviews";
 
 
 export const Route = createFileRoute("/products/$id")({
