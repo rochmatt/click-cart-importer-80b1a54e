@@ -180,13 +180,15 @@ test.describe("ProductCard responsive layout", () => {
         ).toBeLessThanOrEqual(1);
       }
 
+      await card.scrollIntoViewIfNeeded();
+      const shotBox = await boxOf(card);
       await page.screenshot({
         path: `test-results/product-card-${size.name}.png`,
         clip: {
-          x: Math.max(0, cardBox.x - 8),
-          y: Math.max(0, cardBox.y - 8),
-          width: Math.min(size.width, cardBox.width + 16),
-          height: cardBox.height + 16,
+          x: Math.max(0, shotBox.x - 8),
+          y: Math.max(0, shotBox.y - 8),
+          width: Math.min(size.width, shotBox.width + 16),
+          height: shotBox.height + 16,
         },
       });
     });
