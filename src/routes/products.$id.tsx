@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Heart, ShoppingCart, Star, Zap } from "lucide-react";
 import { products } from "@/data/products";
@@ -21,6 +22,7 @@ import {
 import { categorySlug } from "@/data/categories";
 import { reviewsForProduct } from "@/data/reviews";
 import { ProductReviews } from "@/components/store/ProductReviews";
+import { recordView } from "@/lib/recently-viewed";
 
 
 export const Route = createFileRoute("/products/$id")({
@@ -96,6 +98,12 @@ function ProductDetailPage() {
   const product = seed ?? live;
   const images = useProductImages(product?.id ?? id, product?.images ?? []);
   const wishlisted = isWishlisted(useWishlist(), id);
+
+  // Feeds the "Rekomendasi Untukmu" section on the homepage.
+  const viewedCategory = product?.category;
+  useEffect(() => {
+    if (viewedCategory) recordView(id, viewedCategory);
+  }, [id, viewedCategory]);
 
   if (!product) {
     return isLoading ? (
