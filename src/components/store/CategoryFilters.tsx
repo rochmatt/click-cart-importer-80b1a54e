@@ -141,11 +141,11 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
           </p>
         </fieldset>
 
-        <fieldset className="min-w-0">
+        <fieldset className="min-w-0 sm:col-span-2 lg:col-span-1">
           <legend className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Rating minimum
           </legend>
-          <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] sm:gap-2 [&::-webkit-scrollbar]:hidden">
             {ratingOptions.map((r) => {
               const active = value.minRating === r;
               const id = `${uid}-rating-${String(r).replace(".", "-")}`;
