@@ -212,7 +212,6 @@ export function ProductCard({
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
-
             {onQuickView ? (
               <button
                 type="button"
@@ -222,15 +221,15 @@ export function ProductCard({
                   onQuickView(product);
                 }}
                 aria-label={`Quick view ${product.title}`}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
               >
-                <Eye className="h-3.5 w-3.5" />
-                Quick view
+                <Eye className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Quick view</span>
               </button>
             ) : (
-              <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
-                View Product
-                <ArrowRight className="h-3.5 w-3.5" />
+              <span className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+                <span className="truncate">View Product</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0" />
               </span>
             )}
           </div>
