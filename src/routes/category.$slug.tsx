@@ -182,7 +182,17 @@ function CategoryPage() {
         </p>
 
         <div className="mt-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-8">
-          <div className="order-1 space-y-6 lg:order-2">
+          <aside className="space-y-6">
+            <CategoryFilters
+              value={filters}
+              onChange={setFilters}
+              priceBounds={priceBounds}
+              variant="sidebar"
+              className="mt-0"
+            />
+          </aside>
+
+          <div className="mt-6 space-y-6 lg:mt-0">
             <nav aria-label="All categories">
               <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-3 lg:flex-wrap lg:justify-center lg:overflow-visible [&::-webkit-scrollbar]:hidden">
                 {categoryCatalog.map((c) => {
@@ -252,15 +262,6 @@ function CategoryPage() {
               </div>
             )}
           </div>
-
-          <aside className="order-2 mt-6 lg:order-1 lg:mt-0">
-            <CategoryFilters
-              value={filters}
-              onChange={setFilters}
-              priceBounds={priceBounds}
-              className="mt-0"
-            />
-          </aside>
         </div>
       </main>
 
