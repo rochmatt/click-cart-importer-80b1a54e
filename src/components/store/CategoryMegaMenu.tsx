@@ -268,7 +268,16 @@ export function CategoryMegaMenu({ onQueryChange }: CategoryMegaMenuProps) {
                 </button>
               );
             })}
+            <Link
+              to="/categories"
+              onClick={() => closeMenu()}
+              className="mt-2 flex items-center gap-1.5 border-t border-border px-4 pb-1 pt-3 text-sm font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
+              Lihat semua kategori
+              <ChevronRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
           </div>
+
 
           <div
             role="tabpanel"
