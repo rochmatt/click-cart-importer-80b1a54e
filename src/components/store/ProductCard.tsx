@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package, ShoppingCart, Check } from "lucide-react";
+import {
+  ArrowRight,
+  Eye,
+  Heart,
+  Star,
+  Flame,
+  AlertCircle,
+  Package,
+  ShoppingCart,
+  Check,
+  Plus,
+  Minus,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import type { Product } from "@/data/products";
@@ -29,11 +41,25 @@ export function ProductCard({
   product: Product;
   onQuickView?: (product: Product) => void;
 }) {
+  const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const cover = useCoverImage(product.id, product.images);
   const bestseller = isBestseller(product);
   const lowStock = isLowStock(product);
   const outOfStock = isOutOfStock(product);
+  const maxQty = Math.max(1, product.stock ?? 0);
+
+  const increaseQty = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQty((prev) => Math.min(prev + 1, maxQty));
+  };
+
+  const decreaseQty = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQty((prev) => Math.max(prev - 1, 1));
+  };
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,16 +73,20 @@ export function ProductCard({
         price: product.price,
         image: cover,
       },
-      1,
+      qty,
     );
 
     setJustAdded(true);
     toast.success("Ditambahkan ke keranjang", {
-      description: product.title,
+      description: `${qty} × ${product.title}`,
       duration: 1500,
     });
-    setTimeout(() => setJustAdded(false), 1200);
+    setTimeout(() => {
+      setJustAdded(false);
+      setQty(1);
+    }, 1200);
   };
+
 
   return (
     <article className="group relative">
