@@ -29,10 +29,34 @@ export function ProductCard({
   product: Product;
   onQuickView?: (product: Product) => void;
 }) {
+  const [justAdded, setJustAdded] = useState(false);
   const cover = useCoverImage(product.id, product.images);
   const bestseller = isBestseller(product);
   const lowStock = isLowStock(product);
   const outOfStock = isOutOfStock(product);
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (outOfStock) return;
+
+    addToCart(
+      {
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        image: cover,
+      },
+      1,
+    );
+
+    setJustAdded(true);
+    toast.success("Ditambahkan ke keranjang", {
+      description: product.title,
+      duration: 1500,
+    });
+    setTimeout(() => setJustAdded(false), 1200);
+  };
 
   return (
     <article className="group relative">
