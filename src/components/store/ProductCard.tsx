@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package, ShoppingCart, Check } from "lucide-react";
+import {
+  ArrowRight,
+  Eye,
+  Heart,
+  Star,
+  Flame,
+  AlertCircle,
+  Package,
+  ShoppingCart,
+  Check,
+  Plus,
+  Minus,
+} from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import type { Product } from "@/data/products";
@@ -29,11 +41,25 @@ export function ProductCard({
   product: Product;
   onQuickView?: (product: Product) => void;
 }) {
+  const [qty, setQty] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
   const cover = useCoverImage(product.id, product.images);
   const bestseller = isBestseller(product);
   const lowStock = isLowStock(product);
   const outOfStock = isOutOfStock(product);
+  const maxQty = Math.max(1, product.stock ?? 0);
+
+  const increaseQty = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQty((prev) => Math.min(prev + 1, maxQty));
+  };
+
+  const decreaseQty = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setQty((prev) => Math.max(prev - 1, 1));
+  };
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,16 +73,20 @@ export function ProductCard({
         price: product.price,
         image: cover,
       },
-      1,
+      qty,
     );
 
     setJustAdded(true);
     toast.success("Ditambahkan ke keranjang", {
-      description: product.title,
+      description: `${qty} × ${product.title}`,
       duration: 1500,
     });
-    setTimeout(() => setJustAdded(false), 1200);
+    setTimeout(() => {
+      setJustAdded(false);
+      setQty(1);
+    }, 1200);
   };
+
 
   return (
     <article className="group relative">
@@ -101,19 +131,43 @@ export function ProductCard({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={handleQuickAdd}
-            disabled={outOfStock}
-            aria-label={outOfStock ? "Stok habis" : `Tambahkan ${product.title} ke keranjang`}
-            className="absolute bottom-3 right-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          <div
+            className={`absolute bottom-3 right-3 z-10 flex items-center gap-0.5 rounded-full bg-primary p-1 text-primary-foreground shadow-sm transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
           >
-            {justAdded ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <ShoppingCart className="h-4 w-4" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={decreaseQty}
+              disabled={outOfStock || qty <= 1}
+              aria-label="Kurangi jumlah"
+              className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={handleQuickAdd}
+              disabled={outOfStock}
+              aria-label={outOfStock ? "Stok habis" : `Tambahkan ${qty} ${product.title} ke keranjang`}
+              className="flex min-w-[3.25rem] items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors disabled:cursor-not-allowed"
+            >
+              <span className="w-4 text-center">{qty}</span>
+              {justAdded ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <ShoppingCart className="h-3.5 w-3.5" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={increaseQty}
+              disabled={outOfStock || qty >= maxQty}
+              aria-label="Tambah jumlah"
+              className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
