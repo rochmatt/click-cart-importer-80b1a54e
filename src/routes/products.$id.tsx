@@ -213,6 +213,7 @@ function ProductDetailPage() {
             detailedSpecs={product.detailedSpecs}
           />
         </div>
+        <ProductReviews reviews={reviewsForProduct(product.id)} />
 
         <RelatedProducts currentId={product.id} />
       </main>
