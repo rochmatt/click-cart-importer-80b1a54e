@@ -62,28 +62,26 @@ export function ProductCard({
         <div className="flex flex-1 flex-col gap-2 p-3.5 sm:p-4">
           {/* Badge row is always reserved so every card keeps the same height. */}
           <div className="flex min-h-[1.375rem] min-w-0 flex-wrap items-center gap-1.5">
-            {(() => null)()}
+            {bestseller && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
+                <Flame className="h-3 w-3 shrink-0" />
+                Best Seller
+              </span>
+            )}
+            {outOfStock && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                <Package className="h-3 w-3 shrink-0" />
+                Habis
+              </span>
+            )}
+            {lowStock && !outOfStock && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                Stok menipis
+              </span>
+            )}
+          </div>
 
-              {bestseller && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
-                  <Flame className="h-3 w-3 shrink-0" />
-                  Best Seller
-                </span>
-              )}
-              {outOfStock && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  <Package className="h-3 w-3 shrink-0" />
-                  Habis
-                </span>
-              )}
-              {lowStock && !outOfStock && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
-                  <AlertCircle className="h-3 w-3 shrink-0" />
-                  Stok menipis
-                </span>
-              )}
-            </div>
-          )}
 
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
             <h3 className="line-clamp-2 min-h-[2.5rem] min-w-0 text-sm font-medium leading-snug text-foreground">
