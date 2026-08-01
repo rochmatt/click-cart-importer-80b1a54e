@@ -110,6 +110,7 @@ function CategoryPage() {
   const [filters, setFilters] = useState<CategoryFilterState>(emptyCategoryFilters);
   const [sort, setSort] = useState<SortKey>("popular");
   const [quickView, setQuickView] = useState<Product | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
 
