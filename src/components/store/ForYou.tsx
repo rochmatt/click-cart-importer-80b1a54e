@@ -5,6 +5,13 @@ import { products, type Product } from "@/data/products";
 import { useImageOverrides } from "@/lib/cover-overrides";
 import { clearViewHistory, useRecentlyViewed } from "@/lib/recently-viewed";
 
+/** Keeps the "because you viewed X" chip short without cutting words mid-way. */
+function shortLabel(title: string) {
+  const head = title.split("—")[0]!.trim();
+  const words = head.split(/\s+/);
+  return words.length > 3 ? `${words.slice(0, 3).join(" ")}…` : head;
+}
+
 interface Pick {
   product: Product;
   reason: string;
@@ -22,7 +29,7 @@ function buildPicks(viewed: { id: string; category: string }[]): Pick[] {
 
   for (const entry of viewed) {
     const source = products.find((p) => p.id === entry.id);
-    const label = source?.title.split(/[—-]/)[0]?.trim() ?? entry.category;
+    const label = source ? shortLabel(source.title) : entry.category;
     for (const candidate of products) {
       if (picks.length >= 8) break;
       if (candidate.category !== entry.category) continue;
