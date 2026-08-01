@@ -37,6 +37,8 @@ export interface Product {
   description: string;
   specs: string[];
   detailedSpecs?: { label: string; value: string }[];
+  stock?: number;
+  sold?: number;
 }
 
 const links = {
