@@ -1,7 +1,10 @@
-import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package, ShoppingCart, Check } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import type { Product } from "@/data/products";
 import { useCoverImage } from "@/lib/cover-overrides";
+import { addToCart } from "@/lib/cart";
 
 const BESTSELLER_THRESHOLD = 1000;
 const LOW_STOCK_THRESHOLD = 15;
@@ -26,10 +29,34 @@ export function ProductCard({
   product: Product;
   onQuickView?: (product: Product) => void;
 }) {
+  const [justAdded, setJustAdded] = useState(false);
   const cover = useCoverImage(product.id, product.images);
   const bestseller = isBestseller(product);
   const lowStock = isLowStock(product);
   const outOfStock = isOutOfStock(product);
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (outOfStock) return;
+
+    addToCart(
+      {
+        id: product.id,
+        title: product.title,
+        price: product.price,
+        image: cover,
+      },
+      1,
+    );
+
+    setJustAdded(true);
+    toast.success("Ditambahkan ke keranjang", {
+      description: product.title,
+      duration: 1500,
+    });
+    setTimeout(() => setJustAdded(false), 1200);
+  };
 
   return (
     <article className="group relative">
@@ -73,6 +100,20 @@ export function ProductCard({
               </span>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={handleQuickAdd}
+            disabled={outOfStock}
+            aria-label={outOfStock ? "Stok habis" : `Tambahkan ${product.title} ke keranjang`}
+            className="absolute bottom-3 right-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          >
+            {justAdded ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <ShoppingCart className="h-4 w-4" />
+            )}
+          </button>
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
