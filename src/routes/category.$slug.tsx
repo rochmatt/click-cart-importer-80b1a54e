@@ -30,15 +30,48 @@ export const Route = createFileRoute("/category/$slug")({
   loader: ({ params }) => {
     const category = findCategory(params.slug);
     if (!category) throw notFound();
-    return category;
+    const products = productsInCategory(category.label);
+    const prices = products.map((p) => priceValue(p.price)).filter((n) => n > 0);
+    return {
+      ...category,
+      productCount: products.length,
+      minPrice: prices.length ? Math.min(...prices) : 0,
+      maxPrice: prices.length ? Math.max(...prices) : 0,
+      topRating: products.reduce((m, p) => Math.max(m, p.rating), 0),
+    };
   },
   head: ({ loaderData }) => {
-    const title = loaderData
-      ? `${loaderData.label} — Shop Deals on PasarPilih`
-      : "Category not found — PasarPilih";
-    const description = loaderData
-      ? `${loaderData.blurb} Compare prices across Shopee, Tokopedia and TikTok Shop.`
-      : "This category is not available on PasarPilih.";
+    if (!loaderData) {
+      const title = "Kategori tidak ditemukan — PasarPilih";
+      const description = "Kategori ini tidak tersedia di PasarPilih.";
+      return {
+        meta: [
+          { title },
+          { name: "description", content: description },
+          { property: "og:title", content: title },
+          { property: "og:description", content: description },
+          { property: "og:type", content: "website" },
+          { name: "twitter:card", content: "summary_large_image" },
+          { name: "robots", content: "noindex" },
+        ],
+        links: [],
+        scripts: [],
+      };
+    }
+
+    const path = `/category/${loaderData.slug}`;
+    const priceRange =
+      loaderData.maxPrice > 0
+        ? ` Harga Rp${idrCompact(loaderData.minPrice)}–Rp${idrCompact(loaderData.maxPrice)}.`
+        : "";
+    const title = `${loaderData.label} — ${loaderData.productCount} Produk Terbaik | PasarPilih`;
+    const description =
+      `${loaderData.blurb} Bandingkan ${loaderData.productCount} produk ${loaderData.label.toLowerCase()} ` +
+      `dari Shopee, Tokopedia, dan TikTok Shop.${priceRange} Filter harga, rating, dan pencarian.`.slice(
+        0,
+        320,
+      );
+
     return {
       meta: [
         { title },
@@ -46,23 +79,22 @@ export const Route = createFileRoute("/category/$slug")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "website" },
+        { property: "og:url", content: path },
+        { property: "og:site_name", content: "PasarPilih" },
         { name: "twitter:card", content: "summary_large_image" },
-        ...(loaderData ? [] : [{ name: "robots", content: "noindex" }]),
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: description },
       ],
-      links: loaderData ? [{ rel: "canonical", href: `/category/${loaderData.slug}` }] : [],
-      scripts: loaderData
-        ? [
-            jsonLdScript(
-              breadcrumbJsonLd([
-                { name: "Home", path: "/" },
-                { name: loaderData.label, path: `/category/${loaderData.slug}` },
-              ]),
-            ),
-            jsonLdScript(
-              itemListJsonLd(loaderData.label, productsInCategory(loaderData.label)),
-            ),
-          ]
-        : [],
+      links: [{ rel: "canonical", href: path }],
+      scripts: [
+        jsonLdScript(
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: loaderData.label, path },
+          ]),
+        ),
+        jsonLdScript(itemListJsonLd(loaderData.label, productsInCategory(loaderData.label))),
+      ],
     };
   },
   component: CategoryPage,
