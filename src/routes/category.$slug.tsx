@@ -181,25 +181,27 @@ function CategoryPage() {
             : ""}
         </p>
 
-        <nav aria-label="All categories" className="mt-5">
-          <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
-            {categoryCatalog.map((c) => (
-              <li key={c.slug} className="shrink-0 snap-start">
-                <Link
-                  to="/category/$slug"
-                  params={{ slug: c.slug }}
-                  aria-current={c.slug === category.slug ? "page" : undefined}
-                  className={`inline-flex h-10 items-center whitespace-nowrap rounded-full border px-4 text-sm font-medium leading-none transition-colors ${
-                    c.slug === category.slug
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
-                  }`}
-                >
-                  {c.label}
-                </Link>
-
-              </li>
-            ))}
+        <nav aria-label="All categories" className="mt-6">
+          <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-3 [&::-webkit-scrollbar]:hidden">
+            {categoryCatalog.map((c) => {
+              const active = c.slug === category.slug;
+              return (
+                <li key={c.slug} className="shrink-0 snap-start">
+                  <Link
+                    to="/category/$slug"
+                    params={{ slug: c.slug }}
+                    aria-current={active ? "page" : undefined}
+                    className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
+                    }`}
+                  >
+                    {c.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
