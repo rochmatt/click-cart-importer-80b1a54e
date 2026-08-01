@@ -13,6 +13,12 @@ import { useProductImages } from "@/lib/cover-overrides";
 import { addToCart } from "@/lib/cart";
 import { isWishlisted, toggleWishlist, useWishlist } from "@/lib/wishlist";
 import { toast } from "sonner";
+import {
+  breadcrumbJsonLd,
+  jsonLdScript,
+  productJsonLd,
+} from "@/lib/structured-data";
+import { categorySlug } from "@/data/categories";
 
 
 export const Route = createFileRoute("/products/$id")({
@@ -34,7 +40,7 @@ export const Route = createFileRoute("/products/$id")({
     if (!data) throw notFound();
     return null;
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const product = loaderData;
     const title = product ? `${product.title} — PasarPilih` : "Product — PasarPilih";
     const description = product
@@ -49,6 +55,24 @@ export const Route = createFileRoute("/products/$id")({
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
       ],
+      links: [{ rel: "canonical", href: `/products/${params.id}` }],
+      // Product + BreadcrumbList rich results. Admin-only products aren't in
+      // the seed catalog, so the loader returns null and we emit nothing.
+      scripts: product
+        ? [
+            jsonLdScript(productJsonLd(product, `/products/${params.id}`)),
+            jsonLdScript(
+              breadcrumbJsonLd([
+                { name: "Home", path: "/" },
+                {
+                  name: product.category,
+                  path: `/category/${categorySlug(product.category)}`,
+                },
+                { name: product.title, path: `/products/${params.id}` },
+              ]),
+            ),
+          ]
+        : [],
     };
   },
   component: ProductDetailPage,
