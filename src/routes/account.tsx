@@ -591,7 +591,7 @@ function SignedInView() {
                   <Link
                     to="/orders/$orderNumber"
                     params={{ orderNumber: order.order_number }}
-                    className="text-xs font-semibold text-primary hover:underline"
+                    search={{ email: undefined }}
                   >
                     Details
                   </Link>
