@@ -106,7 +106,7 @@ export function ProductCard({
             <span className="truncate">({product.reviews.toLocaleString()})</span>
           </div>
 
-          <div className="mt-auto flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 pt-1">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-base font-extrabold tracking-tight text-foreground sm:text-lg">
               {product.price}
             </span>
@@ -126,13 +126,13 @@ export function ProductCard({
                 onQuickView(product);
               }}
               aria-label={`Quick view ${product.title}`}
-              className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
             >
               <Eye className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Quick view</span>
             </button>
           ) : (
-            <span className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+            <span className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
               <span className="truncate">View Product</span>
               <ArrowRight className="h-3.5 w-3.5 shrink-0" />
             </span>
