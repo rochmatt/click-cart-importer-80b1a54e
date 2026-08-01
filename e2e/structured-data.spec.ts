@@ -36,6 +36,14 @@ test.describe("schema.org structured data", () => {
     expect(product!.offers.priceCurrency).toBe("IDR");
     expect(product!.offers.price).toMatch(/^\d+$/);
 
+    const reviews = (product as unknown as {
+      review?: { "@type": string; author: { name: string }; reviewRating: { ratingValue: number } }[];
+    }).review;
+    expect(reviews?.length).toBeGreaterThan(0);
+    expect(reviews![0]["@type"]).toBe("Review");
+    expect(reviews![0].author.name.length).toBeGreaterThan(0);
+    expect(reviews![0].reviewRating.ratingValue).toBeGreaterThan(0);
+
     const crumbs = typeOf(items, "BreadcrumbList") as
       | { itemListElement: { position: number; name: string }[] }
       | undefined;
