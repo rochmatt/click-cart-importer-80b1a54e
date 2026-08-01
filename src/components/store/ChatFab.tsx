@@ -286,113 +286,118 @@ export function ChatFab() {
 
 
   return (
-    <div className="fixed bottom-20 right-4 z-50 md:bottom-4 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
-      {open && (
-        <div className="animate-in fade-in slide-in-from-bottom-2 flex h-[26rem] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card-hover)]">
-          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">
-              <Headphones className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground">PasarPilih Care</p>
-              <p className="text-[11px] text-tokopedia">Online · replies in ~1 min</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Close help chat"
-              className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
-            {messages.map((m) => (
-              <div key={m.id} className={m.from === "user" ? "flex justify-end" : "flex justify-start"}>
-                {m.order ? (
-                  <OrderCard o={m.order} />
-                ) : (
-                  <p
-                    className={
-                      m.from === "user"
-                        ? "max-w-[85%] whitespace-pre-line rounded-2xl rounded-br-sm bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground"
-                        : "max-w-[85%] whitespace-pre-line rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-xs leading-relaxed text-foreground"
-                    }
-                  >
-                    {m.text}
-                  </p>
-                )}
+    <>
+      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6 md:bottom-6 md:right-6">
+        {open && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 flex h-[26rem] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card-hover)]">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary">
+                <Headphones className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-foreground">PasarPilih Care</p>
+                <p className="text-[11px] text-tokopedia">Online · replies in ~1 min</p>
               </div>
-            ))}
-            {lookingUp && (
-              <div className="flex justify-start" aria-live="polite">
-                <p className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Checking the latest shipment update…
-                </p>
-              </div>
-            )}
-            {typing && !lookingUp && (
-              <div className="flex justify-start">
-                <p className="rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-xs text-muted-foreground">
-                  Typing…
-                </p>
-              </div>
-            )}
-
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 border-t border-border px-3 py-2">
-            {QUICK_REPLIES.map((r) => (
               <button
-                key={r.label}
                 type="button"
-                onClick={() => send(r.prompt, r)}
-                className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+                onClick={() => setOpen(false)}
+                aria-label="Close help chat"
+                className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <r.icon className="h-3 w-3" />
-                {r.label}
+                <X className="h-4 w-4" />
               </button>
-            ))}
-          </div>
+            </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              send(input);
-            }}
-            className="flex items-center gap-2 border-t border-border p-3"
-          >
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your message…"
-              aria-label="Message"
-              className="h-9 flex-1 rounded-full border border-border bg-background px-3 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              aria-label="Send message"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+            <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-4 py-3">
+              {messages.map((m) => (
+                <div key={m.id} className={m.from === "user" ? "flex justify-end" : "flex justify-start"}>
+                  {m.order ? (
+                    <OrderCard o={m.order} />
+                  ) : (
+                    <p
+                      className={
+                        m.from === "user"
+                          ? "max-w-[85%] whitespace-pre-line rounded-2xl rounded-br-sm bg-primary px-3 py-2 text-xs leading-relaxed text-primary-foreground"
+                          : "max-w-[85%] whitespace-pre-line rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-xs leading-relaxed text-foreground"
+                      }
+                    >
+                      {m.text}
+                    </p>
+                  )}
+                </div>
+              ))}
+              {lookingUp && (
+                <div className="flex justify-start" aria-live="polite">
+                  <p className="flex items-center gap-2 rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Checking the latest shipment update…
+                  </p>
+                </div>
+              )}
+              {typing && !lookingUp && (
+                <div className="flex justify-start">
+                  <p className="rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-xs text-muted-foreground">
+                    Typing…
+                  </p>
+                </div>
+              )}
+
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 border-t border-border px-3 py-2">
+              {QUICK_REPLIES.map((r) => (
+                <button
+                  key={r.label}
+                  type="button"
+                  onClick={() => send(r.prompt, r)}
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  <r.icon className="h-3 w-3" />
+                  {r.label}
+                </button>
+              ))}
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send(input);
+              }}
+              className="flex items-center gap-2 border-t border-border p-3"
             >
-              <Send className="h-4 w-4" />
-            </button>
-          </form>
-        </div>
-      )}
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your message…"
+                aria-label="Message"
+                className="h-9 flex-1 rounded-full border border-border bg-background px-3 text-xs text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                aria-label="Send message"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
+          </div>
+        )}
 
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Close help chat" : "Open help chat"}
-        aria-expanded={open}
-        className="grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-brand)] transition-transform hover:scale-105 sm:h-14 sm:w-14"
-      >
-        {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
-      </button>
-    </div>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Close help chat" : "Open help chat"}
+          aria-expanded={open}
+          className="grid h-12 w-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-brand)] transition-transform hover:scale-105 sm:h-14 sm:w-14"
+        >
+          {open ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {/* Keeps the footer and bottom controls clear of the fixed chat button. */}
+      <div aria-hidden="true" className="h-16 sm:h-20 md:h-20" />
+    </>
   );
 }
