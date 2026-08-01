@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, PackageSearch } from "lucide-react";
-import { CategoryFilters, emptyCategoryFilters } from "@/components/store/CategoryFilters";
+import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
+import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import {
   categoryCatalog,
@@ -110,6 +110,7 @@ function CategoryPage() {
   const [filters, setFilters] = useState<CategoryFilterState>(emptyCategoryFilters);
   const [sort, setSort] = useState<SortKey>("popular");
   const [quickView, setQuickView] = useState<Product | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
 
@@ -182,7 +183,22 @@ function CategoryPage() {
         </p>
 
         <div className="mt-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-8 lg:items-start">
-          <aside className="lg:sticky lg:top-32 lg:self-start space-y-6">
+          <aside
+            id="category-filter-sidebar"
+            className={`lg:sticky lg:top-32 lg:self-start space-y-6 ${
+              showFilters ? "block" : "hidden"
+            } lg:block`}
+          >
+            <div className="flex items-center justify-between lg:hidden">
+              <h2 className="text-sm font-semibold text-foreground">Filter produk</h2>
+              <button
+                type="button"
+                onClick={() => setShowFilters(false)}
+                className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Tutup
+              </button>
+            </div>
             <CategoryFilters
               value={filters}
               onChange={setFilters}
@@ -223,6 +239,21 @@ function CategoryPage() {
                 {searchTerm ? ` matching “${searchTerm}”` : ""}
               </p>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((s) => !s)}
+                  aria-expanded={showFilters}
+                  aria-controls="category-filter-sidebar"
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+                >
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                  Filter
+                  {activeFilterCount(filters) > 0 ? (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
+                      {activeFilterCount(filters)}
+                    </span>
+                  ) : null}
+                </button>
                 <label htmlFor="category-sort" className="text-sm text-muted-foreground">
                   Sort by
                 </label>
