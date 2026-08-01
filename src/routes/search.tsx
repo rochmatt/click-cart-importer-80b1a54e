@@ -6,6 +6,7 @@ import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
 import { ChatFab } from "@/components/store/ChatFab";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import { ProductCard } from "@/components/store/ProductCard";
 import { QuickViewModal } from "@/components/store/QuickViewModal";
 import { ProductFilters, type ProductFilterState } from "@/components/store/ProductFilters";
@@ -205,6 +206,7 @@ function SearchPage() {
 
       <Footer />
       <ChatFab />
+      <MobileBottomNav />
     </div>
   );
 }
