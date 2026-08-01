@@ -1,4 +1,5 @@
 import type { Product } from "@/data/products";
+import type { ProductReview } from "@/data/reviews";
 
 /**
  * schema.org helpers for rich results. Every builder returns a plain object
