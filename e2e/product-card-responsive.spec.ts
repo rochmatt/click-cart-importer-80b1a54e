@@ -16,9 +16,9 @@ const WIDTHS = [
 ];
 
 // Max vertical gap allowed between two stacked blocks inside the card body.
-const MAX_INNER_GAP = 24;
-// Max distance allowed between the CTA bottom and the card bottom (padding only).
-const MAX_BOTTOM_SLACK = 30;
+const MAX_INNER_GAP = 16;
+// Max distance between the last block and the card bottom (padding only).
+const MAX_BOTTOM_SLACK = 20;
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -43,6 +43,22 @@ function contains(outer: Box, inner: Box, tolerance = 2) {
     inner.x + inner.width <= outer.x + outer.width + tolerance &&
     inner.y + inner.height <= outer.y + outer.height + tolerance
   );
+}
+
+
+/** Measures the vertical gaps between the card body's direct blocks. */
+async function bodyMetrics(card: Locator) {
+  return card.evaluate((el) => {
+    const body = el.querySelector("a > div:nth-child(2)")!;
+    const rects = [...body.children].map((child) => child.getBoundingClientRect());
+    const gaps: number[] = [];
+    for (let i = 0; i < rects.length - 1; i += 1) {
+      gaps.push(rects[i + 1]!.top - rects[i]!.bottom);
+    }
+    const cardRect = el.getBoundingClientRect();
+    const last = rects[rects.length - 1]!;
+    return { gaps, bottomSlack: cardRect.bottom - last.bottom, blocks: rects.length };
+  });
 }
 
 async function firstCard(page: Page) {
@@ -113,30 +129,21 @@ test.describe("ProductCard responsive layout", () => {
         `cta overlaps wishlist at ${size.name}`,
       ).toBe(false);
 
-      // No dead space: the CTA hugs the bottom padding of the card.
-      const bottomSlack = cardBox.y + cardBox.height - (ctaBox.y + ctaBox.height);
-      expect(
-        bottomSlack,
-        `too much empty space below the cta at ${size.name} (${bottomSlack}px)`,
-      ).toBeLessThanOrEqual(MAX_BOTTOM_SLACK);
-      expect(bottomSlack, `cta clipped at ${size.name}`).toBeGreaterThanOrEqual(-2);
-
-      // No awkward vertical gaps between the stacked blocks in the card body.
-      const stacked: Array<[string, Box]> = [["title", titleBox]];
-      const rating = card.locator("span.font-semibold").first();
-      if (await rating.count()) stacked.push(["rating", await boxOf(rating)]);
-      const price = card.locator("span.font-extrabold").first();
-      if (await price.count()) stacked.push(["price", await boxOf(price)]);
-      stacked.push(["cta", ctaBox]);
-      for (let i = 0; i < stacked.length - 1; i += 1) {
-        const [labelA, a] = stacked[i]!;
-        const [labelB, b] = stacked[i + 1]!;
-        const gap = b.y - (a.y + a.height);
+      // No dead space: blocks are packed and the CTA hugs the bottom padding.
+      const metrics = await bodyMetrics(card);
+      expect(metrics.blocks, `unexpected card body structure at ${size.name}`).toBe(5);
+      for (const gap of metrics.gaps) {
         expect(
           gap,
-          `gap between ${labelA} and ${labelB} too large at ${size.name} (${gap}px)`,
+          `empty space inside the card at ${size.name} (gaps ${metrics.gaps.join("/")})`,
         ).toBeLessThanOrEqual(MAX_INNER_GAP);
+        expect(gap, `blocks collide at ${size.name}`).toBeGreaterThanOrEqual(0);
       }
+      expect(
+        metrics.bottomSlack,
+        `too much empty space below the cta at ${size.name} (${metrics.bottomSlack}px)`,
+      ).toBeLessThanOrEqual(MAX_BOTTOM_SLACK);
+      expect(metrics.bottomSlack, `cta clipped at ${size.name}`).toBeGreaterThanOrEqual(0);
 
       // Badges (when present) never sit on top of the title or cta.
       const badges = card.locator("span.rounded-full.uppercase");
