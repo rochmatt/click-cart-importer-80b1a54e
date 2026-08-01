@@ -545,7 +545,11 @@ function SignedInView() {
             ))}
           </ul>
         )}
+        </div>
+
+        <AddressBook />
       </div>
+
     </div>
   );
 }
