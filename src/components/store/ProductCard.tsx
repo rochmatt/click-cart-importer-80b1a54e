@@ -1,7 +1,10 @@
-import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package, ShoppingCart, Check } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import type { Product } from "@/data/products";
 import { useCoverImage } from "@/lib/cover-overrides";
+import { addToCart } from "@/lib/cart";
 
 const BESTSELLER_THRESHOLD = 1000;
 const LOW_STOCK_THRESHOLD = 15;
