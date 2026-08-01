@@ -172,9 +172,8 @@ export function ProductCard({
           </div>
 
           <div className="grid grid-cols-1 items-center gap-2 pt-1 min-[420px]:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[auto_minmax(0,1fr)]">
-
             <div
-              className={`flex items-center gap-0.5 rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
+              className={`flex w-fit shrink-0 items-center gap-0.5 justify-self-start rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
             >
               <button
                 type="button"
