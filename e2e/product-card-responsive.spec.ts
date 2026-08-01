@@ -46,8 +46,12 @@ async function firstCard(page: Page) {
 }
 
 test.describe("ProductCard responsive layout", () => {
-  // Layout only depends on viewport width, so run it once per width.
-  test.skip(({ browserName }) => browserName !== "chromium", "layout check");
+  // Layout only depends on viewport width, so run this once (desktop project).
+  test.skip(
+    ({}, testInfo) => testInfo.project.name !== "desktop",
+    "viewport-driven layout check runs once",
+  );
+
 
   for (const size of WIDTHS) {
     test(`no overlap at ${size.name}`, async ({ page }) => {
