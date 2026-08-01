@@ -68,13 +68,59 @@ export async function fetchLiveAnnouncements(): Promise<Announcement[]> {
   return (data ?? []) as Announcement[];
 }
 
+export const ANNOUNCEMENTS_KEY = ["announcements", "live"] as const;
+
+/* ---------- realtime: one shared channel for all subscribers ---------- */
+
+let channel: RealtimeChannel | null = null;
+let subscribers = 0;
+
+function useAnnouncementsRealtime() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_KEY });
+    };
+
+    subscribers += 1;
+    if (!channel) {
+      channel = supabase
+        .channel("announcements-live")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "announcements" },
+          invalidate,
+        )
+        .subscribe();
+    } else {
+      // A later mount joins the existing channel; refresh once to catch up.
+      invalidate();
+    }
+
+    return () => {
+      subscribers -= 1;
+      if (subscribers <= 0 && channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+        subscribers = 0;
+      }
+    };
+  }, [queryClient]);
+}
+
 export function useAnnouncements() {
+  useAnnouncementsRealtime();
   return useQuery({
-    queryKey: ["announcements", "live"],
+    queryKey: ANNOUNCEMENTS_KEY,
     queryFn: fetchLiveAnnouncements,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    // Scheduled announcements go live without any DB event, so poll lightly too.
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
 }
+
 
 /* ---------- local read / dismiss state ---------- */
 
