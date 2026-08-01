@@ -33,9 +33,9 @@ export function Header({ query, onQueryChange }: HeaderProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="hidden border-b border-border/60 lg:block">
-          <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-xs text-muted-foreground sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-50 w-full border-b border-header-muted/20 bg-header-background/90 text-header-foreground backdrop-blur-md">
+        <div className="hidden border-b border-header-muted/15 lg:block">
+          <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-xs text-header-muted sm:px-6 lg:px-8">
             <div className="flex items-center gap-4">
               <span className="inline-flex items-center gap-1.5">
                 <Store className="h-3.5 w-3.5" /> Sell on PasarPilih
@@ -60,7 +60,7 @@ export function Header({ query, onQueryChange }: HeaderProps) {
 
         <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 lg:px-8">
 
-          <a href="/" className="flex min-w-0 shrink-0 items-center gap-2">
+          <a href="/" className="flex min-w-0 shrink-0 items-center gap-2 text-header-foreground">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
               <ShoppingBag className="h-5 w-5" />
             </span>
@@ -81,17 +81,17 @@ export function Header({ query, onQueryChange }: HeaderProps) {
               Search products
             </label>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-header-muted" />
               <input
                 id="site-search"
                 type="search"
                 value={query}
                 onChange={(e) => onQueryChange(e.target.value)}
                 placeholder="Search products, brands, categories…"
-                className="h-10 w-full rounded-full border border-border bg-secondary pl-9 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:bg-background focus:ring-2 focus:ring-ring/30"
+                className="h-10 w-full rounded-full border border-header-foreground/20 bg-header-input pl-9 pr-4 text-sm text-header-foreground outline-none transition placeholder:text-header-muted focus:border-primary focus:bg-header-foreground/15 focus:ring-2 focus:ring-primary/30"
               />
             </div>
-            <div className="mt-1.5 hidden items-center gap-2 text-[11px] text-muted-foreground lg:flex">
+            <div className="mt-1.5 hidden items-center gap-2 text-[11px] text-header-muted lg:flex">
               <span className="font-medium">Trending:</span>
               {trending.map((t) => (
                 <Link
@@ -111,7 +111,7 @@ export function Header({ query, onQueryChange }: HeaderProps) {
             <Link
               to="/wishlist"
               aria-label={wishlist.length > 0 ? `Wishlist, ${wishlist.length} items` : "Wishlist"}
-              className="relative grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+              className="relative grid h-10 w-10 place-items-center rounded-full text-header-muted transition-colors hover:bg-header-foreground/10 hover:text-primary"
             >
               <Heart className="h-5 w-5" />
               {wishlist.length > 0 && (
@@ -126,22 +126,22 @@ export function Header({ query, onQueryChange }: HeaderProps) {
         </div>
       </header>
 
-      <nav className="hidden border-b border-border/60 bg-background lg:block">
+      <nav className="hidden border-b border-header-muted/15 bg-header-background lg:block">
         <div className="mx-auto flex h-10 max-w-7xl items-center gap-5 px-4 text-sm sm:px-6 lg:px-8">
           <CategoryMegaMenu onQueryChange={onQueryChange} />
-          <span className="h-4 w-px bg-border" />
+          <span className="h-4 w-px bg-header-muted/20" />
           {navLinks.map(({ label, icon: Icon }) => (
             <button
               key={label}
               type="button"
               onClick={() => onQueryChange("")}
-              className="inline-flex items-center gap-1.5 font-medium text-foreground transition-colors hover:text-primary"
+              className="inline-flex items-center gap-1.5 font-medium text-header-foreground transition-colors hover:text-primary"
             >
               <Icon className="h-4 w-4 text-primary" />
               {label}
             </button>
           ))}
-          <span className="ml-auto text-xs text-muted-foreground">
+          <span className="ml-auto text-xs text-header-muted">
             Compare prices across marketplaces
           </span>
         </div>
