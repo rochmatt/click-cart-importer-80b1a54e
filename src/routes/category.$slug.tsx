@@ -182,14 +182,14 @@ function CategoryPage() {
         </p>
 
         <nav aria-label="All categories" className="mt-5">
-          <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+          <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
             {categoryCatalog.map((c) => (
-              <li key={c.slug}>
+              <li key={c.slug} className="shrink-0 snap-start">
                 <Link
                   to="/category/$slug"
                   params={{ slug: c.slug }}
                   aria-current={c.slug === category.slug ? "page" : undefined}
-                  className={`inline-flex shrink-0 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex h-10 items-center whitespace-nowrap rounded-full border px-4 text-sm font-medium leading-none transition-colors ${
                     c.slug === category.slug
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
@@ -197,6 +197,7 @@ function CategoryPage() {
                 >
                   {c.label}
                 </Link>
+
               </li>
             ))}
           </ul>
