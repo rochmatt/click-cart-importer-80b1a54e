@@ -4,16 +4,16 @@ import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { HeroCarousel } from "@/components/store/HeroCarousel";
 import { QuickActions } from "@/components/store/QuickActions";
-import { FlashSale } from "@/components/store/FlashSale";
+import { ForYou } from "@/components/store/ForYou";
 import { PromoBanners } from "@/components/store/PromoBanners";
 import { DiscoverFeed } from "@/components/store/DiscoverFeed";
 import { ChatFab } from "@/components/store/ChatFab";
 import { Footer } from "@/components/store/Footer";
 import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 
-const title = "PasarPilih — Flash Sales, Vouchers & Daily Deals in Indonesia";
+const title = "PasarPilih — Personalised Picks, Vouchers & Daily Deals";
 const description =
-  "Shop flash sale deals, claim vouchers and discover trending products daily — one curated catalog with free shipping across Indonesia.";
+  "Get product recommendations tailored to what you browse, claim vouchers and discover trending picks daily with free shipping across Indonesia.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,7 +39,7 @@ function Index() {
       <main>
         <HeroCarousel />
         <QuickActions />
-        <FlashSale />
+        <ForYou />
         <PromoBanners />
         <DiscoverFeed query={query} />
       </main>
