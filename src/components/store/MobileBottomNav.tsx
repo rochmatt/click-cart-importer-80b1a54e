@@ -22,7 +22,7 @@ export function MobileBottomNav() {
   const wishlist = useWishlist();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const cartCount = cart.reduce((sum, line) => sum + (line.quantity ?? 1), 0);
+  const cartCount = cart.reduce((sum, line) => sum + (line.qty ?? 1), 0);
 
   const items: Item[] = [
     { to: "/", label: "Home", icon: Home },
