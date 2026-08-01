@@ -44,7 +44,7 @@ function buildPicks(viewed: { id: string; category: string }[]): Pick[] {
   );
   for (const candidate of popular) {
     if (picks.length >= 8) break;
-    if (used.has(candidate.id)) continue;
+    if (used.has(candidate.id) || seenIds.has(candidate.id)) continue;
     used.add(candidate.id);
     picks.push({
       product: candidate,
@@ -120,7 +120,7 @@ export function ForYou() {
                   />
                 </div>
                 <div className="flex flex-1 flex-col gap-1 p-2.5">
-                  <span className="inline-flex min-w-0 items-center gap-1 self-start rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                  <span className="inline-flex min-w-0 items-center gap-1 max-w-full self-start rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                     <History className="h-2.5 w-2.5 shrink-0" />
                     <span className="truncate">{reason}</span>
                   </span>
