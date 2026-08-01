@@ -264,6 +264,51 @@ function AuthForms({ initialMode }: { initialMode: "signin" | "register" }) {
           </form>
         )}
 
+        {mode === "signin" && !sentConfirmation && (
+          <div className="mt-4">
+            {resetSent ? (
+              <p className="rounded-xl border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
+                <KeyRound className="mb-1 h-4 w-4 text-primary" />
+                We emailed a password reset link to{" "}
+                <strong className="text-foreground">{email}</strong>. Open it on this device to set
+                a new password.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={async () => {
+                  const parsed = credentialsSchema.shape.email.safeParse(email);
+                  if (!parsed.success) {
+                    setErrors({ email: "Enter your email first, then request a reset link" });
+                    return;
+                  }
+                  setResetBusy(true);
+                  try {
+                    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+                      redirectTo: window.location.origin + "/reset-password",
+                    });
+                    if (error) throw error;
+                    setResetSent(true);
+                    toast.success("Password reset link sent");
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error ? error.message : "Could not send the reset link",
+                    );
+                  } finally {
+                    setResetBusy(false);
+                  }
+                }}
+                disabled={resetBusy}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:opacity-60"
+              >
+                {resetBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Forgot your password?
+              </button>
+            )}
+          </div>
+        )}
+
+
         <div className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-border" />
           <span className="text-xs uppercase tracking-wide text-muted-foreground">or</span>
