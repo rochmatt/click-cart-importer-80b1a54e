@@ -144,8 +144,6 @@ test.describe("ProductCard responsive layout", () => {
         metrics.gaps[metrics.gaps.length - 1]!,
         `cta collides with the price row at ${size.name}`,
       ).toBeGreaterThanOrEqual(0);
-      if (false) {
-      }
       expect(
         metrics.bottomSlack,
         `too much empty space below the cta at ${size.name} (${metrics.bottomSlack}px)`,

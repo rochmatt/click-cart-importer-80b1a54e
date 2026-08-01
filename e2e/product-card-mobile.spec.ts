@@ -146,8 +146,6 @@ test.describe("ProductCard narrow viewports", () => {
           metrics.gaps[metrics.gaps.length - 1]!,
           `cta collides with the price row at ${at}`,
         ).toBeGreaterThanOrEqual(0);
-        if (false) {
-        }
         expect(
           metrics.bottomSlack,
           `too much empty space below the cta at ${at} (${metrics.bottomSlack}px)`,
