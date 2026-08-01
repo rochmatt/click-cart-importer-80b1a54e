@@ -2,6 +2,11 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, PackageSearch } from "lucide-react";
 import {
+  CategoryFilters,
+  emptyCategoryFilters,
+  type CategoryFilterState,
+} from "@/components/store/CategoryFilters";
+import {
   categoryCatalog,
   findCategory,
   productsInCategory,
@@ -70,14 +75,38 @@ export const Route = createFileRoute("/category/$slug")({
 function CategoryPage() {
   const category = Route.useLoaderData();
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<CategoryFilterState>(emptyCategoryFilters);
   const [sort, setSort] = useState<SortKey>("popular");
   const [quickView, setQuickView] = useState<Product | null>(null);
 
+  const all = useMemo(() => productsInCategory(category.label), [category.label]);
+
+  const priceBounds = useMemo(() => {
+    const values = all.map((p) => priceValue(p.price));
+    return {
+      min: values.length ? Math.min(...values) : 0,
+      max: values.length ? Math.max(...values) : 0,
+    };
+  }, [all]);
+
+  const searchTerm = (filters.query.trim() || query.trim()).toLowerCase();
+
   const items = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    const list = productsInCategory(category.label).filter((p) =>
-      term ? p.title.toLowerCase().includes(term) : true,
-    );
+    const min = filters.minPrice ? Number(filters.minPrice) : null;
+    const max = filters.maxPrice ? Number(filters.maxPrice) : null;
+    const list = all.filter((p) => {
+      if (
+        searchTerm &&
+        !p.title.toLowerCase().includes(searchTerm) &&
+        !p.description.toLowerCase().includes(searchTerm)
+      )
+        return false;
+      const value = priceValue(p.price);
+      if (min !== null && value < min) return false;
+      if (max !== null && max > 0 && value > max) return false;
+      if (filters.minRating > 0 && p.rating < filters.minRating) return false;
+      return true;
+    });
     const sorted = [...list];
     if (sort === "rating") sorted.sort((a, b) => b.rating - a.rating);
     else if (sort === "price-low")
@@ -86,7 +115,7 @@ function CategoryPage() {
       sorted.sort((a, b) => priceValue(b.price) - priceValue(a.price));
     else sorted.sort((a, b) => b.reviews - a.reviews);
     return sorted;
-  }, [category.label, query, sort]);
+  }, [all, searchTerm, filters.minPrice, filters.maxPrice, filters.minRating, sort]);
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
@@ -134,10 +163,12 @@ function CategoryPage() {
           </ul>
         </nav>
 
+        <CategoryFilters value={filters} onChange={setFilters} priceBounds={priceBounds} />
+
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {items.length} product{items.length === 1 ? "" : "s"}
-            {query.trim() ? ` matching “${query.trim()}”` : ""}
+            {searchTerm ? ` matching “${searchTerm}”` : ""}
           </p>
           <div className="flex items-center gap-2">
             <label htmlFor="category-sort" className="text-sm text-muted-foreground">
