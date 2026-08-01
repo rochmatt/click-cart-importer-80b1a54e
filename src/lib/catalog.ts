@@ -65,6 +65,8 @@ function toProduct(row: Row, seed?: Product): Product {
     oldPrice: row.sale_price && row.price > row.sale_price ? idr(row.price) : seed?.oldPrice,
     rating: Number(row.rating ?? seed?.rating ?? 4.7),
     reviews: row.reviews ?? seed?.reviews ?? 0,
+    stock: row.stock ?? seed?.stock ?? 0,
+    sold: seed?.sold ?? 0,
     images,
     links: (row.links as Product["links"]) ?? seed?.links ?? defaultLinks,
     description: row.description || seed?.description || "",
