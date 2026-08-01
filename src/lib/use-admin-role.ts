@@ -1,0 +1,53 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+
+export interface AdminRoleState {
+  loading: boolean;
+  isAdmin: boolean;
+  signedIn: boolean;
+}
+
+/**
+ * Checks whether the signed-in user has the `admin` role.
+ * Mirrors the database RLS rules that guard product writes.
+ */
+export function useAdminRole(): AdminRoleState {
+  const { loading: authLoading, user } = useAuth();
+  const [state, setState] = useState<{ loading: boolean; isAdmin: boolean }>({
+    loading: true,
+    isAdmin: false,
+  });
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setState({ loading: false, isAdmin: false });
+      return;
+    }
+
+    let cancelled = false;
+    setState((prev) => ({ ...prev, loading: true }));
+
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setState({ loading: false, isAdmin: Boolean(data) });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user]);
+
+  return {
+    loading: authLoading || state.loading,
+    isAdmin: state.isAdmin,
+    signedIn: Boolean(user),
+  };
+}
