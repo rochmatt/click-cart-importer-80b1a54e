@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TrackRouteImport } from './routes/track'
@@ -52,6 +53,11 @@ const AdminRoute = AdminRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -162,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/checkout': typeof CheckoutRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/track': typeof TrackRoute
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/checkout': typeof CheckoutRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/track': typeof TrackRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/checkout': typeof CheckoutRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/track': typeof TrackRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/checkout'
+    | '/reset-password'
     | '/search'
     | '/sitemap.xml'
     | '/track'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/checkout'
+    | '/reset-password'
     | '/search'
     | '/sitemap.xml'
     | '/track'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/checkout'
+    | '/reset-password'
     | '/search'
     | '/sitemap.xml'
     | '/track'
@@ -320,6 +332,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
   CheckoutRoute: typeof CheckoutRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TrackRoute: typeof TrackRoute
@@ -362,6 +375,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -536,6 +556,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
   CheckoutRoute: CheckoutRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TrackRoute: TrackRoute,
