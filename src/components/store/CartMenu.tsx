@@ -111,7 +111,7 @@ export function CartMenu() {
               </div>
               <Link
                 to="/checkout"
-                search={{ qty: 1 }}
+                search={{ product: undefined, qty: 1 }}
 
                 className="inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
