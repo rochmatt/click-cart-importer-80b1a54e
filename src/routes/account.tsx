@@ -107,6 +107,9 @@ function AuthForms({ initialMode }: { initialMode: "signin" | "register" }) {
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [sentConfirmation, setSentConfirmation] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+
 
   useEffect(() => setMode(initialMode), [initialMode]);
 
