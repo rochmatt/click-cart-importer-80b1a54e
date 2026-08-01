@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, PackageSearch } from "lucide-react";
+import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { CategoryFilters, emptyCategoryFilters } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import {
