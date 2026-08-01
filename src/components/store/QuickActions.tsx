@@ -2,7 +2,6 @@ import {
   Truck,
   Ticket,
   BadgeCheck,
-  Zap,
   Smartphone,
   Sparkles,
   Shirt,
