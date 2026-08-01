@@ -32,6 +32,7 @@ interface Props {
   onChange: (next: CategoryFilterState) => void;
   priceBounds: { min: number; max: number };
   className?: string;
+  variant?: "default" | "sidebar";
 }
 
 const idr = (n: number) =>
