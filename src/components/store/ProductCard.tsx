@@ -60,8 +60,10 @@ export function ProductCard({
         </div>
 
         <div className="flex flex-1 flex-col gap-2 p-3.5 sm:p-4">
-          {(bestseller || outOfStock || lowStock) && (
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {/* Badge row is always reserved so every card keeps the same height. */}
+          <div className="flex min-h-[1.375rem] min-w-0 flex-wrap items-center gap-1.5">
+            {(() => null)()}
+
               {bestseller && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
                   <Flame className="h-3 w-3 shrink-0" />
