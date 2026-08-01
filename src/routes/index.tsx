@@ -1,24 +1,49 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { AnnouncementBar } from "@/components/store/AnnouncementBar";
+import { Header } from "@/components/store/Header";
+import { HeroCarousel } from "@/components/store/HeroCarousel";
+import { QuickActions } from "@/components/store/QuickActions";
+import { FlashSale } from "@/components/store/FlashSale";
+import { PromoBanners } from "@/components/store/PromoBanners";
+import { DiscoverFeed } from "@/components/store/DiscoverFeed";
+import { ChatFab } from "@/components/store/ChatFab";
+import { Footer } from "@/components/store/Footer";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const title = "PasarPilih — Flash Sales, Vouchers & Daily Deals in Indonesia";
+const description =
+  "Shop flash sale deals, claim vouchers and discover trending products daily — one curated catalog with free shipping across Indonesia.";
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const [query, setQuery] = useState("");
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-background font-sans antialiased">
+      <AnnouncementBar />
+      <Header query={query} onQueryChange={setQuery} />
+      <main>
+        <HeroCarousel />
+        <QuickActions />
+        <FlashSale />
+        <PromoBanners />
+        <DiscoverFeed query={query} />
+      </main>
+      <Footer />
+      <ChatFab />
     </div>
   );
 }
