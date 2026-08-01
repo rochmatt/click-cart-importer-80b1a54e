@@ -182,7 +182,7 @@ function CategoryPage() {
         </p>
 
         <div className="mt-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-8 lg:items-start">
-          <aside className="sticky top-32 self-start space-y-6">
+          <aside className="lg:sticky lg:top-32 lg:self-start space-y-6">
             <CategoryFilters
               value={filters}
               onChange={setFilters}
