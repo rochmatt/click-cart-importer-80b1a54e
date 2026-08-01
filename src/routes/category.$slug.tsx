@@ -238,6 +238,21 @@ function CategoryPage() {
                 {searchTerm ? ` matching “${searchTerm}”` : ""}
               </p>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((s) => !s)}
+                  aria-expanded={showFilters}
+                  aria-controls="category-filter-sidebar"
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+                >
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                  Filter
+                  {activeFilterCount(filters) > 0 ? (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
+                      {activeFilterCount(filters)}
+                    </span>
+                  ) : null}
+                </button>
                 <label htmlFor="category-sort" className="text-sm text-muted-foreground">
                   Sort by
                 </label>
