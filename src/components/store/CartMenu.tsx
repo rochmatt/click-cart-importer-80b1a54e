@@ -25,7 +25,7 @@ export function CartMenu() {
         <button
           type="button"
           aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
-          className="relative grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+          className="relative grid h-10 w-10 place-items-center rounded-full text-header-muted transition-colors hover:bg-header-foreground/10 hover:text-primary"
         >
           <ShoppingCart className="h-5 w-5" />
           {count > 0 && (

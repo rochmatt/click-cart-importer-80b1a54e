@@ -43,7 +43,7 @@ export function AccountMenu() {
         <button
           type="button"
           aria-label={user ? `Account: ${name}` : "Account"}
-          className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-primary data-[state=open]:bg-secondary data-[state=open]:text-primary"
+          className="grid h-10 w-10 place-items-center rounded-full text-header-muted transition-colors hover:bg-header-foreground/10 hover:text-primary data-[state=open]:bg-header-foreground/10 data-[state=open]:text-primary"
         >
           {user ? (
             <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
