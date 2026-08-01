@@ -16,8 +16,10 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    // "chromium" channel = full headless Chromium (the headless shell build is
+    // not available in every environment).
+    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chromium" } },
+    { name: "mobile", use: { ...devices["Pixel 7"], channel: "chromium" } },
   ],
   // Reuse the already-running dev server when there is one.
   webServer: process.env["E2E_BASE_URL"]
