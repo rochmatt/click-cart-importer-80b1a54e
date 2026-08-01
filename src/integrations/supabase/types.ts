@@ -337,6 +337,108 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string
+          shopee_link_template: string
+          store_address: string
+          store_name: string
+          support_email: string
+          support_phone: string
+          tagline: string
+          tiktok_link_template: string
+          tokopedia_link_template: string
+          updated_at: string
+          utm_campaign: string
+          utm_medium: string
+          utm_source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string
+          shopee_link_template?: string
+          store_address?: string
+          store_name?: string
+          support_email?: string
+          support_phone?: string
+          tagline?: string
+          tiktok_link_template?: string
+          tokopedia_link_template?: string
+          updated_at?: string
+          utm_campaign?: string
+          utm_medium?: string
+          utm_source?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string
+          shopee_link_template?: string
+          store_address?: string
+          store_name?: string
+          support_email?: string
+          support_phone?: string
+          tagline?: string
+          tiktok_link_template?: string
+          tokopedia_link_template?: string
+          updated_at?: string
+          utm_campaign?: string
+          utm_medium?: string
+          utm_source?: string
+        }
+        Relationships: []
+      }
+      user_addresses: {
+        Row: {
+          address_line: string
+          city: string
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          notes: string
+          phone: string
+          postal_code: string
+          province: string
+          recipient_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line?: string
+          city?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          notes?: string
+          phone?: string
+          postal_code?: string
+          province?: string
+          recipient_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line?: string
+          city?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          notes?: string
+          phone?: string
+          postal_code?: string
+          province?: string
+          recipient_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
