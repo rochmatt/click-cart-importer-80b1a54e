@@ -20,12 +20,12 @@ test.describe("storefront", () => {
   });
 
   test("category page renders its own title", async ({ page }) => {
-    await page.goto("/");
-    const categoryLink = page.locator('a[href^="/category/"]').first();
-    await categoryLink.waitFor();
-    const href = await categoryLink.getAttribute("href");
-    await page.goto(href!);
+    await page.goto("/category/fashion");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page).toHaveTitle(/PasarPilih/i);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+      "content",
+      /Fashion/i,
+    );
   });
 });
