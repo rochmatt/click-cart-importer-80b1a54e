@@ -37,7 +37,7 @@ interface Props {
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
 
-export function CategoryFilters({ value, onChange, priceBounds }: Props) {
+export function CategoryFilters({ value, onChange, priceBounds, className }: Props) {
   const set = <K extends keyof CategoryFilterState>(key: K, v: CategoryFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
