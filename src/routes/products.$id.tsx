@@ -19,6 +19,8 @@ import {
   productJsonLd,
 } from "@/lib/structured-data";
 import { categorySlug } from "@/data/categories";
+import { reviewsForProduct } from "@/data/reviews";
+import { ProductReviews } from "@/components/store/ProductReviews";
 
 
 export const Route = createFileRoute("/products/$id")({
@@ -60,7 +62,13 @@ export const Route = createFileRoute("/products/$id")({
       // the seed catalog, so the loader returns null and we emit nothing.
       scripts: product
         ? [
-            jsonLdScript(productJsonLd(product, `/products/${params.id}`)),
+            jsonLdScript(
+              productJsonLd(
+                product,
+                `/products/${params.id}`,
+                reviewsForProduct(params.id),
+              ),
+            ),
             jsonLdScript(
               breadcrumbJsonLd([
                 { name: "Home", path: "/" },
@@ -205,6 +213,7 @@ function ProductDetailPage() {
             detailedSpecs={product.detailedSpecs}
           />
         </div>
+        <ProductReviews reviews={reviewsForProduct(product.id)} />
 
         <RelatedProducts currentId={product.id} />
       </main>

@@ -1,4 +1,5 @@
 import type { Product } from "@/data/products";
+import type { ProductReview } from "@/data/reviews";
 
 /**
  * schema.org helpers for rich results. Every builder returns a plain object
@@ -66,7 +67,28 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonL
   };
 }
 
-export function productJsonLd(product: Product, path: string): JsonLd {
+/** Individual customer review, nested inside the Product node. */
+export function reviewJsonLd(review: ProductReview): JsonLd {
+  return {
+    "@type": "Review",
+    name: review.title,
+    reviewBody: review.body,
+    datePublished: review.date,
+    author: { "@type": "Person", name: review.author },
+    reviewRating: {
+      "@type": "Rating",
+      ratingValue: review.rating,
+      bestRating: 5,
+      worstRating: 1,
+    },
+  };
+}
+
+export function productJsonLd(
+  product: Product,
+  path: string,
+  reviews: ProductReview[] = [],
+): JsonLd {
   const amount = priceAmount(product.price);
   const offers: JsonLd[] = [
     {
@@ -100,6 +122,7 @@ export function productJsonLd(product: Product, path: string): JsonLd {
           },
         }
       : {}),
+    ...(reviews.length > 0 ? { review: reviews.map(reviewJsonLd) } : {}),
     offers: offers.length === 1 ? offers[0] : offers,
   };
 }
