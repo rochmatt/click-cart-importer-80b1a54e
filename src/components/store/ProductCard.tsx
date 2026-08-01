@@ -11,6 +11,7 @@ import {
   Check,
   Plus,
   Minus,
+  Tag,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -87,7 +88,6 @@ export function ProductCard({
     }, 1200);
   };
 
-
   return (
     <article className="group relative">
       <Link
@@ -95,6 +95,7 @@ export function ProductCard({
         params={{ id: product.id }}
         className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/30 hover:shadow-[var(--shadow-card-hover)]"
       >
+        {/* Thumbnail stays clean — no overlays on the image. */}
         <div className="relative aspect-[4/3] overflow-hidden bg-secondary sm:max-h-52 lg:max-h-48">
           <img
             src={cover}
@@ -104,76 +105,54 @@ export function ProductCard({
             height={600}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
-          {product.oldPrice && (
-            <span className="absolute left-3 top-3 z-10 rounded-full bg-destructive px-2.5 py-1 text-[11px] font-bold text-destructive-foreground">
-              SALE
-            </span>
-          )}
-
-          <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-1.5">
-            {bestseller && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground shadow-sm">
-                <Flame className="h-3 w-3" />
-                Best Seller
-              </span>
-            )}
-            {outOfStock && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground shadow-sm">
-                <Package className="h-3 w-3" />
-                Habis
-              </span>
-            )}
-            {lowStock && !outOfStock && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground shadow-sm">
-                <AlertCircle className="h-3 w-3" />
-                Stok menipis
-              </span>
-            )}
-          </div>
-
-          <div
-            className={`absolute bottom-3 right-3 z-10 flex items-center gap-0.5 rounded-full bg-primary p-1 text-primary-foreground shadow-sm transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
-          >
-            <button
-              type="button"
-              onClick={decreaseQty}
-              disabled={outOfStock || qty <= 1}
-              aria-label="Kurangi jumlah"
-              className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={handleQuickAdd}
-              disabled={outOfStock}
-              aria-label={outOfStock ? "Stok habis" : `Tambahkan ${qty} ${product.title} ke keranjang`}
-              className="flex min-w-[3.25rem] items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors disabled:cursor-not-allowed"
-            >
-              <span className="w-4 text-center">{qty}</span>
-              {justAdded ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                <ShoppingCart className="h-3.5 w-3.5" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={increaseQty}
-              disabled={outOfStock || qty >= maxQty}
-              aria-label="Tambah jumlah"
-              className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
-          <h3 className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-            {product.title}
-          </h3>
+          {(product.oldPrice || bestseller || outOfStock || lowStock) && (
+            <div className="flex flex-wrap gap-1.5">
+              {product.oldPrice && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                  <Tag className="h-3 w-3" />
+                  Sale
+                </span>
+              )}
+              {bestseller && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
+                  <Flame className="h-3 w-3" />
+                  Best Seller
+                </span>
+              )}
+              {outOfStock && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Package className="h-3 w-3" />
+                  Habis
+                </span>
+              )}
+              {lowStock && !outOfStock && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                  <AlertCircle className="h-3 w-3" />
+                  Stok menipis
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-start gap-2">
+            <h3 className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-foreground">
+              {product.title}
+            </h3>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              aria-label={`Add ${product.title} to wishlist`}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <Heart className="h-4 w-4" />
+            </button>
+          </div>
 
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Star className="h-3.5 w-3.5 fill-chart-4 text-chart-4" />
@@ -192,42 +171,71 @@ export function ProductCard({
             )}
           </div>
 
-          <div className="pt-1">
-            <span className="relative inline-flex w-full items-center justify-center whitespace-nowrap rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors group-hover:bg-primary/90">
-              View Product
-              <ArrowRight className="absolute right-3 h-3.5 w-3.5" />
-            </span>
+          <div className="flex items-center gap-2 pt-1">
+            <div
+              className={`flex items-center gap-0.5 rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
+            >
+              <button
+                type="button"
+                onClick={decreaseQty}
+                disabled={outOfStock || qty <= 1}
+                aria-label="Kurangi jumlah"
+                className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleQuickAdd}
+                disabled={outOfStock}
+                aria-label={
+                  outOfStock
+                    ? "Stok habis"
+                    : `Tambahkan ${qty} ${product.title} ke keranjang`
+                }
+                className="flex min-w-[3.25rem] items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors disabled:cursor-not-allowed"
+              >
+                <span className="w-4 text-center">{qty}</span>
+                {justAdded ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <ShoppingCart className="h-3.5 w-3.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={increaseQty}
+                disabled={outOfStock || qty >= maxQty}
+                aria-label="Tambah jumlah"
+                className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {onQuickView ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onQuickView(product);
+                }}
+                aria-label={`Quick view ${product.title}`}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Quick view
+              </button>
+            ) : (
+              <span className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+                View Product
+                <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            )}
           </div>
         </div>
       </Link>
-
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        aria-label={`Add ${product.title} to wishlist`}
-        className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-background/90 text-muted-foreground opacity-0 shadow-sm transition-all hover:text-primary focus-visible:opacity-100 group-hover:opacity-100"
-      >
-        <Heart className="h-4 w-4" />
-      </button>
-
-      {onQuickView && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onQuickView(product);
-          }}
-          aria-label={`Quick view ${product.title}`}
-          className="absolute inset-x-3 top-1/3 z-10 inline-flex items-center justify-center gap-2 rounded-full bg-background/95 px-4 py-2 text-xs font-semibold text-foreground opacity-0 shadow-sm backdrop-blur transition-all hover:bg-background focus-visible:opacity-100 group-hover:opacity-100"
-        >
-          <Eye className="h-3.5 w-3.5" />
-          Quick view
-        </button>
-      )}
     </article>
   );
 }
