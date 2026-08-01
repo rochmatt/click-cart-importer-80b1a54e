@@ -13,7 +13,7 @@ import {
   Mail,
   Package,
   Settings,
-  ShieldAlert,
+  
   Truck,
   UserPlus,
 } from "lucide-react";
@@ -21,6 +21,7 @@ import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
 import { AddressBook } from "@/components/account/AddressBook";
+import { ResendVerification } from "@/components/account/ResendVerification";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -526,34 +527,10 @@ function SignedInView() {
       </div>
 
       <div className="space-y-6">
-        {user && !user.email_confirmed_at && (
-          <div className="rounded-2xl border border-chart-4/40 bg-chart-4/10 p-4">
-            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <ShieldAlert className="h-4 w-4 text-chart-4" />
-              Confirm your email address
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              We sent a verification link to {user.email}. Confirm it to secure your account and
-              receive order updates.
-            </p>
-            <button
-              type="button"
-              onClick={async () => {
-                if (!user.email) return;
-                const { error } = await supabase.auth.resend({
-                  type: "signup",
-                  email: user.email,
-                  options: { emailRedirectTo: window.location.origin + "/account" },
-                });
-                if (error) toast.error(error.message);
-                else toast.success("Verification email sent");
-              }}
-              className="mt-3 text-xs font-semibold text-primary hover:underline"
-            >
-              Resend verification email
-            </button>
-          </div>
+        {user && !user.email_confirmed_at && user.email && (
+          <ResendVerification email={user.email} />
         )}
+
 
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">
 
