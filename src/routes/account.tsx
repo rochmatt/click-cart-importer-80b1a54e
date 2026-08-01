@@ -473,7 +473,38 @@ function SignedInView() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">
+      <div className="space-y-6">
+        {user && !user.email_confirmed_at && (
+          <div className="rounded-2xl border border-chart-4/40 bg-chart-4/10 p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <ShieldAlert className="h-4 w-4 text-chart-4" />
+              Confirm your email address
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              We sent a verification link to {user.email}. Confirm it to secure your account and
+              receive order updates.
+            </p>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!user.email) return;
+                const { error } = await supabase.auth.resend({
+                  type: "signup",
+                  email: user.email,
+                  options: { emailRedirectTo: window.location.origin + "/account" },
+                });
+                if (error) toast.error(error.message);
+                else toast.success("Verification email sent");
+              }}
+              className="mt-3 text-xs font-semibold text-primary hover:underline"
+            >
+              Resend verification email
+            </button>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">
+
         <div className="flex items-center gap-2">
           <Package className="h-5 w-5 text-primary" />
           <h2 className="text-base font-bold text-foreground">My orders</h2>
