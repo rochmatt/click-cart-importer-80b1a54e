@@ -108,14 +108,9 @@ export function ProductCard({
         </div>
 
         <div className="flex flex-1 flex-col gap-2.5 p-3.5 sm:p-4">
-          {(product.oldPrice || bestseller || outOfStock || lowStock) && (
+          {(bestseller || outOfStock || lowStock) && (
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-              {product.oldPrice && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
-                  <Tag className="h-3 w-3 shrink-0" />
-                  Sale
-                </span>
-              )}
+
               {bestseller && (
                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
                   <Flame className="h-3 w-3 shrink-0" />
