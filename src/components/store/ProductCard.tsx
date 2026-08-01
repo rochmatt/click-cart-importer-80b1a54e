@@ -171,47 +171,8 @@ export function ProductCard({
             )}
           </div>
 
-          <div className="grid grid-cols-1 items-center gap-2 pt-1 min-[420px]:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[auto_minmax(0,1fr)]">
-            <div
-              className={`flex w-fit shrink-0 items-center gap-0.5 justify-self-start rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
-            >
-              <button
-                type="button"
-                onClick={decreaseQty}
-                disabled={outOfStock || qty <= 1}
-                aria-label="Kurangi jumlah"
-                className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={handleQuickAdd}
-                disabled={outOfStock}
-                aria-label={
-                  outOfStock
-                    ? "Stok habis"
-                    : `Tambahkan ${qty} ${product.title} ke keranjang`
-                }
-                className="flex min-w-[3.25rem] items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors disabled:cursor-not-allowed"
-              >
-                <span className="w-4 text-center">{qty}</span>
-                {justAdded ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : (
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={increaseQty}
-                disabled={outOfStock || qty >= maxQty}
-                aria-label="Tambah jumlah"
-                className="grid h-7 w-7 place-items-center rounded-full transition-colors hover:bg-primary-foreground/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
+          <div className="pt-1">
+
             {onQuickView ? (
               <button
                 type="button"
