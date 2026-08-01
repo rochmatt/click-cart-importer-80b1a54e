@@ -1,7 +1,7 @@
-import { test, expect, devices } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 test.describe("mobile bottom navigation", () => {
-  test.use({ ...devices["Pixel 7"] });
+  test.use({ viewport: { width: 390, height: 844 } });
 
   test("is visible on phones and navigates between sections", async ({ page }) => {
     await page.goto("/");
@@ -25,7 +25,7 @@ test.describe("mobile bottom navigation", () => {
 });
 
 test.describe("desktop", () => {
-  test.use({ ...devices["Desktop Chrome"] });
+  test.use({ viewport: { width: 1280, height: 900 } });
 
   test("bottom nav is hidden on wide viewports", async ({ page }) => {
     await page.goto("/");
