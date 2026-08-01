@@ -14,6 +14,11 @@ import { Footer } from "@/components/store/Footer";
 import { ChatFab } from "@/components/store/ChatFab";
 import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import type { Product } from "@/data/products";
+import {
+  breadcrumbJsonLd,
+  itemListJsonLd,
+  jsonLdScript,
+} from "@/lib/structured-data";
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
 
@@ -42,6 +47,20 @@ export const Route = createFileRoute("/category/$slug")({
         { name: "twitter:card", content: "summary_large_image" },
         ...(loaderData ? [] : [{ name: "robots", content: "noindex" }]),
       ],
+      links: loaderData ? [{ rel: "canonical", href: `/category/${loaderData.slug}` }] : [],
+      scripts: loaderData
+        ? [
+            jsonLdScript(
+              breadcrumbJsonLd([
+                { name: "Home", path: "/" },
+                { name: loaderData.label, path: `/category/${loaderData.slug}` },
+              ]),
+            ),
+            jsonLdScript(
+              itemListJsonLd(loaderData.label, productsInCategory(loaderData.label)),
+            ),
+          ]
+        : [],
     };
   },
   component: CategoryPage,

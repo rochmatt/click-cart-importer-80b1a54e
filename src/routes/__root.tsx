@@ -12,6 +12,11 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import {
+  jsonLdScript,
+  organizationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/structured-data";
 
 function NotFoundComponent() {
   return (
@@ -111,6 +116,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
+    // Sitewide entity graph: Organization + WebSite (with sitelinks searchbox).
+    scripts: [jsonLdScript(organizationJsonLd()), jsonLdScript(webSiteJsonLd())],
   }),
   shellComponent: RootShell,
   component: RootComponent,
