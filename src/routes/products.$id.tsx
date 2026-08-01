@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Heart, ShoppingCart, Star, Zap } from "lucide-react";
 import { products } from "@/data/products";
 import { useCatalogProduct } from "@/lib/catalog";
+import { supabase } from "@/integrations/supabase/client";
 import { ProductImageCarousel } from "@/components/store/ProductImageCarousel";
 import { ProductDescription } from "@/components/store/ProductDescription";
 import { RelatedProducts } from "@/components/store/RelatedProducts";
 import { ProductAssurance } from "@/components/store/ProductAssurance";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 
 import { useProductImages } from "@/lib/cover-overrides";
 import { addToCart } from "@/lib/cart";
@@ -14,7 +16,21 @@ import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/products/$id")({
-  loader: ({ params }) => products.find((p) => p.id === params.id) ?? null,
+  loader: async ({ params }) => {
+    const seed = products.find((p) => p.id === params.id);
+    if (seed) return seed;
+
+    // Products created only in the admin dashboard aren't in the seed catalog.
+    // Unknown ids must 404 instead of rendering an empty page.
+    const { data } = await supabase
+      .from("admin_products")
+      .select("id")
+      .eq("status", "active")
+      .or(`id.eq.${params.id},catalog_ref.eq.${params.id}`)
+      .maybeSingle();
+    if (!data) throw notFound();
+    return null;
+  },
   head: ({ loaderData }) => {
     const product = loaderData;
     const title = product ? `${product.title} — PasarPilih` : "Product — PasarPilih";
