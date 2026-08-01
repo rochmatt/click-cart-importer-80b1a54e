@@ -154,7 +154,7 @@ function CategoryPage() {
       <AnnouncementBar />
       <Header query={query} onQueryChange={setQuery} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 pb-36 sm:px-6 sm:pb-24 md:pb-24 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-36 sm:px-6 sm:pb-24 lg:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
           <ol className="flex flex-wrap items-center gap-1.5">
             <li>
@@ -181,77 +181,87 @@ function CategoryPage() {
             : ""}
         </p>
 
-        <nav aria-label="All categories" className="mt-6">
-          <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-3 lg:flex-wrap lg:justify-center lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-            {categoryCatalog.map((c) => {
-              const active = c.slug === category.slug;
-              return (
-                <li key={c.slug} className="shrink-0 snap-start">
-                  <Link
-                    to="/category/$slug"
-                    params={{ slug: c.slug }}
-                    aria-current={active ? "page" : undefined}
-                    className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors ${
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
-                    }`}
-                  >
-                    {c.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <div className="mt-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-8">
+          <div className="order-1 space-y-6 lg:order-2">
+            <nav aria-label="All categories">
+              <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-2 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-3 lg:flex-wrap lg:justify-center lg:overflow-visible [&::-webkit-scrollbar]:hidden">
+                {categoryCatalog.map((c) => {
+                  const active = c.slug === category.slug;
+                  return (
+                    <li key={c.slug} className="shrink-0 snap-start">
+                      <Link
+                        to="/category/$slug"
+                        params={{ slug: c.slug }}
+                        aria-current={active ? "page" : undefined}
+                        className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
+                        }`}
+                      >
+                        {c.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
 
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {items.length} product{items.length === 1 ? "" : "s"}
+                {searchTerm ? ` matching “${searchTerm}”` : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                <label htmlFor="category-sort" className="text-sm text-muted-foreground">
+                  Sort by
+                </label>
+                <select
+                  id="category-sort"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                >
+                  <option value="popular">Most reviewed</option>
+                  <option value="rating">Top rated</option>
+                  <option value="price-low">Price: low to high</option>
+                  <option value="price-high">Price: high to low</option>
+                </select>
+              </div>
+            </div>
 
-        <CategoryFilters value={filters} onChange={setFilters} priceBounds={priceBounds} />
-
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {items.length} product{items.length === 1 ? "" : "s"}
-            {searchTerm ? ` matching “${searchTerm}”` : ""}
-          </p>
-          <div className="flex items-center gap-2">
-            <label htmlFor="category-sort" className="text-sm text-muted-foreground">
-              Sort by
-            </label>
-            <select
-              id="category-sort"
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
-            >
-              <option value="popular">Most reviewed</option>
-              <option value="rating">Top rated</option>
-              <option value="price-low">Price: low to high</option>
-              <option value="price-high">Price: high to low</option>
-            </select>
+            {items.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+                {items.map((product) => (
+                  <ProductCard key={product.id} product={product} onQuickView={setQuickView} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
+                <PackageSearch className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                <p className="mt-3 font-semibold text-foreground">No products here yet</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Try another category or clear your search.
+                </p>
+                <Link
+                  to="/"
+                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                >
+                  Browse all products
+                </Link>
+              </div>
+            )}
           </div>
+
+          <aside className="order-2 mt-6 lg:order-1 lg:mt-0">
+            <CategoryFilters
+              value={filters}
+              onChange={setFilters}
+              priceBounds={priceBounds}
+              className="mt-0"
+            />
+          </aside>
         </div>
-
-        {items.length > 0 ? (
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-            {items.map((product) => (
-              <ProductCard key={product.id} product={product} onQuickView={setQuickView} />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
-            <PackageSearch className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="mt-3 font-semibold text-foreground">No products here yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Try another category or clear your search.
-            </p>
-            <Link
-              to="/"
-              className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              Browse all products
-            </Link>
-          </div>
-        )}
       </main>
 
       <QuickViewModal
