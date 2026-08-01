@@ -149,6 +149,7 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
             {ratingOptions.map((r) => {
               const active = value.minRating === r;
               const id = `${uid}-rating-${String(r).replace(".", "-")}`;
+              const shortLabel = r === 0 ? "Semua" : `${r}+`;
               return (
                 <div key={r} className="relative">
                   <input
@@ -158,18 +159,19 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
                     value={r}
                     checked={active}
                     onChange={() => set("minRating", r)}
+                    aria-label={r === 0 ? "Semua rating" : `${r} bintang ke atas`}
                     className="peer absolute h-px w-px opacity-0"
                   />
                   <label
                     htmlFor={id}
-                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg border px-3 text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card ${
+                    className={`inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg border px-2.5 text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-card ${
                       active
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border bg-background text-foreground hover:border-primary/40 hover:text-primary"
                     }`}
                   >
                     {r === 0 ? (
-                      "Semua rating"
+                      shortLabel
                     ) : (
                       <>
                         <Star
@@ -177,7 +179,7 @@ export function CategoryFilters({ value, onChange, priceBounds }: Props) {
                           fill="currentColor"
                           aria-hidden="true"
                         />
-                        <span>{r}+ bintang</span>
+                        <span>{shortLabel}</span>
                       </>
                     )}
                   </label>
