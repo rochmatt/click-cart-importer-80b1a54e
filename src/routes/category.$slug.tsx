@@ -183,7 +183,21 @@ function CategoryPage() {
         </p>
 
         <div className="mt-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-8 lg:items-start">
-          <aside className="lg:sticky lg:top-32 lg:self-start space-y-6">
+          <aside
+            className={`lg:sticky lg:top-32 lg:self-start space-y-6 ${
+              showFilters ? "block" : "hidden"
+            } lg:block`}
+          >
+            <div className="flex items-center justify-between lg:hidden">
+              <h2 className="text-sm font-semibold text-foreground">Filter produk</h2>
+              <button
+                type="button"
+                onClick={() => setShowFilters(false)}
+                className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Tutup
+              </button>
+            </div>
             <CategoryFilters
               value={filters}
               onChange={setFilters}
