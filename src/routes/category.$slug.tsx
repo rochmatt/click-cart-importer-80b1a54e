@@ -163,10 +163,12 @@ function CategoryPage() {
           </ul>
         </nav>
 
+        <CategoryFilters value={filters} onChange={setFilters} priceBounds={priceBounds} />
+
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {items.length} product{items.length === 1 ? "" : "s"}
-            {query.trim() ? ` matching “${query.trim()}”` : ""}
+            {searchTerm ? ` matching “${searchTerm}”` : ""}
           </p>
           <div className="flex items-center gap-2">
             <label htmlFor="category-sort" className="text-sm text-muted-foreground">
