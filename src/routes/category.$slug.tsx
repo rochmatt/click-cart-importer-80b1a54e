@@ -184,6 +184,7 @@ function CategoryPage() {
 
         <div className="mt-6 lg:grid lg:grid-cols-[280px_1fr] lg:gap-8 lg:items-start">
           <aside
+            id="category-filter-sidebar"
             className={`lg:sticky lg:top-32 lg:self-start space-y-6 ${
               showFilters ? "block" : "hidden"
             } lg:block`}
