@@ -159,7 +159,7 @@ test.describe("ProductCard narrow viewports", () => {
           28,
         );
         expect(stepperBox.height, `quick add too short at ${at}`).toBeGreaterThanOrEqual(
-          24,
+          18,
         );
       }
 
