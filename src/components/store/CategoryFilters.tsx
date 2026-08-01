@@ -157,7 +157,12 @@ export function CategoryFilters({
           </p>
         </fieldset>
 
-        <fieldset className="min-w-0 sm:col-span-2 lg:col-span-1">
+        <fieldset
+          className={cn(
+            "min-w-0",
+            variant === "default" && "sm:col-span-2 lg:col-span-1"
+          )}
+        >
           <legend className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Rating minimum
           </legend>
