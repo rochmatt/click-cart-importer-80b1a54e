@@ -27,6 +27,7 @@ import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as CategoryIndexRouteImport } from './routes/category.index'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as OrdersOrderNumberRouteImport } from './routes/orders.$orderNumber'
 import { Route as ProductsIdRouteImport } from './routes/products.$id'
@@ -127,6 +128,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const CategoryIndexRoute = CategoryIndexRouteImport.update({
+  id: '/category/',
+  path: '/category/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategorySlugRoute = CategorySlugRouteImport.update({
   id: '/category/$slug',
   path: '/category/$slug',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/orders/$orderNumber': typeof OrdersOrderNumberRoute
   '/products/$id': typeof ProductsIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/category/': typeof CategoryIndexRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/orders/$orderNumber': typeof OrdersOrderNumberRoute
   '/products/$id': typeof ProductsIdRoute
   '/admin': typeof AdminIndexRoute
+  '/category': typeof CategoryIndexRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/orders/$orderNumber': typeof OrdersOrderNumberRoute
   '/products/$id': typeof ProductsIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/category/': typeof CategoryIndexRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/orders/$orderNumber'
     | '/products/$id'
     | '/admin/'
+    | '/category/'
     | '/admin/products/$id'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/orders/$orderNumber'
     | '/products/$id'
     | '/admin'
+    | '/category'
     | '/admin/products/$id'
     | '/admin/products'
     | '/api/public/hooks/order-status-emails'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/orders/$orderNumber'
     | '/products/$id'
     | '/admin/'
+    | '/category/'
     | '/admin/products/$id'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
@@ -366,6 +378,7 @@ export interface RootRouteChildren {
   CategorySlugRoute: typeof CategorySlugRoute
   OrdersOrderNumberRoute: typeof OrdersOrderNumberRoute
   ProductsIdRoute: typeof ProductsIdRoute
+  CategoryIndexRoute: typeof CategoryIndexRoute
   ApiPublicHooksOrderStatusEmailsRoute: typeof ApiPublicHooksOrderStatusEmailsRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -500,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/category/': {
+      id: '/category/'
+      path: '/category'
+      fullPath: '/category/'
+      preLoaderRoute: typeof CategoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/category/$slug': {
       id: '/category/$slug'
       path: '/category/$slug'
@@ -607,6 +627,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategorySlugRoute: CategorySlugRoute,
   OrdersOrderNumberRoute: OrdersOrderNumberRoute,
   ProductsIdRoute: ProductsIdRoute,
+  CategoryIndexRoute: CategoryIndexRoute,
   ApiPublicHooksOrderStatusEmailsRoute: ApiPublicHooksOrderStatusEmailsRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
@@ -615,13 +636,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
