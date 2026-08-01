@@ -7,7 +7,7 @@ import { ProductImageCarousel } from "@/components/store/ProductImageCarousel";
 import { ProductDescription } from "@/components/store/ProductDescription";
 import { RelatedProducts } from "@/components/store/RelatedProducts";
 import { ProductAssurance } from "@/components/store/ProductAssurance";
-import { MobileBottomNav } from "@/components/store/MobileBottomNav";
+import { ProductStickyActions } from "@/components/store/ProductStickyActions";
 
 import { useProductImages } from "@/lib/cover-overrides";
 import { addToCart } from "@/lib/cart";
@@ -151,7 +151,7 @@ function ProductDetailPage() {
               )}
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="hidden flex-col gap-3 sm:flex sm:flex-row">
               <button
                 type="button"
                 onClick={() => {
@@ -217,7 +217,18 @@ function ProductDetailPage() {
 
         <RelatedProducts currentId={product.id} />
       </main>
-      <MobileBottomNav />
+      <ProductStickyActions
+        productId={product.id}
+        onAddToCart={() => {
+          addToCart({
+            id: product.id,
+            title: product.title,
+            price: product.price,
+            image: images[0],
+          });
+          toast.success("Added to cart", { description: product.title });
+        }}
+      />
     </div>
   );
 }
