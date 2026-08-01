@@ -107,38 +107,38 @@ export function ProductCard({
           />
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 p-3.5 sm:p-4">
+        <div className="flex flex-1 flex-col gap-2.5 p-3.5 sm:p-4">
           {(product.oldPrice || bestseller || outOfStock || lowStock) && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               {product.oldPrice && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
-                  <Tag className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                  <Tag className="h-3 w-3 shrink-0" />
                   Sale
                 </span>
               )}
               {bestseller && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
-                  <Flame className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-warning px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-warning-foreground">
+                  <Flame className="h-3 w-3 shrink-0" />
                   Best Seller
                 </span>
               )}
               {outOfStock && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  <Package className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  <Package className="h-3 w-3 shrink-0" />
                   Habis
                 </span>
               )}
               {lowStock && !outOfStock && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
-                  <AlertCircle className="h-3 w-3" />
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
                   Stok menipis
                 </span>
               )}
             </div>
           )}
 
-          <div className="flex items-start gap-2">
-            <h3 className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-foreground">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+            <h3 className="line-clamp-2 min-w-0 text-sm font-medium leading-snug text-foreground">
               {product.title}
             </h3>
             <button
@@ -154,13 +154,13 @@ export function ProductCard({
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Star className="h-3.5 w-3.5 fill-chart-4 text-chart-4" />
+          <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            <Star className="h-3.5 w-3.5 shrink-0 fill-chart-4 text-chart-4" />
             <span className="font-semibold text-foreground">{product.rating}</span>
-            <span>({product.reviews.toLocaleString()})</span>
+            <span className="truncate">({product.reviews.toLocaleString()})</span>
           </div>
 
-          <div className="mt-auto flex flex-wrap items-baseline gap-2">
+          <div className="mt-auto flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className="text-base font-extrabold tracking-tight text-foreground sm:text-lg">
               {product.price}
             </span>
@@ -171,7 +171,8 @@ export function ProductCard({
             )}
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="grid grid-cols-1 items-center gap-2 pt-1 min-[420px]:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[auto_minmax(0,1fr)]">
+
             <div
               className={`flex items-center gap-0.5 rounded-full bg-primary p-1 text-primary-foreground transition-all ${outOfStock ? "opacity-70" : "hover:bg-primary/90"}`}
             >
