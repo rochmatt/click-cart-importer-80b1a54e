@@ -26,6 +26,9 @@ type SortKey = "popular" | "rating" | "price-low" | "price-high";
 
 const priceValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
 
+const idrCompact = (n: number) =>
+  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
+
 export const Route = createFileRoute("/category/$slug")({
   loader: ({ params }) => {
     const category = findCategory(params.slug);
