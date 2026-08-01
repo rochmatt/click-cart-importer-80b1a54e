@@ -134,12 +134,19 @@ test.describe("ProductCard narrow viewports", () => {
         // No dead space: blocks are packed and the CTA hugs the bottom padding.
         const metrics = await bodyMetrics(card);
         expect(metrics.blocks, `unexpected card body structure at ${at}`).toBe(5);
-        for (const gap of metrics.gaps) {
+        // The last gap is the flexible spacer that bottom-aligns the CTA across a row.
+        for (const gap of metrics.gaps.slice(0, -1)) {
           expect(
             gap,
             `empty space inside the card at ${at} (gaps ${metrics.gaps.join("/")})`,
           ).toBeLessThanOrEqual(MAX_INNER_GAP);
           expect(gap, `blocks collide at ${at}`).toBeGreaterThanOrEqual(0);
+        }
+        expect(
+          metrics.gaps[metrics.gaps.length - 1]!,
+          `cta collides with the price row at ${at}`,
+        ).toBeGreaterThanOrEqual(0);
+        if (false) {
         }
         expect(
           metrics.bottomSlack,

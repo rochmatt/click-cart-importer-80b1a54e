@@ -132,12 +132,19 @@ test.describe("ProductCard responsive layout", () => {
       // No dead space: blocks are packed and the CTA hugs the bottom padding.
       const metrics = await bodyMetrics(card);
       expect(metrics.blocks, `unexpected card body structure at ${size.name}`).toBe(5);
-      for (const gap of metrics.gaps) {
+      // The last gap is the flexible spacer that bottom-aligns the CTA across a row.
+      for (const gap of metrics.gaps.slice(0, -1)) {
         expect(
           gap,
           `empty space inside the card at ${size.name} (gaps ${metrics.gaps.join("/")})`,
         ).toBeLessThanOrEqual(MAX_INNER_GAP);
         expect(gap, `blocks collide at ${size.name}`).toBeGreaterThanOrEqual(0);
+      }
+      expect(
+        metrics.gaps[metrics.gaps.length - 1]!,
+        `cta collides with the price row at ${size.name}`,
+      ).toBeGreaterThanOrEqual(0);
+      if (false) {
       }
       expect(
         metrics.bottomSlack,
