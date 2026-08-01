@@ -20,6 +20,7 @@ import {
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import { AddressBook } from "@/components/account/AddressBook";
 import { ResendVerification } from "@/components/account/ResendVerification";
 import { Input } from "@/components/ui/input";
@@ -95,6 +96,7 @@ function AccountPage() {
       </main>
 
       <Footer />
+      <MobileBottomNav />
     </div>
   );
 }

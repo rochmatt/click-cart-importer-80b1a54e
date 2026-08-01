@@ -12,6 +12,7 @@ import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
 import { ChatFab } from "@/components/store/ChatFab";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import type { Product } from "@/data/products";
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
@@ -168,6 +169,7 @@ function CategoryPage() {
 
       <Footer />
       <ChatFab />
+      <MobileBottomNav />
     </div>
   );
 }

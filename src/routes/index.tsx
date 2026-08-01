@@ -9,6 +9,7 @@ import { PromoBanners } from "@/components/store/PromoBanners";
 import { DiscoverFeed } from "@/components/store/DiscoverFeed";
 import { ChatFab } from "@/components/store/ChatFab";
 import { Footer } from "@/components/store/Footer";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 
 const title = "PasarPilih — Flash Sales, Vouchers & Daily Deals in Indonesia";
 const description =
@@ -44,6 +45,7 @@ function Index() {
       </main>
       <Footer />
       <ChatFab />
+      <MobileBottomNav />
     </div>
   );
 }

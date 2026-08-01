@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import { addToCart } from "@/lib/cart";
 import { removeFromWishlist, useWishlist } from "@/lib/wishlist";
 
@@ -115,6 +116,7 @@ function WishlistPage() {
       </main>
 
       <Footer />
+      <MobileBottomNav />
     </div>
   );
 }
