@@ -19,7 +19,7 @@ const slides = [
     title: "Tech deals that\nactually feel unfair",
     subtitle: "Audio, wearables and smartphones with extra vouchers applied at checkout.",
     cta: "Shop Gadgets",
-    href: "#flash-sale",
+    href: "#for-you",
   },
   {
     image: banner3,
