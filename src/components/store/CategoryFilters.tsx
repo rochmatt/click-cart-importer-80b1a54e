@@ -31,6 +31,7 @@ interface Props {
   value: CategoryFilterState;
   onChange: (next: CategoryFilterState) => void;
   priceBounds: { min: number; max: number };
+  className?: string;
 }
 
 const idr = (n: number) =>
