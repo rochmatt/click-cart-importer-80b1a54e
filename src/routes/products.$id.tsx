@@ -184,6 +184,7 @@ function ProductDetailPage() {
 
         <RelatedProducts currentId={product.id} />
       </main>
+      <MobileBottomNav />
     </div>
   );
 }
