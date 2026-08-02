@@ -1,6 +1,7 @@
-import { useId } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { Search, SlidersHorizontal, Star, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, SlidersHorizontal, Star, X } from "lucide-react";
 
 export interface CategoryFilterState {
   query: string;
@@ -27,13 +28,115 @@ export function activeFilterCount(f: CategoryFilterState) {
   );
 }
 
+export interface CategoryGroup {
+  title: string;
+  items: { slug: string; label: string }[];
+}
+
 interface Props {
   value: CategoryFilterState;
   onChange: (next: CategoryFilterState) => void;
   priceBounds: { min: number; max: number };
   className?: string;
   variant?: "default" | "sidebar";
+  groups?: CategoryGroup[];
+  activeSlug?: string;
+  collapsedGroups?: Record<string, boolean>;
+  onToggleGroup?: (title: string) => void;
 }
+
+function CategoryChipGroup({
+  groupTitle,
+  items,
+  activeSlug,
+  collapsed,
+}: {
+  groupTitle: string;
+  items: { slug: string; label: string }[];
+  activeSlug: string;
+  collapsed: boolean;
+}) {
+  const slugs = useMemo(() => items.map((i) => i.slug), [items]);
+  const [tabSlug, setTabSlug] = useState(() => {
+    const active = items.find((i) => i.slug === activeSlug)?.slug;
+    return active || items[0]?.slug || "";
+  });
+  const refs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+
+  useEffect(() => {
+    const active = items.find((i) => i.slug === activeSlug)?.slug;
+    if (active && active !== tabSlug) setTabSlug(active);
+  }, [activeSlug, items, tabSlug]);
+
+  const focusSlug = useCallback((slug: string) => {
+    setTabSlug(slug);
+    refs.current.get(slug)?.focus();
+  }, []);
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const idx = slugs.indexOf(tabSlug);
+      if (idx === -1) return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        focusSlug(slugs[(idx + 1) % slugs.length]);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        focusSlug(slugs[(idx - 1 + slugs.length) % slugs.length]);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        focusSlug(slugs[0]);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        focusSlug(slugs[slugs.length - 1]);
+      }
+    },
+    [slugs, tabSlug, focusSlug],
+  );
+
+  return (
+    <ul
+      role="listbox"
+      aria-label={groupTitle}
+      aria-orientation="horizontal"
+      aria-hidden={collapsed}
+      onKeyDown={onKeyDown}
+      className={`${
+        collapsed ? "hidden" : "flex"
+      } flex-wrap items-center gap-2 py-1`}
+    >
+      {items.map((c) => {
+        const active = c.slug === activeSlug;
+        const tabbable = c.slug === tabSlug;
+        return (
+          <li key={c.slug} role="presentation" className="shrink-0">
+            <Link
+              ref={(el) => {
+                if (el) refs.current.set(c.slug, el);
+                else refs.current.delete(c.slug);
+              }}
+              to="/category/$slug"
+              params={{ slug: c.slug }}
+              role="option"
+              aria-selected={active}
+              aria-current={active ? "page" : undefined}
+              tabIndex={tabbable ? 0 : -1}
+              onFocus={() => setTabSlug(c.slug)}
+              className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card ${
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              {c.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
