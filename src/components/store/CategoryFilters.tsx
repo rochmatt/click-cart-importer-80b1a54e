@@ -1,6 +1,7 @@
-import { useId } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { Search, SlidersHorizontal, Star, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, SlidersHorizontal, Star, X } from "lucide-react";
 
 export interface CategoryFilterState {
   query: string;
@@ -27,13 +28,115 @@ export function activeFilterCount(f: CategoryFilterState) {
   );
 }
 
+export interface CategoryGroup {
+  title: string;
+  items: { slug: string; label: string }[];
+}
+
 interface Props {
   value: CategoryFilterState;
   onChange: (next: CategoryFilterState) => void;
   priceBounds: { min: number; max: number };
   className?: string;
   variant?: "default" | "sidebar";
+  groups?: CategoryGroup[];
+  activeSlug?: string;
+  collapsedGroups?: Record<string, boolean>;
+  onToggleGroup?: (title: string) => void;
 }
+
+function CategoryChipGroup({
+  groupTitle,
+  items,
+  activeSlug,
+  collapsed,
+}: {
+  groupTitle: string;
+  items: { slug: string; label: string }[];
+  activeSlug: string;
+  collapsed: boolean;
+}) {
+  const slugs = useMemo(() => items.map((i) => i.slug), [items]);
+  const [tabSlug, setTabSlug] = useState(() => {
+    const active = items.find((i) => i.slug === activeSlug)?.slug;
+    return active || items[0]?.slug || "";
+  });
+  const refs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+
+  useEffect(() => {
+    const active = items.find((i) => i.slug === activeSlug)?.slug;
+    if (active && active !== tabSlug) setTabSlug(active);
+  }, [activeSlug, items, tabSlug]);
+
+  const focusSlug = useCallback((slug: string) => {
+    setTabSlug(slug);
+    refs.current.get(slug)?.focus();
+  }, []);
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const idx = slugs.indexOf(tabSlug);
+      if (idx === -1) return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        focusSlug(slugs[(idx + 1) % slugs.length]);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        focusSlug(slugs[(idx - 1 + slugs.length) % slugs.length]);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        focusSlug(slugs[0]);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        focusSlug(slugs[slugs.length - 1]);
+      }
+    },
+    [slugs, tabSlug, focusSlug],
+  );
+
+  return (
+    <ul
+      role="listbox"
+      aria-label={groupTitle}
+      aria-orientation="horizontal"
+      aria-hidden={collapsed}
+      onKeyDown={onKeyDown}
+      className={`${
+        collapsed ? "hidden" : "flex"
+      } flex-wrap items-center gap-2 py-1`}
+    >
+      {items.map((c) => {
+        const active = c.slug === activeSlug;
+        const tabbable = c.slug === tabSlug;
+        return (
+          <li key={c.slug} role="presentation" className="shrink-0">
+            <Link
+              ref={(el) => {
+                if (el) refs.current.set(c.slug, el);
+                else refs.current.delete(c.slug);
+              }}
+              to="/category/$slug"
+              params={{ slug: c.slug }}
+              role="option"
+              aria-selected={active}
+              aria-current={active ? "page" : undefined}
+              tabIndex={tabbable ? 0 : -1}
+              onFocus={() => setTabSlug(c.slug)}
+              className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card ${
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              {c.label}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
@@ -44,12 +147,17 @@ export function CategoryFilters({
   priceBounds,
   className,
   variant = "default",
+  groups,
+  activeSlug,
+  collapsedGroups,
+  onToggleGroup,
 }: Props) {
   const set = <K extends keyof CategoryFilterState>(key: K, v: CategoryFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
   const uid = useId();
   const count = activeFilterCount(value);
+  const hasGroups = groups && groups.length > 0;
 
   return (
     <section
@@ -83,6 +191,50 @@ export function CategoryFilters({
       <p aria-live="polite" className="sr-only">
         {count === 0 ? "Tidak ada filter aktif." : `${count} filter aktif.`}
       </p>
+
+      {hasGroups && (
+        <div className="mt-4 space-y-4 border-b border-border pb-4">
+          {groups.map((group) => {
+            const collapsed = !!collapsedGroups?.[group.title];
+            return (
+              <div key={group.title} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.title}
+                    <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+                      {group.items.length} kategori
+                    </span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => onToggleGroup?.(group.title)}
+                    aria-expanded={!collapsed}
+                    aria-controls={`category-group-${group.title}`}
+                    aria-label={`${collapsed ? "Buka" : "Tutup"} grup ${group.title} (${group.items.length} kategori)`}
+                    className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {collapsed ? (
+                      <>
+                        Buka <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                      </>
+                    ) : (
+                      <>
+                        Tutup <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                      </>
+                    )}
+                  </button>
+                </div>
+                <CategoryChipGroup
+                  groupTitle={group.title}
+                  items={group.items}
+                  activeSlug={activeSlug || ""}
+                  collapsed={collapsed}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div
         className={cn(

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, ChevronDown, ChevronUp, PackageSearch, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import {
@@ -47,98 +47,6 @@ const priceValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
 
 const idrCompact = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
-
-function CategoryChipGroup({
-  groupTitle,
-  items,
-  activeSlug,
-  collapsed,
-}: {
-  groupTitle: string;
-  items: { slug: string; label: string }[];
-  activeSlug: string;
-  collapsed: boolean;
-}) {
-  const slugs = useMemo(() => items.map((i) => i.slug), [items]);
-  const [tabSlug, setTabSlug] = useState(() => {
-    const active = items.find((i) => i.slug === activeSlug)?.slug;
-    return active || items[0]?.slug || "";
-  });
-  const refs = useRef<Map<string, HTMLAnchorElement>>(new Map());
-
-  useEffect(() => {
-    const active = items.find((i) => i.slug === activeSlug)?.slug;
-    if (active && active !== tabSlug) setTabSlug(active);
-  }, [activeSlug, items, tabSlug]);
-
-  const focusSlug = useCallback((slug: string) => {
-    setTabSlug(slug);
-    refs.current.get(slug)?.focus();
-  }, []);
-
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const idx = slugs.indexOf(tabSlug);
-      if (idx === -1) return;
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        focusSlug(slugs[(idx + 1) % slugs.length]);
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        focusSlug(slugs[(idx - 1 + slugs.length) % slugs.length]);
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        focusSlug(slugs[0]);
-      } else if (e.key === "End") {
-        e.preventDefault();
-        focusSlug(slugs[slugs.length - 1]);
-      }
-    },
-    [slugs, tabSlug, focusSlug],
-  );
-
-  return (
-    <ul
-      role="listbox"
-      aria-label={groupTitle}
-      aria-orientation="horizontal"
-      aria-hidden={collapsed}
-      onKeyDown={onKeyDown}
-      className={`${
-        collapsed ? "hidden" : "flex"
-      } -mx-4 snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-1 lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden`}
-    >
-      {items.map((c) => {
-        const active = c.slug === activeSlug;
-        const tabbable = c.slug === tabSlug;
-        return (
-          <li key={c.slug} role="presentation" className="shrink-0 snap-start">
-            <Link
-              ref={(el) => {
-                if (el) refs.current.set(c.slug, el);
-                else refs.current.delete(c.slug);
-              }}
-              to="/category/$slug"
-              params={{ slug: c.slug }}
-              role="option"
-              aria-selected={active}
-              aria-current={active ? "page" : undefined}
-              tabIndex={tabbable ? 0 : -1}
-              onFocus={() => setTabSlug(c.slug)}
-              className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
-              }`}
-            >
-              {c.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 export const Route = createFileRoute("/category/$slug")({
   loader: ({ params }) => {
@@ -305,8 +213,7 @@ function CategoryPage() {
               showFilters ? "block" : "hidden"
             } lg:block`}
           >
-            <div className="flex items-center justify-between lg:hidden">
-              <h2 className="text-sm font-semibold text-foreground">Filter produk</h2>
+            <div className="flex items-center justify-end lg:hidden">
               <button
                 type="button"
                 onClick={() => setShowFilters(false)}
@@ -321,59 +228,19 @@ function CategoryPage() {
               priceBounds={priceBounds}
               variant="sidebar"
               className="mt-0"
+              groups={categoryGroups}
+              activeSlug={category.slug}
+              collapsedGroups={collapsedGroups}
+              onToggleGroup={(title) =>
+                setCollapsedGroups((prev) => ({
+                  ...prev,
+                  [title]: !prev[title],
+                }))
+              }
             />
           </aside>
 
           <div className="mt-6 space-y-6 lg:mt-0">
-            <nav aria-label="All categories" className="space-y-4">
-              <div className="flex flex-col gap-4">
-                {categoryGroups.map((group) => {
-                  const collapsed = !!collapsedGroups[group.title];
-                  return (
-                    <div key={group.title} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {group.title}
-                          <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
-                            {group.items.length} kategori
-                          </span>
-                        </h2>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCollapsedGroups((prev) => ({
-                              ...prev,
-                              [group.title]: !prev[group.title],
-                            }))
-                          }
-                          aria-expanded={!collapsed}
-                          aria-controls={`category-group-${group.title}`}
-                          aria-label={`${collapsed ? "Buka" : "Tutup"} grup ${group.title} (${group.items.length} kategori)`}
-                          className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-                        >
-                          {collapsed ? (
-                            <>
-                              Buka <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-                            </>
-                          ) : (
-                            <>
-                              Tutup <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <CategoryChipGroup
-                        groupTitle={group.title}
-                        items={group.items}
-                        activeSlug={category.slug}
-                        collapsed={collapsed}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </nav>
-
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground" aria-live="polite">
                 {items.length} product{items.length === 1 ? "" : "s"}
