@@ -34,11 +34,6 @@ const searchSchema = z.object({
   mode: z.enum(["signin", "register"]).optional(),
 });
 
-const credentialsSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address").max(255),
-  password: z.string().min(6, "Password must be at least 6 characters").max(72),
-  name: z.string().trim().max(80, "Name is too long").optional(),
-});
 
 export const Route = createFileRoute("/account")({
   validateSearch: searchSchema,
