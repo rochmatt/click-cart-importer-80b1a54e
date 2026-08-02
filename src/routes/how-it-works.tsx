@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, ExternalLink, PackageCheck, Truck } from "lucide-react";
 import { LegalPageLayout, LegalCallout } from "@/components/store/LegalPageLayout";
@@ -7,7 +8,9 @@ const description =
   "Learn how PasarPilih curates products, links you to trusted marketplaces, and helps you track your delivery.";
 
 export const Route = createFileRoute("/how-it-works")({
-  head: () => ({
+  loader: () => getRequestOrigin(),
+
+  head: ({ loaderData }) => ({
     meta: [
       { title },
       { name: "description", content: description },
@@ -15,12 +18,12 @@ export const Route = createFileRoute("/how-it-works")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:url", content: "/how-it-works" },
+      { property: "og:url", content: `${loaderData ?? ""}/how-it-works` },
       { property: "og:site_name", content: "PasarPilih" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
     ],
-    links: [{ rel: "canonical", href: "/how-it-works" }],
+    links: [{ rel: "canonical", href: `${loaderData ?? ""}/how-it-works` }],
     scripts: [
       {
         type: "application/ld+json",

@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Mail, Clock, MapPin } from "lucide-react";
@@ -12,7 +13,9 @@ const description =
   "Contact PT RAFA KPT (PasarPilih) for support with orders, payments, shipping, returns, or partnership inquiries.";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
+  loader: () => getRequestOrigin(),
+
+  head: ({ loaderData }) => ({
     meta: [
       { title },
       { name: "description", content: description },
@@ -20,12 +23,12 @@ export const Route = createFileRoute("/contact")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:url", content: "/contact" },
+      { property: "og:url", content: `${loaderData ?? ""}/contact` },
       { property: "og:site_name", content: "PasarPilih" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
     ],
-    links: [{ rel: "canonical", href: "/contact" }],
+    links: [{ rel: "canonical", href: `${loaderData ?? ""}/contact` }],
     scripts: [
       {
         type: "application/ld+json",

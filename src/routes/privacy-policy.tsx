@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout } from "@/components/store/LegalPageLayout";
 
@@ -6,7 +7,9 @@ const description =
   "Read the PasarPilih Privacy Policy to understand how PT RAFA KPT collects, uses, and protects your personal information.";
 
 export const Route = createFileRoute("/privacy-policy")({
-  head: () => ({
+  loader: () => getRequestOrigin(),
+
+  head: ({ loaderData }) => ({
     meta: [
       { title },
       { name: "description", content: description },
@@ -14,12 +17,12 @@ export const Route = createFileRoute("/privacy-policy")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:url", content: "/privacy-policy" },
+      { property: "og:url", content: `${loaderData ?? ""}/privacy-policy` },
       { property: "og:site_name", content: "PasarPilih" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
     ],
-    links: [{ rel: "canonical", href: "/privacy-policy" }],
+    links: [{ rel: "canonical", href: `${loaderData ?? ""}/privacy-policy` }],
   }),
   component: PrivacyPolicyPage,
 });
