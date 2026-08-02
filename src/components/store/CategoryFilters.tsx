@@ -423,5 +423,6 @@ export function CategoryFilters({
         </button>
       </div>
     </section>
+    </TooltipProvider>
   );
 }
