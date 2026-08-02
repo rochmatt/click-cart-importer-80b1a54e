@@ -745,6 +745,13 @@ export default function GrabFromUrl({
                         <li className="text-muted-foreground">Tidak ada data yang dipilih.</li>
                       )}
                   </ul>
+                  {priceCheck && priceCheck.trace.length > 0 && (
+                    <p className="mt-2 border-t border-border pt-2 text-muted-foreground">
+                      {priceCheck.trace.length} langkah normalisasi diterapkan (
+                      {priceCheck.trace.filter((s) => s.changed).length} mengubah nilai) — detailnya
+                      ada di panel “Rule normalisasi &amp; jejak transformasi”.
+                    </p>
+                  )}
                   {allIssues.length > 0 && (
                     <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
                       {allIssues.map((issue, index) => (
