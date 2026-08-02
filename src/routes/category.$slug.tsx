@@ -343,41 +343,48 @@ function CategoryPage() {
           </aside>
 
           <div className="mt-6 space-y-6 lg:mt-0">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground" aria-live="polite">
-                {items.length} product{items.length === 1 ? "" : "s"}
-                {searchTerm ? ` matching “${searchTerm}”` : ""}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowFilters((s) => !s)}
-                  aria-expanded={showFilters}
-                  aria-controls="category-filter-sidebar"
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-                >
-                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-                  Filter
-                  {activeFilterCount(filters) > 0 ? (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
-                      {activeFilterCount(filters)}
-                    </span>
-                  ) : null}
-                </button>
-                <label htmlFor="category-sort" className="text-sm text-muted-foreground">
-                  Sort by
-                </label>
-                <select
-                  id="category-sort"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortKey)}
-                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
-                >
-                  <option value="popular">Most reviewed</option>
-                  <option value="rating">Top rated</option>
-                  <option value="price-low">Price: low to high</option>
-                  <option value="price-high">Price: high to low</option>
-                </select>
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground" aria-live="polite">
+                    Menampilkan{" "}
+                    <span className="font-bold text-foreground">{items.length}</span>{" "}
+                    produk
+                    {searchTerm ? ` untuk “${searchTerm}”` : ""}
+                    {activeFilterCount(filters) > 0 ? " yang cocok dengan filter" : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters((s) => !s)}
+                    aria-expanded={showFilters}
+                    aria-controls="category-filter-sidebar"
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                    Filter
+                    {activeFilterCount(filters) > 0 ? (
+                      <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
+                        {activeFilterCount(filters)}
+                      </span>
+                    ) : null}
+                  </button>
+                  <label htmlFor="category-sort" className="text-sm text-muted-foreground">
+                    Urutkan
+                  </label>
+                  <select
+                    id="category-sort"
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value as SortKey)}
+                    className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                  >
+                    <option value="popular">Paling populer</option>
+                    <option value="rating">Rating tertinggi</option>
+                    <option value="price-low">Harga: rendah ke tinggi</option>
+                    <option value="price-high">Harga: tinggi ke rendah</option>
+                  </select>
+                </div>
               </div>
             </div>
 
