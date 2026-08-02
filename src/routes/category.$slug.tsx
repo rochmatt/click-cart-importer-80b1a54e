@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, stripSearchParams } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
-import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
+import { CategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import {
   categoryCatalog,
@@ -23,6 +25,17 @@ import {
 } from "@/lib/structured-data";
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
+
+const sortKeys: SortKey[] = ["popular", "rating", "price-low", "price-high"];
+
+const categorySearchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  min: fallback(z.string(), "").default(""),
+  max: fallback(z.string(), "").default(""),
+  rating: fallback(z.number(), 0).default(0),
+  sort: fallback(z.string(), "popular").default("popular"),
+});
+
 
 const categoryGroups = [
   {
@@ -49,6 +62,10 @@ const idrCompact = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
 
 export const Route = createFileRoute("/category/$slug")({
+  validateSearch: zodValidator(categorySearchSchema),
+  search: {
+    middlewares: [stripSearchParams({ q: "", min: "", max: "", rating: 0, sort: "popular" })],
+  },
   loader: ({ params }) => {
     const category = findCategory(params.slug);
     if (!category) throw notFound();
@@ -125,11 +142,51 @@ export const Route = createFileRoute("/category/$slug")({
 
 function CategoryPage() {
   const category = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<CategoryFilterState>(emptyCategoryFilters);
-  const [sort, setSort] = useState<SortKey>("popular");
   const [quickView, setQuickView] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  const filters: CategoryFilterState = useMemo(
+    () => ({
+      query: search.q,
+      minPrice: search.min.replace(/[^\d]/g, ""),
+      maxPrice: search.max.replace(/[^\d]/g, ""),
+      minRating: [0, 3.5, 4, 4.5].includes(search.rating) ? search.rating : 0,
+    }),
+    [search.q, search.min, search.max, search.rating],
+  );
+
+  const sort: SortKey = sortKeys.includes(search.sort as SortKey)
+    ? (search.sort as SortKey)
+    : "popular";
+
+  const setFilters = (next: CategoryFilterState) => {
+    navigate({
+      to: ".",
+      search: {
+        ...search,
+        q: next.query,
+        min: next.minPrice,
+        max: next.maxPrice,
+        rating: next.minRating,
+      },
+      replace: true,
+      resetScroll: false,
+    });
+  };
+
+  const setSort = (next: SortKey) => {
+    navigate({
+      to: ".",
+      search: { ...search, sort: next },
+      replace: true,
+      resetScroll: false,
+    });
+  };
+
+
 
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
 
