@@ -149,7 +149,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: window.location.origin + "/account",
+            emailRedirectTo: window.location.origin + "/verify-email",
             data: { display_name: parsed.data.name ?? "" },
           },
         });
@@ -157,6 +157,9 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
         if (!data.session) {
           setSentConfirmation(true);
           toast.success("Cek inbox kamu untuk konfirmasi email");
+          window.location.assign(
+            `/verify-email?email=${encodeURIComponent(parsed.data.email)}`,
+          );
         } else {
           toast.success("Akun berhasil dibuat. Selamat berbelanja!");
         }
