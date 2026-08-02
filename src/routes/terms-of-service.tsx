@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout } from "@/components/store/LegalPageLayout";
 
@@ -6,7 +7,9 @@ const description =
   "Read the PasarPilih Terms of Service for the rules, responsibilities, and limitations that apply when using PT RAFA KPT's services.";
 
 export const Route = createFileRoute("/terms-of-service")({
-  head: () => ({
+  loader: () => getRequestOrigin(),
+
+  head: ({ loaderData }) => ({
     meta: [
       { title },
       { name: "description", content: description },
@@ -14,12 +17,12 @@ export const Route = createFileRoute("/terms-of-service")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:url", content: "/terms-of-service" },
+      { property: "og:url", content: `${loaderData ?? ""}/terms-of-service` },
       { property: "og:site_name", content: "PasarPilih" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
     ],
-    links: [{ rel: "canonical", href: "/terms-of-service" }],
+    links: [{ rel: "canonical", href: `${loaderData ?? ""}/terms-of-service` }],
   }),
   component: TermsOfServicePage,
 });

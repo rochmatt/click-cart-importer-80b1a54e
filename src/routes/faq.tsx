@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Accordion,
@@ -12,7 +13,9 @@ const description =
   "Find answers about PasarPilih orders, payments, shipping, returns, and how we curate products from partner marketplaces.";
 
 export const Route = createFileRoute("/faq")({
-  head: () => ({
+  loader: () => getRequestOrigin(),
+
+  head: ({ loaderData }) => ({
     meta: [
       { title },
       { name: "description", content: description },
@@ -20,12 +23,12 @@ export const Route = createFileRoute("/faq")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:url", content: "/faq" },
+      { property: "og:url", content: `${loaderData ?? ""}/faq` },
       { property: "og:site_name", content: "PasarPilih" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
     ],
-    links: [{ rel: "canonical", href: "/faq" }],
+    links: [{ rel: "canonical", href: `${loaderData ?? ""}/faq` }],
     scripts: [
       {
         type: "application/ld+json",

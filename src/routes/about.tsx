@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LegalPageLayout, LegalCallout } from "@/components/store/LegalPageLayout";
 
@@ -6,7 +7,9 @@ const description =
   "PasarPilih is operated by PT RAFA KPT. We sell products directly and curate deals from trusted marketplaces across Indonesia.";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({
+  loader: () => getRequestOrigin(),
+
+  head: ({ loaderData }) => ({
     meta: [
       { title },
       { name: "description", content: description },
@@ -14,12 +17,12 @@ export const Route = createFileRoute("/about")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:url", content: "/about" },
+      { property: "og:url", content: `${loaderData ?? ""}/about` },
       { property: "og:site_name", content: "PasarPilih" },
       { name: "twitter:title", content: title },
       { name: "twitter:description", content: description },
     ],
-    links: [{ rel: "canonical", href: "/about" }],
+    links: [{ rel: "canonical", href: `${loaderData ?? ""}/about` }],
     scripts: [
       {
         type: "application/ld+json",
