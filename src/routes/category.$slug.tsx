@@ -235,34 +235,66 @@ function CategoryPage() {
           <div className="mt-6 space-y-6 lg:mt-0">
             <nav aria-label="All categories" className="space-y-4">
               <div className="flex flex-col gap-4">
-                {categoryGroups.map((group) => (
-                  <div key={group.title} className="space-y-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      {group.title}
-                    </h2>
-                    <ul className="-mx-4 flex snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-1 lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-                      {group.items.map((c) => {
-                        const active = c.slug === category.slug;
-                        return (
-                          <li key={c.slug} className="shrink-0 snap-start">
-                            <Link
-                              to="/category/$slug"
-                              params={{ slug: c.slug }}
-                              aria-current={active ? "page" : undefined}
-                              className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors ${
-                                active
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
-                              }`}
-                            >
-                              {c.label}
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
+                {categoryGroups.map((group) => {
+                  const collapsed = !!collapsedGroups[group.title];
+                  return (
+                    <div key={group.title} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {group.title}
+                        </h2>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCollapsedGroups((prev) => ({
+                              ...prev,
+                              [group.title]: !prev[group.title],
+                            }))
+                          }
+                          aria-expanded={!collapsed}
+                          aria-controls={`category-group-${group.title}`}
+                          className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+                        >
+                          {collapsed ? (
+                            <>
+                              Buka <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                            </>
+                          ) : (
+                            <>
+                              Tutup <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <ul
+                        id={`category-group-${group.title}`}
+                        className={`${
+                          collapsed ? "hidden" : "flex"
+                        } -mx-4 snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-1 lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden`}
+                      >
+                        {group.items.map((c) => {
+                          const active = c.slug === category.slug;
+                          return (
+                            <li key={c.slug} className="shrink-0 snap-start">
+                              <Link
+                                to="/category/$slug"
+                                params={{ slug: c.slug }}
+                                aria-current={active ? "page" : undefined}
+                                className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors ${
+                                  active
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
+                                }`}
+                              >
+                                {c.label}
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  );
+                })}
               </div>
             </nav>
 
