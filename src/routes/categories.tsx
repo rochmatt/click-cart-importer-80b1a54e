@@ -160,8 +160,15 @@ function CategoriesPage() {
           <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
             <p className="font-semibold text-foreground">Kategori tidak ditemukan</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Coba kata kunci lain di kolom pencarian.
+              Coba kata kunci lain, atau tampilkan semua kategori.
             </p>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="mt-4 inline-flex h-10 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+            >
+              Tampilkan semua kategori
+            </button>
           </div>
         )}
       </main>
