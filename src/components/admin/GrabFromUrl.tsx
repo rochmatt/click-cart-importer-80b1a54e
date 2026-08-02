@@ -159,8 +159,6 @@ export default function GrabFromUrl({
           result.title ? "title" : null,
           result.description ? "description" : null,
           result.brand ? "brand" : null,
-          null,
-          null,
           result.marketplace ? "link" : null,
         ] as (FieldKey | null)[]
       ).filter((k): k is FieldKey => !!k)
@@ -176,13 +174,9 @@ export default function GrabFromUrl({
       case "brand":
         return result.brand;
       case "price":
-        return result.price !== null ? formatRupiah(result.price) : "";
+        return editedPrice !== null ? formatRupiah(editedPrice) : "";
       case "salePrice":
-        return result.salePrice !== null
-          ? `${formatRupiah(result.salePrice)}${
-              result.discountPercent !== null ? ` · hemat ${result.discountPercent}%` : ""
-            }`
-          : "";
+        return editedSalePrice !== null ? formatRupiah(editedSalePrice) : "";
       case "link":
         return `${result.marketplace} · ${result.sourceUrl}`;
     }
@@ -296,6 +290,108 @@ export default function GrabFromUrl({
                 </ul>
               </div>
             )}
+
+            <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Pencil className="size-3.5 text-primary" aria-hidden="true" />
+                  Harga &amp; diskon (bisa diedit manual)
+                </p>
+                {(priceEdited || salePriceEdited) && (
+                  <button
+                    type="button"
+                    onClick={resetPrices}
+                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <RotateCcw className="size-3" aria-hidden="true" />
+                    Kembalikan hasil parsing
+                  </button>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <label
+                    htmlFor="grab-price"
+                    className="flex items-center gap-2 text-xs font-medium text-foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={fields.price}
+                      onChange={() => toggleField("price")}
+                      aria-label="Terapkan harga normal"
+                      className="size-4 shrink-0 accent-primary"
+                    />
+                    Harga normal
+                  </label>
+                  <input
+                    id="grab-price"
+                    type="text"
+                    inputMode="numeric"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    disabled={!fields.price}
+                    placeholder="cth. 1.250.000 atau 1,2jt"
+                    aria-invalid={priceInvalid}
+                    className={`h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary disabled:opacity-50 ${
+                      priceInvalid ? "border-destructive" : "border-border"
+                    }`}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {priceInvalid
+                      ? "Format harga tidak dikenali."
+                      : editedPrice !== null
+                        ? `Dibaca sebagai ${formatRupiah(editedPrice)}${priceEdited ? " · diubah manual" : ""}`
+                        : "Kosong — harga tidak diterapkan."}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label
+                    htmlFor="grab-sale-price"
+                    className="flex items-center gap-2 text-xs font-medium text-foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={fields.salePrice}
+                      onChange={() => toggleField("salePrice")}
+                      aria-label="Terapkan harga diskon"
+                      className="size-4 shrink-0 accent-primary"
+                    />
+                    Harga diskon
+                  </label>
+                  <input
+                    id="grab-sale-price"
+                    type="text"
+                    inputMode="numeric"
+                    value={salePriceInput}
+                    onChange={(e) => setSalePriceInput(e.target.value)}
+                    disabled={!fields.salePrice}
+                    placeholder="cth. 999.000"
+                    aria-invalid={salePriceInvalid}
+                    className={`h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary disabled:opacity-50 ${
+                      salePriceInvalid ? "border-destructive" : "border-border"
+                    }`}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    {salePriceInvalid
+                      ? "Format harga tidak dikenali."
+                      : editedSalePrice !== null
+                        ? `Dibaca sebagai ${formatRupiah(editedSalePrice)}${salePriceEdited ? " · diubah manual" : ""}`
+                        : "Kosong — tanpa harga diskon."}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground">
+                Hasil parsing awal: harga{" "}
+                {result.price !== null ? formatRupiah(result.price) : "—"} · diskon{" "}
+                {result.salePrice !== null ? formatRupiah(result.salePrice) : "—"}
+                {priceCheck?.discountPercent != null
+                  ? ` · potongan saat ini ${priceCheck.discountPercent}%`
+                  : ""}
+              </p>
+            </div>
 
             {available.length > 0 && (
               <div className="space-y-2">
@@ -492,15 +588,36 @@ export default function GrabFromUrl({
                           <span>{FIELD_LABELS[key]}</span>
                         </li>
                       ))}
+                    {fields.price && priceCheck?.price != null && (
+                      <li className="flex items-center gap-2">
+                        <Check className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                        <span>
+                          Harga normal {formatRupiah(priceCheck.price)}
+                          {priceEdited ? " (diedit manual)" : ""}
+                        </span>
+                      </li>
+                    )}
+                    {fields.salePrice && priceCheck?.salePrice != null && (
+                      <li className="flex items-center gap-2">
+                        <Check className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                        <span>
+                          Harga diskon {formatRupiah(priceCheck.salePrice)}
+                          {salePriceEdited ? " (diedit manual)" : ""}
+                        </span>
+                      </li>
+                    )}
                     {pickedImages.length > 0 && (
                       <li className="flex items-center gap-2">
                         <Check className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
                         <span>{pickedImages.length} gambar</span>
                       </li>
                     )}
-                    {available.filter((key) => fields[key]).length === 0 && pickedImages.length === 0 && (
-                      <li className="text-muted-foreground">Tidak ada data yang dipilih.</li>
-                    )}
+                    {available.filter((key) => fields[key]).length === 0 &&
+                      pickedImages.length === 0 &&
+                      priceCheck?.price == null &&
+                      priceCheck?.salePrice == null && (
+                        <li className="text-muted-foreground">Tidak ada data yang dipilih.</li>
+                      )}
                   </ul>
                   {allIssues.length > 0 && (
                     <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
