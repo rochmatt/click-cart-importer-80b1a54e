@@ -82,6 +82,7 @@ function scorePassword(password: string) {
 }
 
 export function AuthPanel({ initialMode }: { initialMode: Mode }) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
