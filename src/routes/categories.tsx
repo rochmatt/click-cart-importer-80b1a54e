@@ -37,6 +37,7 @@ export const Route = createFileRoute("/categories")({
 });
 
 function CategoriesPage() {
+  const [headerQuery, setHeaderQuery] = useState("");
   const [query, setQuery] = useState("");
 
   const cards = useMemo(() => {
@@ -60,7 +61,7 @@ function CategoriesPage() {
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       <AnnouncementBar />
-      <Header query={query} onQueryChange={setQuery} />
+      <Header query={headerQuery} onQueryChange={setHeaderQuery} />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
@@ -88,9 +89,22 @@ function CategoriesPage() {
               antar marketplace.
             </p>
           </div>
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {cards.length} kategori · {total} produk
-          </p>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <label htmlFor="category-filter" className="sr-only">
+              Cari kategori
+            </label>
+            <input
+              id="category-filter"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari kategori…"
+              className="h-10 w-full min-w-[14rem] rounded-full border border-border bg-card px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30 sm:w-auto"
+            />
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {cards.length} kategori · {total} produk
+            </p>
+          </div>
         </div>
 
         {cards.length > 0 ? (
@@ -146,8 +160,15 @@ function CategoriesPage() {
           <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
             <p className="font-semibold text-foreground">Kategori tidak ditemukan</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Coba kata kunci lain di kolom pencarian.
+              Coba kata kunci lain, atau tampilkan semua kategori.
             </p>
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="mt-4 inline-flex h-10 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+            >
+              Tampilkan semua kategori
+            </button>
           </div>
         )}
       </main>
