@@ -303,6 +303,8 @@ export function CategoryFilters({
             {ratingOptions.map((r) => {
               const active = value.minRating === r;
               const id = `${uid}-rating-${String(r).replace(".", "-")}`;
+              const n = ratingCounts?.[String(r)];
+              const unavailable = n === 0 && !active;
               return (
                 <div key={r} className="relative flex items-center">
                   <input
@@ -311,13 +313,22 @@ export function CategoryFilters({
                     name={`${uid}-rating`}
                     value={r}
                     checked={active}
+                    disabled={unavailable}
                     onChange={() => set("minRating", r)}
-                    aria-label={r === 0 ? "Semua rating" : `${r} bintang ke atas`}
+                    aria-label={
+                      (r === 0 ? "Semua rating" : `${r} bintang ke atas`) +
+                      (n !== undefined ? `, ${n} produk` : "")
+                    }
                     className="peer absolute h-px w-px opacity-0"
                   />
                   <label
                     htmlFor={id}
-                    className="inline-flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm text-foreground transition-colors hover:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
+                    className={cn(
+                      "inline-flex min-h-10 w-full items-center gap-2.5 rounded-md px-1 text-sm text-foreground transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring",
+                      unavailable
+                        ? "cursor-not-allowed text-muted-foreground opacity-60"
+                        : "cursor-pointer hover:text-primary",
+                    )}
                   >
                     <span
                       aria-hidden="true"
@@ -346,10 +357,12 @@ export function CategoryFilters({
                         {r} ke atas
                       </span>
                     )}
+                    {n !== undefined ? <CountBadge count={n} /> : null}
                   </label>
                 </div>
               );
             })}
+
           </div>
         </fieldset>
       </div>
