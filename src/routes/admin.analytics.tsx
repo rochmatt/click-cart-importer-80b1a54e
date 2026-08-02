@@ -140,7 +140,7 @@ function shortDate(iso: string) {
 }
 
 function AnalyticsPage() {
-  const search = Route.useSearch();
+  const search = Route.useSearch() as AnalyticsSearch;
   const navigate = useNavigate({ from: Route.fullPath });
 
   const days = ([7, 14, 30] as const).includes(search.days as RangeDays)

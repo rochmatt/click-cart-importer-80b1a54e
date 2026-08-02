@@ -34,6 +34,12 @@ const description =
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "register"]).optional(),
+  // Same-origin relative path to return to after sign-in (e.g. the OAuth consent page).
+  next: z
+    .string()
+    .refine((v) => v.startsWith("/") && !v.startsWith("//"))
+    .optional()
+    .catch(undefined),
 });
 
 
@@ -85,7 +91,7 @@ function AccountPage() {
             Masuk atau daftar untuk checkout lebih cepat dan melacak pesanan otomatis.
           </p>
 
-          <AuthPanel initialMode={search.mode ?? "signin"} />
+          <AuthPanel initialMode={search.mode ?? "signin"} nextPath={search.next} />
         </main>
 
         <div className="hidden md:block">
