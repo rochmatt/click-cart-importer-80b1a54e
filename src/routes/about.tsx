@@ -20,7 +20,30 @@ export const Route = createFileRoute("/about")({
       { name: "twitter:description", content: description },
     ],
     links: [{ rel: "canonical", href: "/about" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          name: "About PasarPilih",
+          description,
+          mainEntity: {
+            "@type": "Organization",
+            name: "PT RAFA KPT",
+            alternateName: "PasarPilih",
+            email: "adin@inipilihanku.com",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "DS. LAHAR RT3 RW1",
+              addressCountry: "ID",
+            },
+          },
+        }),
+      },
+    ],
   }),
+
   component: AboutPage,
 });
 
