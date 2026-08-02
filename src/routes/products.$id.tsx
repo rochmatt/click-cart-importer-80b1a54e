@@ -3,7 +3,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Heart, ShoppingCart, Star, Zap } from "lucide-react";
 import { products } from "@/data/products";
 import { useCatalogProduct } from "@/lib/catalog";
-import { supabase } from "@/integrations/supabase/client";
+import { productExists } from "@/lib/catalog.functions";
 import { ProductImageCarousel } from "@/components/store/ProductImageCarousel";
 import { ProductDescription } from "@/components/store/ProductDescription";
 import { RelatedProducts } from "@/components/store/RelatedProducts";
@@ -14,16 +14,11 @@ import { useProductImages } from "@/lib/cover-overrides";
 import { addToCart } from "@/lib/cart";
 import { isWishlisted, toggleWishlist, useWishlist } from "@/lib/wishlist";
 import { toast } from "sonner";
-import {
-  breadcrumbJsonLd,
-  jsonLdScript,
-  productJsonLd,
-} from "@/lib/structured-data";
+import { breadcrumbJsonLd, jsonLdScript, productJsonLd } from "@/lib/structured-data";
 import { categorySlug } from "@/data/categories";
 import { reviewsForProduct } from "@/data/reviews";
 import { ProductReviews } from "@/components/store/ProductReviews";
 import { recordView } from "@/lib/recently-viewed";
-
 
 export const Route = createFileRoute("/products/$id")({
   loader: async ({ params }) => {
@@ -32,16 +27,9 @@ export const Route = createFileRoute("/products/$id")({
 
     // Products created only in the admin dashboard aren't in the seed catalog.
     // Unknown ids must 404 instead of rendering an empty page.
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      params.id,
-    );
-    const { data } = await supabase
-      .from("admin_products")
-      .select("id")
-      .eq("status", "active")
-      .eq(isUuid ? "id" : "catalog_ref", params.id)
-      .maybeSingle();
-    if (!data) throw notFound();
+    // Pemeriksaannya pindah ke server function karena datanya kini di
+    // PostgreSQL lokal; deteksi uuid ikut pindah ke sana.
+    if (!(await productExists({ data: params.id }))) throw notFound();
     return null;
   },
   head: ({ loaderData, params }) => {
@@ -65,11 +53,7 @@ export const Route = createFileRoute("/products/$id")({
       scripts: product
         ? [
             jsonLdScript(
-              productJsonLd(
-                product,
-                `/products/${params.id}`,
-                reviewsForProduct(params.id),
-              ),
+              productJsonLd(product, `/products/${params.id}`, reviewsForProduct(params.id)),
             ),
             jsonLdScript(
               breadcrumbJsonLd([
@@ -114,7 +98,6 @@ function ProductDetailPage() {
       <ProductNotFound />
     );
   }
-
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
@@ -208,10 +191,8 @@ function ProductDetailPage() {
               {wishlisted ? "Saved to wishlist" : "Add to wishlist"}
             </button>
 
-
             <ProductAssurance />
           </div>
-
         </div>
 
         <div className="mt-10 sm:mt-14">

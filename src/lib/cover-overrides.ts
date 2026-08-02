@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchImageOverrideRows } from "@/lib/catalog.functions";
 
 type CoverRow = { catalog_ref: string | null; images: string[] | null };
 
@@ -7,15 +7,14 @@ type CoverRow = { catalog_ref: string | null; images: string[] | null };
  * The admin dashboard lets merchants reorder images and pick a cover.
  * Storefront views read that ordering (keyed by catalog reference) so the
  * selected cover is always the primary thumbnail.
+ *
+ * Datanya kini datang dari PostgreSQL lokal lewat server function, bukan dari
+ * Supabase langsung — lihat catatan di catalog.functions.ts.
  */
 async function fetchImageOverrides(): Promise<Record<string, string[]>> {
-  const { data, error } = await supabase
-    .from("admin_products")
-    .select("catalog_ref, images")
-    .eq("status", "active");
-  if (error) throw error;
+  const rows = (await fetchImageOverrideRows()) as CoverRow[];
   const map: Record<string, string[]> = {};
-  for (const row of (data ?? []) as CoverRow[]) {
+  for (const row of rows) {
     if (row.catalog_ref && row.images?.length) map[row.catalog_ref] = row.images;
   }
   return map;

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchCatalogRows, fetchStockRows } from "@/lib/catalog.functions";
 import { products as catalogSeed, type Product } from "@/data/products";
 
 type Row = {
@@ -71,23 +71,15 @@ function toProduct(row: Row, seed?: Product): Product {
     links: (row.links as Product["links"]) ?? seed?.links ?? defaultLinks,
     description: row.description || seed?.description || "",
     specs: specsFrom(row).length ? specsFrom(row) : (seed?.specs ?? []),
-    detailedSpecs: detailedSpecsFrom(row).length
-      ? detailedSpecsFrom(row)
-      : seed?.detailedSpecs,
+    detailedSpecs: detailedSpecsFrom(row).length ? detailedSpecsFrom(row) : seed?.detailedSpecs,
   };
 }
 
-const COLUMNS =
-  "id, catalog_ref, title, category, description, images, price, sale_price, stock, rating, reviews, brand, weight, dimensions, warranty_status, warranty_duration, custom_attributes, links";
+// Daftar kolomnya sekarang tinggal di catalog.functions.ts bersama query-nya,
+// supaya tidak ada dua sumber kebenaran yang bisa menyimpang diam-diam.
 
 async function fetchLiveProducts(): Promise<Row[]> {
-  const { data, error } = await supabase
-    .from("admin_products")
-    .select(COLUMNS)
-    .eq("status", "active")
-    .order("updated_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as unknown as Row[];
+  return (await fetchCatalogRows()) as unknown as Row[];
 }
 
 /**
@@ -130,13 +122,13 @@ export function useStockLevels() {
   const query = useQuery({
     queryKey: ["storefront-stock"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("admin_products")
-        .select("id, catalog_ref, stock")
-        .eq("status", "active");
-      if (error) throw error;
+      const rows = (await fetchStockRows()) as {
+        id: string;
+        catalog_ref: string | null;
+        stock: number | null;
+      }[];
       const map: Record<string, number> = {};
-      for (const row of data ?? []) map[row.catalog_ref || row.id] = row.stock ?? 0;
+      for (const row of rows) map[row.catalog_ref || row.id] = row.stock ?? 0;
       return map;
     },
     staleTime: 30_000,
