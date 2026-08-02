@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Link2, Loader2, Sparkles, Wand2, Check, AlertTriangle, XCircle } from "lucide-react";
+import {
+  Link2,
+  Loader2,
+  Sparkles,
+  Wand2,
+  Check,
+  AlertTriangle,
+  XCircle,
+  RotateCcw,
+  Pencil,
+} from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
 import { formatRupiah, type AdminProduct } from "@/lib/admin-store";
-import { normalizePrices } from "@/lib/price-normalize";
+import { normalizePrices, parsePriceValue } from "@/lib/price-normalize";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +59,8 @@ export default function GrabFromUrl({
     salePrice: true,
     link: true,
   });
+  const [priceInput, setPriceInput] = useState("");
+  const [salePriceInput, setSalePriceInput] = useState("");
   const [pickedImages, setPickedImages] = useState<string[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -62,6 +74,8 @@ export default function GrabFromUrl({
     try {
       const data = await grab({ data: { url: url.trim() } });
       setResult(data);
+      setPriceInput(data.price !== null ? String(data.price) : "");
+      setSalePriceInput(data.salePrice !== null ? String(data.salePrice) : "");
       setPickedImages(data.images.slice(0, room));
       if (!data.title && data.price === null && data.images.length === 0) {
         setError("Tidak ada data produk yang bisa dibaca dari halaman ini. Coba URL lain.");
@@ -90,13 +104,23 @@ export default function GrabFromUrl({
     );
   }
 
+  const editedPrice = priceInput.trim() ? parsePriceValue(priceInput) : null;
+  const editedSalePrice = salePriceInput.trim() ? parsePriceValue(salePriceInput) : null;
+  const priceInvalid = priceInput.trim().length > 0 && editedPrice === null;
+  const salePriceInvalid = salePriceInput.trim().length > 0 && editedSalePrice === null;
+  const priceEdited = result ? editedPrice !== result.price : false;
+  const salePriceEdited = result ? editedSalePrice !== result.salePrice : false;
+
   const priceCheck = result
-    ? normalizePrices(
-        fields.price ? result.price : null,
-        fields.salePrice ? result.salePrice : null,
-      )
+    ? normalizePrices(fields.price ? editedPrice : null, fields.salePrice ? editedSalePrice : null)
     : null;
   const allIssues = result ? [...result.priceIssues, ...(priceCheck?.issues ?? [])] : [];
+
+  function resetPrices() {
+    if (!result) return;
+    setPriceInput(result.price !== null ? String(result.price) : "");
+    setSalePriceInput(result.salePrice !== null ? String(result.salePrice) : "");
+  }
 
   function apply() {
     if (!result) return;
@@ -106,8 +130,8 @@ export default function GrabFromUrl({
     if (fields.description && result.description) patch.description = result.description;
     if (fields.brand && result.brand) patch.brand = result.brand;
     const checked = normalizePrices(
-      fields.price ? result.price : null,
-      fields.salePrice ? result.salePrice : null,
+      fields.price ? editedPrice : null,
+      fields.salePrice ? editedSalePrice : null,
     );
     if (fields.price && checked.price !== null) patch.price = checked.price;
     if (fields.salePrice && checked.salePrice !== null) patch.salePrice = checked.salePrice;
@@ -135,8 +159,8 @@ export default function GrabFromUrl({
           result.title ? "title" : null,
           result.description ? "description" : null,
           result.brand ? "brand" : null,
-          result.price !== null ? "price" : null,
-          result.salePrice !== null ? "salePrice" : null,
+          null,
+          null,
           result.marketplace ? "link" : null,
         ] as (FieldKey | null)[]
       ).filter((k): k is FieldKey => !!k)
