@@ -22,6 +22,7 @@ import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
 import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import { AddressBook } from "@/components/account/AddressBook";
+import { AuthPanel } from "@/components/account/AuthPanel";
 import { ResendVerification } from "@/components/account/ResendVerification";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +92,7 @@ function AccountPage() {
         ) : user ? (
           <SignedInView />
         ) : (
-          <AuthForms initialMode={search.mode ?? "signin"} />
+          <AuthPanel initialMode={search.mode ?? "signin"} />
         )}
       </main>
 
