@@ -81,25 +81,57 @@ function MoreList({
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? children : children.slice(0, limit);
   const hasMore = children.length > limit;
+  const hiddenItems = children.slice(limit);
 
   return (
     <div>
       <ul className="space-y-0.5">{visible}</ul>
       {hasMore ? (
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-          className="mt-1 inline-flex min-h-10 items-center gap-1 pl-1 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-        >
-          {expanded ? "Lebih sedikit" : "Lainnya"}
-          {expanded ? (
-            <ChevronUp className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ChevronDown className="h-4 w-4" aria-hidden="true" />
-          )}
-          <span className="sr-only">{label}</span>
-        </button>
+        <div className="mt-1 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            aria-expanded={expanded}
+            className="inline-flex min-h-10 items-center gap-1 pl-1 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+          >
+            {expanded ? "Lebih sedikit" : "Lainnya"}
+            {expanded ? (
+              <ChevronUp className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            )}
+            <span className="sr-only">{label}</span>
+          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                aria-label={`Lihat subkategori tersembunyi untuk ${label}`}
+              >
+                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-xs">
+              <p className="mb-1 font-semibold">{expanded ? "Semua item ditampilkan" : `${hiddenItems.length} item tersembunyi`}</p>
+              {!expanded ? (
+                <ul className="space-y-0.5">
+                  {hiddenItems.map((item, idx) => {
+                    const key = React.isValidElement(item) ? item.key ?? idx : idx;
+                    const text = React.isValidElement(item)
+                      ? (item.props.children as React.ReactElement)?.props?.children ?? item.props.label
+                      : null;
+                    return (
+                      <li key={key} className="text-xs">
+                        • {text}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       ) : null}
     </div>
   );
