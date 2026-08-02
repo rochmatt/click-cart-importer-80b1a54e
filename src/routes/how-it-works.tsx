@@ -15,8 +15,31 @@ export const Route = createFileRoute("/how-it-works")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "/how-it-works" },
+      { property: "og:site_name", content: "PasarPilih" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ],
+    links: [{ rel: "canonical", href: "/how-it-works" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: "How PasarPilih works",
+          description,
+          step: steps.map((s, i) => ({
+            "@type": "HowToStep",
+            position: i + 1,
+            name: s.title,
+            text: s.description,
+          })),
+        }),
+      },
     ],
   }),
+
   component: HowItWorksPage,
 });
 

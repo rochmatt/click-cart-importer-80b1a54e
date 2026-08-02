@@ -20,8 +20,46 @@ export const Route = createFileRoute("/contact")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "/contact" },
+      { property: "og:site_name", content: "PasarPilih" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ],
+    links: [{ rel: "canonical", href: "/contact" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          name: "Contact PasarPilih",
+          mainEntity: {
+            "@type": "Organization",
+            name: "PT RAFA KPT",
+            alternateName: "PasarPilih",
+            email: "adin@inipilihanku.com",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "DS. LAHAR RT3 RW1",
+              addressCountry: "ID",
+            },
+            contactPoint: {
+              "@type": "ContactPoint",
+              contactType: "customer support",
+              email: "adin@inipilihanku.com",
+              availableLanguage: ["id", "en"],
+              hoursAvailable: {
+                "@type": "OpeningHoursSpecification",
+                opens: "07:00",
+                closes: "24:00",
+              },
+            },
+          },
+        }),
+      },
     ],
   }),
+
   component: ContactPage,
 });
 

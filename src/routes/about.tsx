@@ -14,8 +14,36 @@ export const Route = createFileRoute("/about")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "/about" },
+      { property: "og:site_name", content: "PasarPilih" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+    ],
+    links: [{ rel: "canonical", href: "/about" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          name: "About PasarPilih",
+          description,
+          mainEntity: {
+            "@type": "Organization",
+            name: "PT RAFA KPT",
+            alternateName: "PasarPilih",
+            email: "adin@inipilihanku.com",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "DS. LAHAR RT3 RW1",
+              addressCountry: "ID",
+            },
+          },
+        }),
+      },
     ],
   }),
+
   component: AboutPage,
 });
 

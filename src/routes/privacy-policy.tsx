@@ -14,7 +14,12 @@ export const Route = createFileRoute("/privacy-policy")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "/privacy-policy" },
+      { property: "og:site_name", content: "PasarPilih" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
     ],
+    links: [{ rel: "canonical", href: "/privacy-policy" }],
   }),
   component: PrivacyPolicyPage,
 });

@@ -14,7 +14,12 @@ export const Route = createFileRoute("/terms-of-service")({
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "/terms-of-service" },
+      { property: "og:site_name", content: "PasarPilih" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
     ],
+    links: [{ rel: "canonical", href: "/terms-of-service" }],
   }),
   component: TermsOfServicePage,
 });
