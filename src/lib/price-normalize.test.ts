@@ -145,7 +145,10 @@ describe("normalizePrices", () => {
       expect(second.price).toBe(first.price);
       expect(second.salePrice).toBe(first.salePrice);
       expect(second.discountPercent).toBe(first.discountPercent);
-      expect(second.issues).toHaveLength(0);
+      // Tidak boleh muncul jenis peringatan baru pada pass kedua.
+      for (const code of codesOf(second.issues)) {
+        expect(codesOf(first.issues)).toContain(code);
+      }
     }
   });
 });

@@ -61,7 +61,10 @@ function idr(value: number): string {
 }
 
 function rawText(value: unknown): string {
-  if (typeof value === "string") return value.replace(/\s+/g, " ").trim();
+  if (typeof value === "string") {
+    const trimmed = value.replace(/\s+/g, " ").trim();
+    return trimmed === "" ? "kosong" : trimmed;
+  }
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return "kosong";
 }
@@ -127,7 +130,9 @@ export function parsePriceValue(value: unknown): number | null {
   return Math.round(n);
 }
 
-const RANGE_RE = /\d[\d.,\s]*\s*(?:-|–|—|s\/d|sampai|to)\s*\d/i;
+// Rentang: "10.000 - 25.000", "Rp10.000–Rp25.000", "10rb s/d 25rb".
+const RANGE_RE =
+  /\d[\d.,\s]*(?:rb|ribu|k|jt|juta)?\s*(?:-|–|—|s\/d|sampai|to)\s*(?:rp|idr)?\s*\d/i;
 
 function validateSingle(
   raw: unknown,
