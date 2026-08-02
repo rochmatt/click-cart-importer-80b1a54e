@@ -224,7 +224,13 @@ export function CategoryFilters({
       {allCategories.length > 0 ? (
         <div className="mt-4 border-t border-border pt-4">
           <p className="mb-1 text-sm font-bold text-foreground">Kategori lain</p>
-          <MoreList label="kategori lain" limit={4}>
+          <MoreList
+            label="kategori lain"
+            limit={4}
+            labels={allCategories
+              .filter((c) => c.slug !== activeSlug)
+              .map((c) => c.label)}
+          >
             {allCategories
               .filter((c) => c.slug !== activeSlug)
               .map((c) => {
