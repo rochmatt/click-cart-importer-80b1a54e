@@ -262,7 +262,10 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {companyLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link to={to} className="transition-colors hover:text-primary">
+                <Link
+                  to={to}
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   {label}
                 </Link>
               </li>
@@ -275,7 +278,10 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {supportLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link to={to} className="transition-colors hover:text-primary">
+                <Link
+                  to={to}
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   {label}
                 </Link>
               </li>
@@ -297,7 +303,11 @@ export function Footer() {
           </p>
           <nav aria-label="Legal" className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground sm:justify-start">
             {legalLinks.map(({ label, to }) => (
-              <Link key={label} to={to} className="transition-colors hover:text-primary">
+              <Link
+                key={label}
+                to={to}
+                className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 {label}
               </Link>
             ))}
