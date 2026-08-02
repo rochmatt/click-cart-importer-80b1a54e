@@ -3,6 +3,8 @@
  * Strategy: JSON-LD (schema.org/Product) → OpenGraph/meta → AI fallback.
  */
 
+import { normalizePrices, parsePriceValue, type PriceIssue } from "./price-normalize";
+
 export type GrabbedProduct = {
   sourceUrl: string;
   marketplace: "shopee" | "tokopedia" | "tiktok" | null;
@@ -14,6 +16,8 @@ export type GrabbedProduct = {
   salePrice: number | null;
   images: string[];
   usedAi: boolean;
+  discountPercent: number | null;
+  priceIssues: PriceIssue[];
 };
 
 function decodeEntities(input: string): string {
@@ -78,16 +82,7 @@ function allMeta(html: string, key: string): string[] {
 }
 
 function toNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
-  if (typeof value !== "string") return null;
-  const cleaned = value.replace(/[^\d.,]/g, "");
-  if (!cleaned) return null;
-  // Indonesian formats: 1.250.000 or 1.250.000,50
-  let normalized = cleaned;
-  if (/,\d{1,2}$/.test(cleaned)) normalized = cleaned.replace(/\./g, "").replace(",", ".");
-  else normalized = cleaned.replace(/[.,](?=\d{3}\b)/g, "").replace(",", ".");
-  const n = Number(normalized);
-  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+  return parsePriceValue(value);
 }
 
 function flattenJsonLd(node: unknown, out: Record<string, unknown>[]): void {
@@ -299,7 +294,15 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
     }
   }
 
-  if (price !== null && salePrice !== null && salePrice >= price) salePrice = null;
+  const normalized = normalizePrices(price, salePrice);
+  price = normalized.price;
+  salePrice = normalized.salePrice;
+  if (currency && currency.toUpperCase() !== "IDR") {
+    normalized.issues.push({
+      level: "warning",
+      message: `Harga di halaman ini memakai mata uang ${currency.toUpperCase()} — konversi manual bila perlu.`,
+    });
+  }
 
   return {
     sourceUrl: base,
@@ -312,5 +315,7 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
     salePrice,
     images,
     usedAi,
+    discountPercent: normalized.discountPercent,
+    priceIssues: normalized.issues,
   };
 }
