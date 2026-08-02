@@ -1,16 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { AnnouncementBar } from "@/components/store/AnnouncementBar";
-import { Header } from "@/components/store/Header";
-import { Footer } from "@/components/store/Footer";
-import { MobileBottomNav } from "@/components/store/MobileBottomNav";
-import { ChatFab } from "@/components/store/ChatFab";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { LegalPageLayout, LegalCallout } from "@/components/store/LegalPageLayout";
 
 const title = "FAQ — PasarPilih";
 const description =
@@ -79,64 +74,40 @@ const faqs = [
 ];
 
 function FAQPage() {
-  const [query, setQuery] = useState("");
-
   return (
-    <div className="min-h-screen bg-background font-sans antialiased">
-      <AnnouncementBar />
-      <Header query={query} onQueryChange={setQuery} />
+    <LegalPageLayout
+      heading="Frequently asked questions"
+      lead="Answers to common questions about PasarPilih orders, payments, shipping, and returns."
+    >
+      <Accordion type="single" collapsible className="w-full">
+        {faqs.map(({ question, answer }, i) => (
+          <AccordionItem key={i} value={`item-${i}`}>
+            <AccordionTrigger className="py-4 text-left text-sm font-medium text-foreground sm:text-base">
+              {question}
+            </AccordionTrigger>
+            <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
+              {answer}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14 lg:px-8">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
-        >
-          ← Back to shopping
-        </Link>
-
-        <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-          Frequently asked questions
-        </h1>
-        <p className="mt-4 text-sm text-muted-foreground sm:text-base">
-          This page is maintained by PT RAFA KPT to answer common questions about
-          PasarPilih. If you need more help, please contact support.
+      <LegalCallout title="Still have questions?">
+        <p>
+          Reach out via our{" "}
+          <Link to="/contact" className="text-primary hover:underline">
+            Contact page
+          </Link>{" "}
+          or email{" "}
+          <a
+            href="mailto:adin@inipilihanku.com"
+            className="text-primary hover:underline"
+          >
+            adin@inipilihanku.com
+          </a>
+          .
         </p>
-
-        <Accordion type="single" collapsible className="mt-8 w-full">
-          {faqs.map(({ question, answer }, i) => (
-            <AccordionItem key={i} value={`item-${i}`}>
-              <AccordionTrigger className="text-left text-sm font-medium text-foreground sm:text-base">
-                {question}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-                {answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        <div className="mt-10 rounded-2xl border border-border bg-secondary/50 p-6">
-          <p className="font-medium text-foreground">Still have questions?</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Reach out via our{" "}
-            <Link to="/contact" className="text-primary hover:underline">
-              Contact page
-            </Link>{" "}
-            or email{" "}
-            <a
-              href="mailto:adin@inipilihanku.com"
-              className="text-primary hover:underline"
-            >
-              adin@inipilihanku.com
-            </a>
-            .
-          </p>
-        </div>
-      </main>
-
-      <Footer />
-      <ChatFab />
-      <MobileBottomNav />
-    </div>
+      </LegalCallout>
+    </LegalPageLayout>
   );
 }
