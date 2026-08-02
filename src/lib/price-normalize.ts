@@ -35,11 +35,81 @@ export type PriceIssue = {
   action: string;
 };
 
+export type PriceRuleId =
+  | "parse"
+  | "range"
+  | "bounds"
+  | "order"
+  | "identical"
+  | "fallback"
+  | "discount";
+
+/** Rule catalogue shown in the admin Grab panel. */
+export const PRICE_RULES: { id: PriceRuleId; name: string; description: string }[] = [
+  {
+    id: "parse",
+    name: "Normalisasi angka",
+    description:
+      'Simbol mata uang, spasi, dan pemisah ribuan dibuang; singkatan "rb/k/jt/juta" dikalikan, desimal dibulatkan ke rupiah bulat.',
+  },
+  {
+    id: "range",
+    name: "Deteksi rentang",
+    description:
+      'Nilai berbentuk rentang ("10.000 - 25.000", "s/d", "sampai") dipangkas ke batas terendah dan ditandai sebagai perkiraan.',
+  },
+  {
+    id: "bounds",
+    name: "Batas kewajaran",
+    description: `Nilai di bawah ${MIN_PRICE.toLocaleString("id-ID")} atau di atas ${MAX_PRICE.toLocaleString("id-ID")} dianggap salah baca dan tidak diterapkan.`,
+  },
+  {
+    id: "order",
+    name: "Urutan harga vs diskon",
+    description:
+      "Harga diskon harus lebih kecil dari harga normal; bila terbalik, kedua nilai ditukar otomatis.",
+  },
+  {
+    id: "identical",
+    name: "Nilai kembar",
+    description: "Bila harga normal dan diskon sama, harga diskon dikosongkan (tidak ada promo).",
+  },
+  {
+    id: "fallback",
+    name: "Fallback satu harga",
+    description:
+      "Bila hanya harga diskon yang valid, angka itu dipakai sebagai harga normal agar produk tetap punya harga.",
+  },
+  {
+    id: "discount",
+    name: "Perhitungan diskon %",
+    description:
+      "diskon% = bulat((harga normal − harga diskon) ÷ harga normal × 100). Di bawah 1% diskon dibuang, di atas 95% ditandai untuk diperiksa.",
+  },
+];
+
+export type PriceTraceStep = {
+  /** Rule that produced this step. */
+  rule: PriceRuleId;
+  field: "price" | "salePrice" | "both";
+  /** Human label of the rule as applied. */
+  label: string;
+  /** Value(s) before the rule ran. */
+  from: string;
+  /** Value(s) after the rule ran. */
+  to: string;
+  /** Optional formula/reason shown as monospace note. */
+  note?: string;
+  changed: boolean;
+};
+
 export type NormalizedPrices = {
   price: number | null;
   salePrice: number | null;
   discountPercent: number | null;
   issues: PriceIssue[];
+  /** Ordered transformation trace: raw value → applied rules → final value. */
+  trace: PriceTraceStep[];
 };
 
 export const PRICE_ISSUE_LABELS: Record<PriceIssueCode, string> = {
@@ -139,9 +209,32 @@ function validateSingle(
   field: "price" | "salePrice",
   label: string,
   issues: PriceIssue[],
+  trace: PriceTraceStep[],
 ): number | null {
   const original = rawText(raw);
   const value = parsePriceValue(raw);
+  const isRange = typeof raw === "string" && RANGE_RE.test(raw);
+
+  if (original !== "kosong") {
+    trace.push({
+      rule: "parse",
+      field,
+      label: `${label}: baca angka dari teks sumber`,
+      from: `"${original}"`,
+      to: value !== null ? idr(value) : "tidak terbaca",
+      changed: true,
+    });
+  }
+  if (isRange && value !== null) {
+    trace.push({
+      rule: "range",
+      field,
+      label: `${label}: rentang dipangkas ke batas terendah`,
+      from: `"${original}"`,
+      to: idr(value),
+      changed: true,
+    });
+  }
 
   if (raw !== null && raw !== undefined && original !== "kosong" && value === null) {
     issues.push({
@@ -156,7 +249,7 @@ function validateSingle(
   }
   if (value === null) return null;
 
-  if (typeof raw === "string" && RANGE_RE.test(raw)) {
+  if (isRange) {
     issues.push({
       level: "warning",
       code: "range_collapsed",
@@ -176,6 +269,15 @@ function validateSingle(
       detail: `${label} terbaca ${idr(value)} dari "${original}", di bawah batas minimum ${idr(MIN_PRICE)} — biasanya ini potongan angka (mis. rating atau jumlah terjual).`,
       action: `${label} tidak diterapkan ke form.`,
     });
+    trace.push({
+      rule: "bounds",
+      field,
+      label: `${label}: di luar batas kewajaran`,
+      from: idr(value),
+      to: "dibuang",
+      note: `${idr(value)} < minimum ${idr(MIN_PRICE)}`,
+      changed: true,
+    });
     return null;
   }
   if (value > MAX_PRICE) {
@@ -187,8 +289,26 @@ function validateSingle(
       detail: `${label} terbaca ${idr(value)} dari "${original}", melebihi batas wajar ${idr(MAX_PRICE)} — kemungkinan pemisah ribuan salah baca.`,
       action: `${label} tidak diterapkan ke form.`,
     });
+    trace.push({
+      rule: "bounds",
+      field,
+      label: `${label}: di luar batas kewajaran`,
+      from: idr(value),
+      to: "dibuang",
+      note: `${idr(value)} > maksimum ${idr(MAX_PRICE)}`,
+      changed: true,
+    });
     return null;
   }
+  trace.push({
+    rule: "bounds",
+    field,
+    label: `${label}: lolos batas kewajaran`,
+    from: idr(value),
+    to: idr(value),
+    note: `${idr(MIN_PRICE)} ≤ nilai ≤ ${idr(MAX_PRICE)}`,
+    changed: false,
+  });
   return value;
 }
 
@@ -200,8 +320,9 @@ export function normalizePrices(
   rawSalePrice: unknown,
 ): NormalizedPrices {
   const issues: PriceIssue[] = [];
-  let price = validateSingle(rawPrice, "price", "Harga normal", issues);
-  let salePrice = validateSingle(rawSalePrice, "salePrice", "Harga diskon", issues);
+  const trace: PriceTraceStep[] = [];
+  let price = validateSingle(rawPrice, "price", "Harga normal", issues, trace);
+  let salePrice = validateSingle(rawSalePrice, "salePrice", "Harga diskon", issues, trace);
 
   if (price !== null && salePrice !== null) {
     if (salePrice > price) {
@@ -215,6 +336,25 @@ export function normalizePrices(
         detail: `Halaman sumber memberi harga diskon ${idr(before.salePrice)} lebih besar dari harga normal ${idr(before.price)} — urutannya tidak konsisten.`,
         action: `Ditukar otomatis: harga normal ${idr(price)}, harga diskon ${idr(salePrice)}.`,
       });
+      trace.push({
+        rule: "order",
+        field: "both",
+        label: "Urutan harga vs diskon: ditukar",
+        from: `normal ${idr(before.price)} / diskon ${idr(before.salePrice)}`,
+        to: `normal ${idr(price)} / diskon ${idr(salePrice)}`,
+        note: "aturan: harga diskon < harga normal",
+        changed: true,
+      });
+    } else {
+      trace.push({
+        rule: "order",
+        field: "both",
+        label: "Urutan harga vs diskon: sudah benar",
+        from: `normal ${idr(price)} / diskon ${idr(salePrice)}`,
+        to: "tidak diubah",
+        note: "aturan: harga diskon < harga normal",
+        changed: false,
+      });
     }
     if (salePrice === price) {
       const same = price;
@@ -226,6 +366,14 @@ export function normalizePrices(
         title: PRICE_ISSUE_LABELS.identical,
         detail: `Kedua nilai terbaca sama, yaitu ${idr(same)}, jadi tidak ada diskon nyata.`,
         action: "Harga diskon dikosongkan, hanya harga normal yang diterapkan.",
+      });
+      trace.push({
+        rule: "identical",
+        field: "salePrice",
+        label: "Nilai kembar: harga diskon dikosongkan",
+        from: `diskon ${idr(same)} = normal ${idr(same)}`,
+        to: "diskon kosong",
+        changed: true,
       });
     }
   }
@@ -241,11 +389,28 @@ export function normalizePrices(
       detail: "Hanya satu angka harga yang valid terbaca dari halaman sumber, yaitu harga diskon.",
       action: `Angka itu dipakai sebagai harga normal: ${idr(price)}.`,
     });
+    trace.push({
+      rule: "fallback",
+      field: "price",
+      label: "Fallback satu harga: diskon dipakai sebagai harga normal",
+      from: `normal kosong / diskon ${idr(price)}`,
+      to: `normal ${idr(price)} / diskon kosong`,
+      changed: true,
+    });
   }
 
   let discountPercent: number | null = null;
   if (price !== null && salePrice !== null) {
     discountPercent = Math.round(((price - salePrice) / price) * 100);
+    trace.push({
+      rule: "discount",
+      field: "both",
+      label: "Perhitungan diskon %",
+      from: `normal ${idr(price)} / diskon ${idr(salePrice)}`,
+      to: `${discountPercent}%`,
+      note: `bulat((${price} − ${salePrice}) ÷ ${price} × 100) = ${discountPercent}`,
+      changed: true,
+    });
     if (discountPercent < 1) {
       const gap = price - salePrice;
       salePrice = null;
@@ -258,6 +423,14 @@ export function normalizePrices(
         detail: `Selisih hanya ${idr(gap)} (di bawah 1% dari harga normal ${idr(price)}).`,
         action: "Harga diskon dikosongkan agar tidak tampil sebagai promo palsu.",
       });
+      trace.push({
+        rule: "discount",
+        field: "salePrice",
+        label: "Diskon < 1%: harga diskon dibuang",
+        from: `selisih ${idr(gap)}`,
+        to: "diskon kosong",
+        changed: true,
+      });
     } else if (discountPercent > 95) {
       issues.push({
         level: "warning",
@@ -267,10 +440,18 @@ export function normalizePrices(
         detail: `Diskon terhitung ${discountPercent}% (${idr(price)} → ${idr(salePrice)}), jauh di atas batas normal 95%.`,
         action: "Nilai tetap dipakai, tapi periksa ulang sebelum menyimpan.",
       });
+      trace.push({
+        rule: "discount",
+        field: "both",
+        label: "Diskon > 95%: ditandai untuk diperiksa",
+        from: `${discountPercent}%`,
+        to: "tetap dipakai",
+        changed: false,
+      });
     }
   }
 
 
 
-  return { price, salePrice, discountPercent, issues };
+  return { price, salePrice, discountPercent, issues, trace };
 }
