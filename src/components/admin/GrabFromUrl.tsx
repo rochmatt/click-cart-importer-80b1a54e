@@ -150,6 +150,10 @@ export default function GrabFromUrl({
 
   function openConfirm() {
     if (!result) return;
+    if (priceInvalid || salePriceInvalid) {
+      toast.error("Perbaiki format harga yang diedit manual dulu");
+      return;
+    }
     setShowConfirm(true);
   }
 
@@ -561,7 +565,8 @@ export default function GrabFromUrl({
             <button
               type="button"
               onClick={openConfirm}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-background px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 sm:w-auto"
+              disabled={priceInvalid || salePriceInvalid}
+              className="inline-flex h-10 w-full disabled:opacity-50 items-center justify-center gap-2 rounded-lg border border-primary bg-background px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 sm:w-auto"
             >
               <Check className="size-4" aria-hidden="true" />
               Terapkan ke form
