@@ -62,17 +62,20 @@ function AccountPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-          My account
+          {user ? "Akun saya" : search.mode === "register" ? "Daftar akun" : "Masuk ke akun"}
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Manage your profile, orders and preferences in one place.
+          {user
+            ? "Kelola profil, pesanan, dan preferensi kamu di satu tempat."
+            : "Masuk atau daftar untuk checkout lebih cepat dan melacak pesanan otomatis."}
         </p>
 
         {loading ? (
           <div className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading your account…
+            Memuat akun kamu…
           </div>
+
         ) : user ? (
           <SignedInView />
         ) : (
