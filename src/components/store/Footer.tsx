@@ -3,12 +3,19 @@ import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   ArrowUp,
+  BadgeCheck,
+  Bitcoin,
+  CreditCard,
   Facebook,
   Instagram,
+  Landmark,
+  Lock,
   Mail,
   PackageCheck,
+  QrCode,
   ShieldCheck,
   ShoppingBag,
+  Smartphone,
   Truck,
   Twitter,
   Youtube,
@@ -155,6 +162,62 @@ function AssuranceBar() {
   );
 }
 
+const paymentMethods = [
+  { label: "QRIS", icon: QrCode },
+  { label: "Virtual Account", icon: Landmark },
+  { label: "E-Wallet", icon: Smartphone },
+  { label: "Kartu Kredit", icon: CreditCard },
+  { label: "Crypto", icon: Bitcoin },
+];
+
+const securityBadges = [
+  { label: "SSL Secure", icon: Lock },
+  { label: "Verified", icon: BadgeCheck },
+  { label: "Protected", icon: ShieldCheck },
+];
+
+function PaymentAndSecurity() {
+  return (
+    <div className="border-b border-border bg-secondary/30">
+      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-2 lg:px-8">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Metode Pembayaran
+          </h3>
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Metode pembayaran">
+            {paymentMethods.map(({ label, icon: Icon }) => (
+              <li
+                key={label}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground"
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="whitespace-nowrap">{label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Keamanan &amp; Verifikasi
+          </h3>
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Keamanan dan verifikasi">
+            {securityBadges.map(({ label, icon: Icon }) => (
+              <li
+                key={label}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground"
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0 text-success" />
+                <span className="whitespace-nowrap">{label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Footer() {
   return (
     <footer className="border-t border-border bg-secondary">
@@ -217,6 +280,8 @@ export function Footer() {
 
         <Newsletter />
       </div>
+
+      <PaymentAndSecurity />
 
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-5 sm:flex-row sm:px-6 lg:px-8">
