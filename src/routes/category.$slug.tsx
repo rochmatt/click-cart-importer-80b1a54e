@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, ChevronDown, ChevronUp, PackageSearch, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import {
@@ -47,98 +47,6 @@ const priceValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
 
 const idrCompact = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
-
-function CategoryChipGroup({
-  groupTitle,
-  items,
-  activeSlug,
-  collapsed,
-}: {
-  groupTitle: string;
-  items: { slug: string; label: string }[];
-  activeSlug: string;
-  collapsed: boolean;
-}) {
-  const slugs = useMemo(() => items.map((i) => i.slug), [items]);
-  const [tabSlug, setTabSlug] = useState(() => {
-    const active = items.find((i) => i.slug === activeSlug)?.slug;
-    return active || items[0]?.slug || "";
-  });
-  const refs = useRef<Map<string, HTMLAnchorElement>>(new Map());
-
-  useEffect(() => {
-    const active = items.find((i) => i.slug === activeSlug)?.slug;
-    if (active && active !== tabSlug) setTabSlug(active);
-  }, [activeSlug, items, tabSlug]);
-
-  const focusSlug = useCallback((slug: string) => {
-    setTabSlug(slug);
-    refs.current.get(slug)?.focus();
-  }, []);
-
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const idx = slugs.indexOf(tabSlug);
-      if (idx === -1) return;
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        focusSlug(slugs[(idx + 1) % slugs.length]);
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        focusSlug(slugs[(idx - 1 + slugs.length) % slugs.length]);
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        focusSlug(slugs[0]);
-      } else if (e.key === "End") {
-        e.preventDefault();
-        focusSlug(slugs[slugs.length - 1]);
-      }
-    },
-    [slugs, tabSlug, focusSlug],
-  );
-
-  return (
-    <ul
-      role="listbox"
-      aria-label={groupTitle}
-      aria-orientation="horizontal"
-      aria-hidden={collapsed}
-      onKeyDown={onKeyDown}
-      className={`${
-        collapsed ? "hidden" : "flex"
-      } -mx-4 snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-1 lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden`}
-    >
-      {items.map((c) => {
-        const active = c.slug === activeSlug;
-        const tabbable = c.slug === tabSlug;
-        return (
-          <li key={c.slug} role="presentation" className="shrink-0 snap-start">
-            <Link
-              ref={(el) => {
-                if (el) refs.current.set(c.slug, el);
-                else refs.current.delete(c.slug);
-              }}
-              to="/category/$slug"
-              params={{ slug: c.slug }}
-              role="option"
-              aria-selected={active}
-              aria-current={active ? "page" : undefined}
-              tabIndex={tabbable ? 0 : -1}
-              onFocus={() => setTabSlug(c.slug)}
-              className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
-              }`}
-            >
-              {c.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 export const Route = createFileRoute("/category/$slug")({
   loader: ({ params }) => {
