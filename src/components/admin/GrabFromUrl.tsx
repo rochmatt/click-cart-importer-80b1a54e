@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Link2, Loader2, Sparkles, Wand2, Check } from "lucide-react";
+import { Link2, Loader2, Sparkles, Wand2, Check, AlertTriangle } from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
 import { formatRupiah, type AdminProduct } from "@/lib/admin-store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type FieldKey = "title" | "description" | "brand" | "price" | "salePrice" | "link";
 
@@ -39,6 +49,7 @@ export default function GrabFromUrl({
     link: true,
   });
   const [pickedImages, setPickedImages] = useState<string[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const room = Math.max(0, maxImages - currentImageCount);
 
@@ -80,6 +91,7 @@ export default function GrabFromUrl({
 
   function apply() {
     if (!result) return;
+    setShowConfirm(false);
     const patch: Partial<AdminProduct> = {};
     if (fields.title && result.title) patch.title = result.title;
     if (fields.description && result.description) patch.description = result.description;
@@ -95,6 +107,11 @@ export default function GrabFromUrl({
     }
     onApply({ ...patch, ...(pickedImages.length ? { images: pickedImages } : {}) });
     toast.success("Data diterapkan ke form");
+  }
+
+  function openConfirm() {
+    if (!result) return;
+    setShowConfirm(true);
   }
 
   const available: FieldKey[] = result
@@ -350,12 +367,51 @@ export default function GrabFromUrl({
 
             <button
               type="button"
-              onClick={apply}
+              onClick={openConfirm}
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary bg-background px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 sm:w-auto"
             >
               <Check className="size-4" aria-hidden="true" />
               Terapkan ke form
             </button>
+
+            <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10 sm:mx-0">
+                    <AlertTriangle className="size-6 text-primary" aria-hidden="true" />
+                  </div>
+                  <AlertDialogTitle>Terapkan data dari URL?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Data berikut akan menimpa isian yang sudah ada di editor produk.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="rounded-lg border border-border bg-background p-3 text-xs">
+                  <ul className="space-y-1.5">
+                    {available
+                      .filter((key) => fields[key])
+                      .map((key) => (
+                        <li key={key} className="flex items-center gap-2">
+                          <Check className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                          <span>{FIELD_LABELS[key]}</span>
+                        </li>
+                      ))}
+                    {pickedImages.length > 0 && (
+                      <li className="flex items-center gap-2">
+                        <Check className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+                        <span>{pickedImages.length} gambar</span>
+                      </li>
+                    )}
+                    {available.filter((key) => fields[key]).length === 0 && pickedImages.length === 0 && (
+                      <li className="text-muted-foreground">Tidak ada data yang dipilih.</li>
+                    )}
+                  </ul>
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction onClick={apply}>Ya, terapkan ke form</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </div>
