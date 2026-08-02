@@ -8,10 +8,26 @@ const socials = [
   { label: "YouTube", icon: Youtube },
 ];
 
+const companyLinks = [
+  { label: "About Us", to: "/about" },
+  { label: "Contact", to: "/contact" },
+  { label: "How it works", to: "/how-it-works" },
+];
+
+const supportLinks = [
+  { label: "Track Order", to: "/track" },
+  { label: "FAQ", to: "/faq" },
+];
+
+const legalLinks = [
+  { label: "Privacy Policy", to: "/privacy-policy" },
+  { label: "Terms of Service", to: "/terms-of-service" },
+];
+
 export function Footer() {
   return (
     <footer className="border-t border-border bg-secondary">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-[1.5fr_1fr_1fr] lg:px-8">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-8">
         <div className="max-w-sm">
           <div className="flex items-center gap-2">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
@@ -42,47 +58,48 @@ export function Footer() {
         <nav aria-label="Company">
           <h3 className="text-sm font-semibold text-foreground">Company</h3>
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-            <li>
-              <a href="#" className="transition-colors hover:text-primary">
-                About Us
-              </a>
-            </li>
-            <li>
-              <a href="#" className="transition-colors hover:text-primary">
-                Contact
-              </a>
-            </li>
-            <li>
-              <a href="#" className="transition-colors hover:text-primary">
-                How it works
-              </a>
-            </li>
+            {companyLinks.map(({ label, to }) => (
+              <li key={label}>
+                <Link
+                  to={to}
+                  className="transition-colors hover:text-primary"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
 
         <nav aria-label="Support">
           <h3 className="text-sm font-semibold text-foreground">Support</h3>
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-            <li>
-              <Link to="/track" className="transition-colors hover:text-primary">
-                Track Order
-              </Link>
-            </li>
-            <li>
-              <a href="#" className="transition-colors hover:text-primary">
-                FAQ
-              </a>
-            </li>
-            <li>
-              <a href="#" className="transition-colors hover:text-primary">
-                Privacy Policy
-              </a>
-            </li>
-            <li>
-              <a href="#" className="transition-colors hover:text-primary">
-                Terms of Service
-              </a>
-            </li>
+            {supportLinks.map(({ label, to }) => (
+              <li key={label}>
+                <Link
+                  to={to}
+                  className="transition-colors hover:text-primary"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <nav aria-label="Legal">
+          <h3 className="text-sm font-semibold text-foreground">Legal</h3>
+          <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
+            {legalLinks.map(({ label, to }) => (
+              <li key={label}>
+                <Link
+                  to={to}
+                  className="transition-colors hover:text-primary"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
       </div>
