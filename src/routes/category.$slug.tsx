@@ -335,6 +335,10 @@ function CategoryPage() {
               activeSlug={category.slug}
               activeLabel={category.label}
               subcategories={category.subcategories}
+              categoryCounts={categoryCounts}
+              subcategoryCounts={subcategoryCounts}
+              ratingCounts={ratingCounts}
+
             />
           </aside>
 
