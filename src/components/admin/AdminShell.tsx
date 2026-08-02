@@ -27,6 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AdminFooter } from "@/components/admin/AdminFooter";
+import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
 
 const NAV = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
