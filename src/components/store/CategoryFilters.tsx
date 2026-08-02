@@ -113,6 +113,9 @@ export function CategoryFilters({
   activeSlug,
   activeLabel,
   subcategories,
+  categoryCounts,
+  subcategoryCounts,
+  ratingCounts,
 }: Props) {
   const set = <K extends keyof CategoryFilterState>(key: K, v: CategoryFilterState[K]) =>
     onChange({ ...value, [key]: v });
@@ -153,17 +156,27 @@ export function CategoryFilters({
           {subcategories && subcategories.length > 0 ? (
             <div className="mt-2 pl-4">
               <MoreList label={`subkategori ${activeLabel}`} limit={5}>
-                {subcategories.map((sub) => (
-                  <li key={sub}>
-                    <Link
-                      to="/search"
-                      search={{ q: sub }}
-                      className="block min-h-10 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                    >
-                      {sub}
-                    </Link>
-                  </li>
-                ))}
+                {subcategories.map((sub) => {
+                  const n = subcategoryCounts?.[sub];
+                  return (
+                    <li key={sub}>
+                      <Link
+                        to="/search"
+                        search={{ q: sub }}
+                        aria-label={
+                          n === undefined ? sub : `${sub}, ${n} produk`
+                        }
+                        className={cn(
+                          "flex min-h-10 items-center gap-2 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                          n === 0 && "text-muted-foreground",
+                        )}
+                      >
+                        <span className="truncate">{sub}</span>
+                        {n !== undefined ? <CountBadge count={n} /> : null}
+                      </Link>
+                    </li>
+                  );
+                })}
               </MoreList>
             </div>
           ) : null}
@@ -176,20 +189,31 @@ export function CategoryFilters({
           <MoreList label="kategori lain" limit={4}>
             {allCategories
               .filter((c) => c.slug !== activeSlug)
-              .map((c) => (
-                <li key={c.slug}>
-                  <Link
-                    to="/category/$slug"
-                    params={{ slug: c.slug }}
-                    className="block min-h-10 py-2 text-sm text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                  >
-                    {c.label}
-                  </Link>
-                </li>
-              ))}
+              .map((c) => {
+                const n = categoryCounts?.[c.slug];
+                return (
+                  <li key={c.slug}>
+                    <Link
+                      to="/category/$slug"
+                      params={{ slug: c.slug }}
+                      aria-label={
+                        n === undefined ? c.label : `${c.label}, ${n} produk`
+                      }
+                      className={cn(
+                        "flex min-h-10 items-center gap-2 py-2 text-sm text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                        n === 0 && "text-muted-foreground",
+                      )}
+                    >
+                      <span className="truncate">{c.label}</span>
+                      {n !== undefined ? <CountBadge count={n} /> : null}
+                    </Link>
+                  </li>
+                );
+              })}
           </MoreList>
         </div>
       ) : null}
+
 
       {/* FILTER */}
       <div className="mt-5 border-t border-border pt-5">
