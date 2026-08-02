@@ -298,9 +298,14 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="kamu@email.com"
                   autoComplete="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   aria-invalid={Boolean(errors.email)}
                   aria-describedby={errors.email ? "email-error" : undefined}
                 />
+
                 {errors.email && (
                   <p id="email-error" className="text-xs text-destructive">
                     {errors.email}
