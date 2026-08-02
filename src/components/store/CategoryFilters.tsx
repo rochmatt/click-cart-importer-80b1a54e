@@ -90,54 +90,56 @@ function MoreList({
     <div>
       <ul className="space-y-0.5">{visible}</ul>
       {hasMore ? (
-        <div className="mt-1 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            aria-expanded={expanded}
-            className="inline-flex min-h-10 items-center gap-1 pl-1 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-          >
-            {expanded ? "Lebih sedikit" : "Lainnya"}
-            {expanded ? (
-              <ChevronUp className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <ChevronDown className="h-4 w-4" aria-hidden="true" />
-            )}
-            <span className="sr-only">{label}</span>
-          </button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                aria-label={`Lihat ${hiddenLabels.length} item tersembunyi untuk ${label}`}
-              >
-                <HelpCircle className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-xs">
-              <p className="mb-1.5 font-semibold">
-                {expanded
-                  ? "Semua item ditampilkan"
-                  : `${hiddenLabels.length} item tersembunyi`}
-              </p>
-              {!expanded ? (
-                <ul className="space-y-0.5">
-                  {hiddenLabels.map((item) => (
-                    <li key={item} className="text-xs">
-                      • {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        {!expanded ? (
-          <p className="mt-0.5 pl-1 text-[11px] text-muted-foreground">
-            Klik ikon info untuk melihat subkategori tersembunyi.
-          </p>
-        ) : null}
+        <>
+          <div className="mt-1 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              className="inline-flex min-h-10 items-center gap-1 pl-1 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            >
+              {expanded ? "Lebih sedikit" : "Lainnya"}
+              {expanded ? (
+                <ChevronUp className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span className="sr-only">{label}</span>
+            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                  aria-label={`Lihat ${hiddenLabels.length} item tersembunyi untuk ${label}`}
+                >
+                  <HelpCircle className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs">
+                <p className="mb-1.5 font-semibold">
+                  {expanded
+                    ? "Semua item ditampilkan"
+                    : `${hiddenLabels.length} item tersembunyi`}
+                </p>
+                {!expanded ? (
+                  <ul className="space-y-0.5">
+                    {hiddenLabels.map((item) => (
+                      <li key={item} className="text-xs">
+                        • {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          {!expanded ? (
+            <p className="mt-0.5 pl-1 text-[11px] text-muted-foreground">
+              Klik ikon info untuk melihat subkategori tersembunyi.
+            </p>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
