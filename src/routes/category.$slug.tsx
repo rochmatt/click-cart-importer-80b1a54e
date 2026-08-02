@@ -229,59 +229,19 @@ function CategoryPage() {
               priceBounds={priceBounds}
               variant="sidebar"
               className="mt-0"
+              groups={categoryGroups}
+              activeSlug={category.slug}
+              collapsedGroups={collapsedGroups}
+              onToggleGroup={(title) =>
+                setCollapsedGroups((prev) => ({
+                  ...prev,
+                  [title]: !prev[title],
+                }))
+              }
             />
           </aside>
 
           <div className="mt-6 space-y-6 lg:mt-0">
-            <nav aria-label="All categories" className="space-y-4">
-              <div className="flex flex-col gap-4">
-                {categoryGroups.map((group) => {
-                  const collapsed = !!collapsedGroups[group.title];
-                  return (
-                    <div key={group.title} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          {group.title}
-                          <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
-                            {group.items.length} kategori
-                          </span>
-                        </h2>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCollapsedGroups((prev) => ({
-                              ...prev,
-                              [group.title]: !prev[group.title],
-                            }))
-                          }
-                          aria-expanded={!collapsed}
-                          aria-controls={`category-group-${group.title}`}
-                          aria-label={`${collapsed ? "Buka" : "Tutup"} grup ${group.title} (${group.items.length} kategori)`}
-                          className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-                        >
-                          {collapsed ? (
-                            <>
-                              Buka <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-                            </>
-                          ) : (
-                            <>
-                              Tutup <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <CategoryChipGroup
-                        groupTitle={group.title}
-                        items={group.items}
-                        activeSlug={category.slug}
-                        collapsed={collapsed}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </nav>
-
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground" aria-live="polite">
                 {items.length} product{items.length === 1 ? "" : "s"}
