@@ -8,9 +8,31 @@ export const MIN_PRICE = 100; // di bawah ini hampir pasti hasil parsing salah
 
 export type PriceIssueLevel = "warning" | "error";
 
+export type PriceIssueCode =
+  | "unparsable"
+  | "too_low"
+  | "too_high"
+  | "rounded"
+  | "swapped"
+  | "identical"
+  | "sale_as_price"
+  | "discount_too_small"
+  | "discount_too_large"
+  | "range_collapsed"
+  | "currency_mismatch";
+
 export type PriceIssue = {
   level: PriceIssueLevel;
-  message: string;
+  /** Machine-readable reason so the UI can label it consistently. */
+  code: PriceIssueCode;
+  /** Which value it concerns. */
+  field: "price" | "salePrice" | "both";
+  /** Short reason headline. */
+  title: string;
+  /** Specific explanation: nilai asli, nilai hasil, dan apa yang dilakukan. */
+  detail: string;
+  /** What the system did about it. */
+  action: string;
 };
 
 export type NormalizedPrices = {
@@ -19,6 +41,31 @@ export type NormalizedPrices = {
   discountPercent: number | null;
   issues: PriceIssue[];
 };
+
+export const PRICE_ISSUE_LABELS: Record<PriceIssueCode, string> = {
+  unparsable: "Nilai tidak bisa dibaca",
+  too_low: "Nilai tak wajar (terlalu kecil)",
+  too_high: "Nilai tak wajar (terlalu besar)",
+  rounded: "Angka dibulatkan",
+  swapped: "Harga diskon tertukar",
+  identical: "Harga diskon sama dengan harga normal",
+  sale_as_price: "Harga normal tidak terbaca",
+  discount_too_small: "Selisih diskon tidak signifikan",
+  discount_too_large: "Diskon terlalu besar",
+  range_collapsed: "Rentang harga tidak konsisten",
+  currency_mismatch: "Mata uang bukan Rupiah",
+};
+
+function idr(value: number): string {
+  return `Rp${value.toLocaleString("id-ID")}`;
+}
+
+function rawText(value: unknown): string {
+  if (typeof value === "string") return value.replace(/\s+/g, " ").trim();
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return "kosong";
+}
+
 
 /**
  * Parse a raw price value (number or messy string) into a clean integer rupiah.
