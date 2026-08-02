@@ -69,6 +69,7 @@ function BackToTop() {
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 300);
     window.addEventListener("scroll", onScroll, { passive: true });
+    setVisible(window.scrollY > 300);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -80,7 +81,7 @@ function BackToTop() {
       aria-label="Kembali ke atas"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       className={cn(
-        "fixed bottom-20 right-4 z-40 h-10 w-10 rounded-full shadow-lg transition-all duration-300 lg:bottom-8",
+        "fixed bottom-36 right-4 z-40 h-10 w-10 shrink-0 rounded-full shadow-lg transition-all duration-300 sm:bottom-20 sm:right-6",
         visible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0 pointer-events-none",
       )}
     >
