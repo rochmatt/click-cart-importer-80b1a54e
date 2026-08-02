@@ -50,7 +50,7 @@ export interface SendEmailInput {
  * setiap kiriman ditolak 403.
  */
 export function emailFrom(): string {
-  return process.env.EMAIL_FROM || "PasarPilih <noreply@notify.inipilihanku.com>";
+  return process.env.EMAIL_FROM || "PasarPilih <noreply@send.inipilihanku.com>";
 }
 
 /** Dipakai pemanggil untuk memutuskan degradasi anggun, bukan melempar error. */
