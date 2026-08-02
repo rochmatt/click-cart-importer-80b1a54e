@@ -226,6 +226,57 @@ function CategoryPage() {
     return sorted;
   }, [all, searchTerm, filters.minPrice, filters.maxPrice, filters.minRating, sort]);
 
+  /** Products matching every filter except rating — the base for rating counts. */
+  const withoutRating = useMemo(() => {
+    const min = filters.minPrice ? Number(filters.minPrice) : null;
+    const max = filters.maxPrice ? Number(filters.maxPrice) : null;
+    return all.filter((p) => {
+      if (
+        searchTerm &&
+        !p.title.toLowerCase().includes(searchTerm) &&
+        !p.description.toLowerCase().includes(searchTerm)
+      )
+        return false;
+      const value = priceValue(p.price);
+      if (min !== null && value < min) return false;
+      if (max !== null && max > 0 && value > max) return false;
+      return true;
+    });
+  }, [all, searchTerm, filters.minPrice, filters.maxPrice]);
+
+  const ratingCounts = useMemo(() => {
+    const entries: Record<string, number> = {};
+    for (const r of [0, 3.5, 4, 4.5]) {
+      entries[String(r)] = withoutRating.filter((p) => p.rating >= r).length;
+    }
+    return entries;
+  }, [withoutRating]);
+
+  const categoryCounts = useMemo(() => {
+    const entries: Record<string, number> = {};
+    for (const c of categoryCatalog) {
+      entries[c.slug] = productsInCategory(c.label).length;
+    }
+    return entries;
+  }, []);
+
+  const subcategoryCounts = useMemo(() => {
+    const entries: Record<string, number> = {};
+    for (const sub of category.subcategories) {
+      const words: string[] = sub
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((w: string) => w.length > 2);
+      entries[sub] = all.filter((p) => {
+        const haystack = `${p.title} ${p.description}`.toLowerCase();
+        return words.some((w: string) => haystack.includes(w));
+      }).length;
+
+    }
+    return entries;
+  }, [all, category.subcategories]);
+
+
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       <AnnouncementBar />
@@ -284,6 +335,10 @@ function CategoryPage() {
               activeSlug={category.slug}
               activeLabel={category.label}
               subcategories={category.subcategories}
+              categoryCounts={categoryCounts}
+              subcategoryCounts={subcategoryCounts}
+              ratingCounts={ratingCounts}
+
             />
           </aside>
 

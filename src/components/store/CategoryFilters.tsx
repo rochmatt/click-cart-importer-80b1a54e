@@ -45,7 +45,24 @@ interface Props {
   subcategories?: string[];
   collapsedGroups?: Record<string, boolean>;
   onToggleGroup?: (title: string) => void;
+  /** Result counts per option so users see what is available. */
+  categoryCounts?: Record<string, number>;
+  subcategoryCounts?: Record<string, number>;
+  ratingCounts?: Record<string, number>;
 }
+
+/** Small trailing count badge for a filter option. */
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span
+      className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground"
+      aria-hidden="true"
+    >
+      {count}
+    </span>
+  );
+}
+
 
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
@@ -96,6 +113,9 @@ export function CategoryFilters({
   activeSlug,
   activeLabel,
   subcategories,
+  categoryCounts,
+  subcategoryCounts,
+  ratingCounts,
 }: Props) {
   const set = <K extends keyof CategoryFilterState>(key: K, v: CategoryFilterState[K]) =>
     onChange({ ...value, [key]: v });
@@ -136,17 +156,27 @@ export function CategoryFilters({
           {subcategories && subcategories.length > 0 ? (
             <div className="mt-2 pl-4">
               <MoreList label={`subkategori ${activeLabel}`} limit={5}>
-                {subcategories.map((sub) => (
-                  <li key={sub}>
-                    <Link
-                      to="/search"
-                      search={{ q: sub }}
-                      className="block min-h-10 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                    >
-                      {sub}
-                    </Link>
-                  </li>
-                ))}
+                {subcategories.map((sub) => {
+                  const n = subcategoryCounts?.[sub];
+                  return (
+                    <li key={sub}>
+                      <Link
+                        to="/search"
+                        search={{ q: sub }}
+                        aria-label={
+                          n === undefined ? sub : `${sub}, ${n} produk`
+                        }
+                        className={cn(
+                          "flex min-h-10 items-center gap-2 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                          n === 0 && "text-muted-foreground",
+                        )}
+                      >
+                        <span className="truncate">{sub}</span>
+                        {n !== undefined ? <CountBadge count={n} /> : null}
+                      </Link>
+                    </li>
+                  );
+                })}
               </MoreList>
             </div>
           ) : null}
@@ -159,20 +189,31 @@ export function CategoryFilters({
           <MoreList label="kategori lain" limit={4}>
             {allCategories
               .filter((c) => c.slug !== activeSlug)
-              .map((c) => (
-                <li key={c.slug}>
-                  <Link
-                    to="/category/$slug"
-                    params={{ slug: c.slug }}
-                    className="block min-h-10 py-2 text-sm text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                  >
-                    {c.label}
-                  </Link>
-                </li>
-              ))}
+              .map((c) => {
+                const n = categoryCounts?.[c.slug];
+                return (
+                  <li key={c.slug}>
+                    <Link
+                      to="/category/$slug"
+                      params={{ slug: c.slug }}
+                      aria-label={
+                        n === undefined ? c.label : `${c.label}, ${n} produk`
+                      }
+                      className={cn(
+                        "flex min-h-10 items-center gap-2 py-2 text-sm text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                        n === 0 && "text-muted-foreground",
+                      )}
+                    >
+                      <span className="truncate">{c.label}</span>
+                      {n !== undefined ? <CountBadge count={n} /> : null}
+                    </Link>
+                  </li>
+                );
+              })}
           </MoreList>
         </div>
       ) : null}
+
 
       {/* FILTER */}
       <div className="mt-5 border-t border-border pt-5">
@@ -262,6 +303,8 @@ export function CategoryFilters({
             {ratingOptions.map((r) => {
               const active = value.minRating === r;
               const id = `${uid}-rating-${String(r).replace(".", "-")}`;
+              const n = ratingCounts?.[String(r)];
+              const unavailable = n === 0 && !active;
               return (
                 <div key={r} className="relative flex items-center">
                   <input
@@ -270,13 +313,22 @@ export function CategoryFilters({
                     name={`${uid}-rating`}
                     value={r}
                     checked={active}
+                    disabled={unavailable}
                     onChange={() => set("minRating", r)}
-                    aria-label={r === 0 ? "Semua rating" : `${r} bintang ke atas`}
+                    aria-label={
+                      (r === 0 ? "Semua rating" : `${r} bintang ke atas`) +
+                      (n !== undefined ? `, ${n} produk` : "")
+                    }
                     className="peer absolute h-px w-px opacity-0"
                   />
                   <label
                     htmlFor={id}
-                    className="inline-flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-md px-1 text-sm text-foreground transition-colors hover:text-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
+                    className={cn(
+                      "inline-flex min-h-10 w-full items-center gap-2.5 rounded-md px-1 text-sm text-foreground transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-ring",
+                      unavailable
+                        ? "cursor-not-allowed text-muted-foreground opacity-60"
+                        : "cursor-pointer hover:text-primary",
+                    )}
                   >
                     <span
                       aria-hidden="true"
@@ -305,10 +357,12 @@ export function CategoryFilters({
                         {r} ke atas
                       </span>
                     )}
+                    {n !== undefined ? <CountBadge count={n} /> : null}
                   </label>
                 </div>
               );
             })}
+
           </div>
         </fieldset>
       </div>
