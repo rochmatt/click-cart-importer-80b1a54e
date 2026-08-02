@@ -91,6 +91,7 @@ export default function GrabFromUrl({
 
   function apply() {
     if (!result) return;
+    setShowConfirm(false);
     const patch: Partial<AdminProduct> = {};
     if (fields.title && result.title) patch.title = result.title;
     if (fields.description && result.description) patch.description = result.description;
@@ -106,6 +107,11 @@ export default function GrabFromUrl({
     }
     onApply({ ...patch, ...(pickedImages.length ? { images: pickedImages } : {}) });
     toast.success("Data diterapkan ke form");
+  }
+
+  function openConfirm() {
+    if (!result) return;
+    setShowConfirm(true);
   }
 
   const available: FieldKey[] = result
