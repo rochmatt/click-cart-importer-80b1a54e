@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, stripSearchParams } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
-import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
+import { CategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import {
   categoryCatalog,
@@ -63,6 +63,9 @@ const idrCompact = (n: number) =>
 
 export const Route = createFileRoute("/category/$slug")({
   validateSearch: zodValidator(categorySearchSchema),
+  search: {
+    middlewares: [stripSearchParams({ q: "", min: "", max: "", rating: 0, sort: "popular" })],
+  },
   loader: ({ params }) => {
     const category = findCategory(params.slug);
     if (!category) throw notFound();
