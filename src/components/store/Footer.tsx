@@ -189,9 +189,9 @@ function PaymentAndSecurity() {
             {paymentMethods.map(({ label, icon: Icon }) => (
               <li
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground sm:min-h-10 sm:px-2.5 sm:py-1.5"
               >
-                <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <Icon className="h-4 w-4 shrink-0 text-primary sm:h-3.5 sm:w-3.5" aria-hidden="true" />
                 <span className="whitespace-nowrap">{label}</span>
               </li>
             ))}
@@ -206,9 +206,9 @@ function PaymentAndSecurity() {
             {securityBadges.map(({ label, icon: Icon }) => (
               <li
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground sm:min-h-10 sm:px-2.5 sm:py-1.5"
               >
-                <Icon className="h-3.5 w-3.5 shrink-0 text-success" />
+                <Icon className="h-4 w-4 shrink-0 text-success sm:h-3.5 sm:w-3.5" aria-hidden="true" />
                 <span className="whitespace-nowrap">{label}</span>
               </li>
             ))}
@@ -239,16 +239,20 @@ export function Footer() {
             products directly and help you compare deals across trusted
             marketplaces.
           </p>
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {socials.map(({ label, icon: Icon }) => (
-              <a
+              <Button
                 key={label}
-                href="#"
-                aria-label={label}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                asChild
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-full sm:h-11 sm:w-11"
+                aria-label={`Kunjungi ${label} PasarPilih`}
               >
-                <Icon className="h-4 w-4" />
-              </a>
+                <a href="#" target="_blank" rel="noopener noreferrer">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </a>
+              </Button>
             ))}
           </div>
         </div>
