@@ -1,7 +1,8 @@
-import { useId, useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp, LayoutList, ListFilter, Search, Star } from "lucide-react";
+import { ChevronDown, ChevronUp, HelpCircle, LayoutList, ListFilter, Search, Star } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface CategoryFilterState {
   query: string;
@@ -72,33 +73,73 @@ function MoreList({
   children,
   limit = 4,
   label,
+  labels,
 }: {
   children: React.ReactNode[];
   limit?: number;
   label: string;
+  /** Plain text labels used for the hidden-items tooltip. */
+  labels: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? children : children.slice(0, limit);
   const hasMore = children.length > limit;
+  const hiddenLabels = expanded ? [] : labels.slice(limit);
 
   return (
     <div>
       <ul className="space-y-0.5">{visible}</ul>
       {hasMore ? (
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-          className="mt-1 inline-flex min-h-10 items-center gap-1 pl-1 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-        >
-          {expanded ? "Lebih sedikit" : "Lainnya"}
-          {expanded ? (
-            <ChevronUp className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ChevronDown className="h-4 w-4" aria-hidden="true" />
-          )}
-          <span className="sr-only">{label}</span>
-        </button>
+        <>
+          <div className="mt-1 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              className="inline-flex min-h-10 items-center gap-1 pl-1 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            >
+              {expanded ? "Lebih sedikit" : "Lainnya"}
+              {expanded ? (
+                <ChevronUp className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-4 w-4" aria-hidden="true" />
+              )}
+              <span className="sr-only">{label}</span>
+            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                  aria-label={`Lihat ${hiddenLabels.length} item tersembunyi untuk ${label}`}
+                >
+                  <HelpCircle className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs">
+                <p className="mb-1.5 font-semibold">
+                  {expanded
+                    ? "Semua item ditampilkan"
+                    : `${hiddenLabels.length} item tersembunyi`}
+                </p>
+                {!expanded ? (
+                  <ul className="space-y-0.5">
+                    {hiddenLabels.map((item) => (
+                      <li key={item} className="text-xs">
+                        • {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          {!expanded ? (
+            <p className="mt-0.5 pl-1 text-[11px] text-muted-foreground">
+              Klik ikon info untuk melihat subkategori tersembunyi.
+            </p>
+          ) : null}
+        </>
       ) : null}
     </div>
   );
@@ -129,13 +170,14 @@ export function CategoryFilters({
   );
 
   return (
-    <section
-      aria-labelledby={`${uid}-heading`}
-      className={cn(
-        "rounded-2xl border border-border bg-card px-4 py-5 sm:px-5",
-        className,
-      )}
-    >
+    <TooltipProvider>
+      <section
+        aria-labelledby={`${uid}-heading`}
+        className={cn(
+          "rounded-2xl border border-border bg-card px-4 py-5 sm:px-5",
+          className,
+        )}
+      >
       {/* Semua Kategori */}
       <h2
         id={`${uid}-heading`}
@@ -155,7 +197,11 @@ export function CategoryFilters({
           </p>
           {subcategories && subcategories.length > 0 ? (
             <div className="mt-2 pl-4">
-              <MoreList label={`subkategori ${activeLabel}`} limit={5}>
+              <MoreList
+                label={`subkategori ${activeLabel}`}
+                limit={5}
+                labels={subcategories}
+              >
                 {subcategories.map((sub) => {
                   const n = subcategoryCounts?.[sub];
                   return (
@@ -186,7 +232,13 @@ export function CategoryFilters({
       {allCategories.length > 0 ? (
         <div className="mt-4 border-t border-border pt-4">
           <p className="mb-1 text-sm font-bold text-foreground">Kategori lain</p>
-          <MoreList label="kategori lain" limit={4}>
+          <MoreList
+            label="kategori lain"
+            limit={4}
+            labels={allCategories
+              .filter((c) => c.slug !== activeSlug)
+              .map((c) => c.label)}
+          >
             {allCategories
               .filter((c) => c.slug !== activeSlug)
               .map((c) => {
@@ -378,5 +430,6 @@ export function CategoryFilters({
         </button>
       </div>
     </section>
+    </TooltipProvider>
   );
 }
