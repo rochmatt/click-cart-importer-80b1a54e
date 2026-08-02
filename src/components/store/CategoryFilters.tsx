@@ -147,12 +147,17 @@ export function CategoryFilters({
   priceBounds,
   className,
   variant = "default",
+  groups,
+  activeSlug,
+  collapsedGroups,
+  onToggleGroup,
 }: Props) {
   const set = <K extends keyof CategoryFilterState>(key: K, v: CategoryFilterState[K]) =>
     onChange({ ...value, [key]: v });
 
   const uid = useId();
   const count = activeFilterCount(value);
+  const hasGroups = groups && groups.length > 0;
 
   return (
     <section
