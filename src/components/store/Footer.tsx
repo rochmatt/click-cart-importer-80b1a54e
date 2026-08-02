@@ -246,7 +246,7 @@ export function Footer() {
                 asChild
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 rounded-full sm:h-11 sm:w-11"
+                className="h-11 w-11 rounded-full sm:h-10 sm:w-10"
                 aria-label={`Kunjungi ${label} PasarPilih`}
               >
                 <a href="#" target="_blank" rel="noopener noreferrer">
