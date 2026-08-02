@@ -89,9 +89,22 @@ function CategoriesPage() {
               antar marketplace.
             </p>
           </div>
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {cards.length} kategori · {total} produk
-          </p>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <label htmlFor="category-filter" className="sr-only">
+              Cari kategori
+            </label>
+            <input
+              id="category-filter"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari kategori…"
+              className="h-10 w-full min-w-[14rem] rounded-full border border-border bg-card px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30 sm:w-auto"
+            />
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {cards.length} kategori · {total} produk
+            </p>
+          </div>
         </div>
 
         {cards.length > 0 ? (
