@@ -1,15 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { AnnouncementBar } from "@/components/store/AnnouncementBar";
-import { Header } from "@/components/store/Header";
-import { Footer } from "@/components/store/Footer";
-import { MobileBottomNav } from "@/components/store/MobileBottomNav";
-import { ChatFab } from "@/components/store/ChatFab";
-import { Search, ExternalLink, Truck, PackageCheck } from "lucide-react";
+import { Search, ExternalLink, PackageCheck, Truck } from "lucide-react";
+import { LegalPageLayout, LegalCallout } from "@/components/store/LegalPageLayout";
 
 const title = "How It Works — PasarPilih";
 const description =
-  "Learn how PasarPilih curates products, compares prices, and redirects you to trusted marketplaces for checkout and order tracking.";
+  "Learn how PasarPilih curates products, links you to trusted marketplaces, and helps you track your delivery.";
 
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
@@ -53,80 +48,55 @@ const steps = [
 ];
 
 function HowItWorksPage() {
-  const [query, setQuery] = useState("");
-
   return (
-    <div className="min-h-screen bg-background font-sans antialiased">
-      <AnnouncementBar />
-      <Header query={query} onQueryChange={setQuery} />
+    <LegalPageLayout
+      heading="How PasarPilih works"
+      lead="This page explains the shopping flow, from browsing curated picks to tracking your delivery."
+    >
+      <ol className="space-y-4">
+        {steps.map(({ icon: Icon, title: stepTitle, description: stepDesc }, i) => (
+          <li
+            key={i}
+            className="flex gap-3 rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-card)] sm:gap-4 sm:p-5"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground sm:h-10 sm:w-10">
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="!mt-0 text-sm font-semibold text-foreground sm:text-base">
+                {i + 1}. {stepTitle}
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                {stepDesc}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
 
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:py-14 lg:px-8">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
-        >
-          ← Back to shopping
-        </Link>
-
-        <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-          How PasarPilih works
-        </h1>
-        <p className="mt-4 text-sm text-muted-foreground sm:text-base">
-          This page is maintained by PasarPilih to explain the shopping flow. We
-          are a curator, not a seller, so your purchase always happens on a
-          marketplace you trust.
+      <LegalCallout title="Important note">
+        <p>
+          PasarPilih does not set prices, manage inventory, or handle deliveries
+          for partner-marketplace listings. The marketplace shown on each product
+          page is the seller of record. Always review the seller's details,
+          shipping options, and return policy before you buy.
         </p>
+      </LegalCallout>
 
-        <ol className="mt-10 space-y-6">
-          {steps.map(({ icon: Icon, title, description }, i) => (
-            <li
-              key={i}
-              className="flex gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)]"
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Icon className="h-5 w-5" />
-              </span>
-              <div>
-                <h2 className="text-sm font-semibold text-foreground sm:text-base">
-                  {i + 1}. {title}
-                </h2>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  {description}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-
-        <div className="mt-10 rounded-2xl border border-border bg-secondary/50 p-6">
-          <p className="font-medium text-foreground">Important note</p>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            PasarPilih does not set prices, manage inventory, or handle
-            deliveries. The marketplace shown on each product page is the
-            seller of record. Always review the seller's details, shipping
-            options, and return policy before you buy.
-          </p>
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            to="/search"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Start browsing
-          </Link>
-          <Link
-            to="/faq"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Read FAQ
-          </Link>
-        </div>
-      </main>
-
-      <Footer />
-      <ChatFab />
-      <MobileBottomNav />
-    </div>
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <Link
+          to="/search"
+          className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Start browsing
+        </Link>
+        <Link
+          to="/faq"
+          className="inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+        >
+          Read FAQ
+        </Link>
+      </div>
+    </LegalPageLayout>
   );
 }
