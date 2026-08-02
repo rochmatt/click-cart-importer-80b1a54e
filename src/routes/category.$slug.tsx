@@ -162,13 +162,13 @@ function CategoryPage() {
   const setFilters = (next: CategoryFilterState) => {
     navigate({
       to: ".",
-      search: (prev) => ({
-        ...prev,
-        q: next.query || undefined,
-        min: next.minPrice || undefined,
-        max: next.maxPrice || undefined,
-        rating: next.minRating || undefined,
-      }),
+      search: {
+        ...search,
+        q: next.query,
+        min: next.minPrice,
+        max: next.maxPrice,
+        rating: next.minRating,
+      },
       replace: true,
       resetScroll: false,
     });
@@ -177,11 +177,12 @@ function CategoryPage() {
   const setSort = (next: SortKey) => {
     navigate({
       to: ".",
-      search: (prev) => ({ ...prev, sort: next === "popular" ? undefined : next }),
+      search: { ...search, sort: next },
       replace: true,
       resetScroll: false,
     });
   };
+
 
 
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
