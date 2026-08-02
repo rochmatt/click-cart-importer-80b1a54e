@@ -81,7 +81,13 @@ function scorePassword(password: string) {
   return { checks, score, ...meta };
 }
 
-export function AuthPanel({ initialMode }: { initialMode: Mode }) {
+export function AuthPanel({
+  initialMode,
+  nextPath,
+}: {
+  initialMode: Mode;
+  nextPath?: string;
+}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
@@ -145,12 +151,15 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
         });
         if (error) throw error;
         toast.success("Berhasil masuk. Selamat datang kembali!");
+        if (nextPath) window.location.href = nextPath;
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: window.location.origin + "/verify-email",
+            emailRedirectTo:
+              window.location.origin +
+              (nextPath ? `/verify-email?next=${encodeURIComponent(nextPath)}` : "/verify-email"),
             data: { display_name: parsed.data.name ?? "" },
           },
         });
@@ -161,6 +170,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
           navigate({ to: "/verify-email", search: { email: parsed.data.email } });
         } else {
           toast.success("Akun berhasil dibuat. Selamat berbelanja!");
+          if (nextPath) window.location.href = nextPath;
         }
       }
     } catch (error) {
@@ -180,7 +190,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
     setGoogleBusy(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/account",
+        redirect_uri: window.location.origin + (nextPath ?? "/account"),
       });
       if (result.error) {
         toast.error("Masuk dengan Google gagal. Coba lagi.");
