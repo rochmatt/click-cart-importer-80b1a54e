@@ -1,9 +1,19 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Link2, Loader2, Sparkles, Wand2, Check } from "lucide-react";
+import { Link2, Loader2, Sparkles, Wand2, Check, AlertTriangle } from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
 import { formatRupiah, type AdminProduct } from "@/lib/admin-store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type FieldKey = "title" | "description" | "brand" | "price" | "salePrice" | "link";
 
