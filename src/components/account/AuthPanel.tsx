@@ -317,16 +317,15 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="password">Password</Label>
                   {mode === "signin" && !resetSent && (
-                    <button
-                      type="button"
-                      onClick={onForgotPassword}
-                      disabled={resetBusy}
-                      className="inline-flex items-center gap-1 rounded text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
+                    <Link
+                      to="/forgot-password"
+                      search={{ email: email || undefined }}
+                      className="inline-flex items-center gap-1 rounded text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      {resetBusy && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
                       Lupa password?
-                    </button>
+                    </Link>
                   )}
+
                 </div>
                 <div className="relative">
                   <Input
