@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
