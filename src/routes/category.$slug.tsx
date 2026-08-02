@@ -161,6 +161,7 @@ function CategoryPage() {
 
   const setFilters = (next: CategoryFilterState) => {
     navigate({
+      to: ".",
       search: (prev) => ({
         ...prev,
         q: next.query || undefined,
@@ -175,6 +176,7 @@ function CategoryPage() {
 
   const setSort = (next: SortKey) => {
     navigate({
+      to: ".",
       search: (prev) => ({ ...prev, sort: next === "popular" ? undefined : next }),
       replace: true,
       resetScroll: false,
