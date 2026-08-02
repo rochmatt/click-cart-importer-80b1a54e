@@ -281,6 +281,8 @@ export function Footer() {
         <Newsletter />
       </div>
 
+      <PaymentAndSecurity />
+
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-5 sm:flex-row sm:px-6 lg:px-8">
           <p className="text-center text-xs text-muted-foreground sm:text-left">
