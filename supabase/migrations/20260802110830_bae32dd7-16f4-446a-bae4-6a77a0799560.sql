@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS preferences jsonb NOT NULL DEFAULT '{"language":"id","currency":"IDR","email_promos":true,"email_order_updates":true,"email_price_drop":false,"whatsapp_updates":false}'::jsonb;

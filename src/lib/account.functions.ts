@@ -1,13 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  type AccountPreferences,
+  parsePreferences,
+  preferencesSchema,
+} from "@/lib/account-preferences";
 
 export interface AccountProfile {
   display_name: string;
   phone: string;
   avatar_url: string;
   email: string;
+  preferences: AccountPreferences;
 }
+
+
 
 export interface AccountOrder {
   order_number: string;
@@ -26,7 +34,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
     const email = (context.claims.email as string | undefined) ?? "";
     const { data, error } = await context.supabase
       .from("profiles")
-      .select("display_name, phone, avatar_url")
+      .select("display_name, phone, avatar_url, preferences")
       .eq("id", context.userId)
       .maybeSingle();
     if (error) throw error;
@@ -35,6 +43,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       phone: data?.phone ?? "",
       avatar_url: data?.avatar_url ?? "",
       email,
+      preferences: parsePreferences(data?.preferences),
     };
   });
 
@@ -64,6 +73,18 @@ export const updateMyProfile = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+export const updateMyPreferences = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => preferencesSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("profiles")
+      .upsert({ id: context.userId, preferences: data }, { onConflict: "id" });
+    if (error) throw error;
+    return { ok: true };
+  });
+
 
 export const listMyOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
