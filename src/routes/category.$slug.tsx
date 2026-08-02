@@ -230,13 +230,8 @@ function CategoryPage() {
               className="mt-0"
               groups={categoryGroups}
               activeSlug={category.slug}
-              collapsedGroups={collapsedGroups}
-              onToggleGroup={(title) =>
-                setCollapsedGroups((prev) => ({
-                  ...prev,
-                  [title]: !prev[title],
-                }))
-              }
+              activeLabel={category.label}
+              subcategories={category.subcategories}
             />
           </aside>
 
