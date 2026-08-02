@@ -24,6 +24,25 @@ import {
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
 
+const categoryGroups = [
+  {
+    title: "Gaya & Penampilan",
+    items: categoryCatalog.filter((c) => ["fashion", "beauty"].includes(c.slug)),
+  },
+  {
+    title: "Teknologi & Hiburan",
+    items: categoryCatalog.filter((c) => ["electronics", "gaming"].includes(c.slug)),
+  },
+  {
+    title: "Rumah & Dapur",
+    items: categoryCatalog.filter((c) => ["home-living", "kitchen"].includes(c.slug)),
+  },
+  {
+    title: "Aktivitas & Keluarga",
+    items: categoryCatalog.filter((c) => ["sports", "kids"].includes(c.slug)),
+  },
+];
+
 const priceValue = (price: string) => Number(price.replace(/[^\d]/g, "")) || 0;
 
 const idrCompact = (n: number) =>
