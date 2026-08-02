@@ -26,9 +26,10 @@ import {
   updateMyProfile,
 } from "@/lib/account.functions";
 
-const title = "My Account — PasarPilih";
+const title = "Masuk atau Daftar Akun — PasarPilih";
 const description =
-  "Sign in or create a PasarPilih account to manage your profile, follow your orders and keep your shopping preferences in one place.";
+  "Masuk atau buat akun PasarPilih untuk checkout lebih cepat, menyimpan alamat & wishlist, serta melacak status pesanan secara otomatis.";
+
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "register"]).optional(),
