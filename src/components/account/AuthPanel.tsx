@@ -337,6 +337,9 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
                     onKeyUp={(e) => setCapsOn(e.getModifierState?.("CapsLock") ?? false)}
                     placeholder={mode === "signin" ? "Password kamu" : "Minimal 8 karakter"}
                     autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     className="pr-12"
                     aria-invalid={Boolean(errors.password)}
                     aria-describedby={errors.password ? "password-error" : undefined}
@@ -345,7 +348,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                    className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9 sm:w-9"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -355,11 +358,16 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
                   </button>
                 </div>
                 {capsOn && (
-                  <p className="inline-flex items-center gap-1 text-xs text-chart-4">
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="inline-flex items-center gap-1 text-xs text-chart-4"
+                  >
                     <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                     Caps Lock sedang aktif
                   </p>
                 )}
+
                 {errors.password && (
                   <p id="password-error" className="text-xs text-destructive">
                     {errors.password}
