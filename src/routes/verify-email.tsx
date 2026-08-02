@@ -115,7 +115,7 @@ function VerifyEmailPage() {
         return;
       }
 
-      if (data.user?.email) setEmail((prev) => prev || data.user!.email!);
+      if (data.user?.email) setEmail((prev: string) => prev || data.user!.email!);
       setStatus({ kind: "pending" });
     }
 
