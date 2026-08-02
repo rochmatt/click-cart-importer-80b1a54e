@@ -113,6 +113,7 @@ interface CategoryMegaMenuProps {
 
 export function CategoryMegaMenu({ onQueryChange }: CategoryMegaMenuProps) {
   const baseId = useId();
+  const navigate = useNavigate();
   const panelId = `${baseId}-panel`;
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
