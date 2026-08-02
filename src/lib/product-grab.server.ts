@@ -279,8 +279,8 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
     "IDR";
 
   const sorted = [...offerPrices].sort((a, b) => b - a);
-  let price = sorted[0] ?? metaPrice ?? null;
-  let salePrice = sorted.length > 1 ? sorted[sorted.length - 1] : null;
+  let price: number | null = sorted[0] ?? metaPrice ?? null;
+  let salePrice: number | null = sorted.length > 1 ? sorted[sorted.length - 1] : null;
 
   let usedAi = false;
   if (!title || price === null) {
