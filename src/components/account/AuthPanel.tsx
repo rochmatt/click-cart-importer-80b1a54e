@@ -190,7 +190,7 @@ export function AuthPanel({
     setGoogleBusy(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/account",
+        redirect_uri: window.location.origin + (nextPath ?? "/account"),
       });
       if (result.error) {
         toast.error("Masuk dengan Google gagal. Coba lagi.");
