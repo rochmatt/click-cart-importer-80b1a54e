@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -82,6 +82,7 @@ function scorePassword(password: string) {
 }
 
 export function AuthPanel({ initialMode }: { initialMode: Mode }) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -149,7 +150,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: window.location.origin + "/account",
+            emailRedirectTo: window.location.origin + "/verify-email",
             data: { display_name: parsed.data.name ?? "" },
           },
         });
@@ -157,6 +158,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
         if (!data.session) {
           setSentConfirmation(true);
           toast.success("Cek inbox kamu untuk konfirmasi email");
+          navigate({ to: "/verify-email", search: { email: parsed.data.email } });
         } else {
           toast.success("Akun berhasil dibuat. Selamat berbelanja!");
         }
