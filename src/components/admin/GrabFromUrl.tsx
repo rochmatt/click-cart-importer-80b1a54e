@@ -49,6 +49,7 @@ export default function GrabFromUrl({
     link: true,
   });
   const [pickedImages, setPickedImages] = useState<string[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const room = Math.max(0, maxImages - currentImageCount);
 
