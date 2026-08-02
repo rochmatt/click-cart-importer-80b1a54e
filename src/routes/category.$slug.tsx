@@ -62,6 +62,7 @@ const idrCompact = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
 
 export const Route = createFileRoute("/category/$slug")({
+  validateSearch: zodValidator(categorySearchSchema),
   loader: ({ params }) => {
     const category = findCategory(params.slug);
     if (!category) throw notFound();
