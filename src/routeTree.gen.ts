@@ -10,13 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as WishlistRouteImport } from './routes/wishlist'
@@ -43,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -63,6 +74,26 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -76,6 +107,11 @@ const SearchRoute = SearchRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
+  id: '/terms-of-service',
+  path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrackRoute = TrackRouteImport.update({
@@ -183,13 +219,19 @@ const LovableEmailTransactionalPreviewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/checkout': typeof CheckoutRoute
+  '/contact': typeof ContactRoute
+  '/faq': typeof FaqRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/track': typeof TrackRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/wishlist': typeof WishlistRoute
@@ -213,12 +255,18 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/categories': typeof CategoriesRoute
   '/checkout': typeof CheckoutRoute
+  '/contact': typeof ContactRoute
+  '/faq': typeof FaqRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/track': typeof TrackRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/wishlist': typeof WishlistRoute
@@ -243,13 +291,19 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/checkout': typeof CheckoutRoute
+  '/contact': typeof ContactRoute
+  '/faq': typeof FaqRoute
+  '/how-it-works': typeof HowItWorksRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/track': typeof TrackRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/wishlist': typeof WishlistRoute
@@ -275,13 +329,19 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/account'
     | '/admin'
     | '/categories'
     | '/checkout'
+    | '/contact'
+    | '/faq'
+    | '/how-it-works'
+    | '/privacy-policy'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/terms-of-service'
     | '/track'
     | '/unsubscribe'
     | '/wishlist'
@@ -305,12 +365,18 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/account'
     | '/categories'
     | '/checkout'
+    | '/contact'
+    | '/faq'
+    | '/how-it-works'
+    | '/privacy-policy'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/terms-of-service'
     | '/track'
     | '/unsubscribe'
     | '/wishlist'
@@ -334,13 +400,19 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/account'
     | '/admin'
     | '/categories'
     | '/checkout'
+    | '/contact'
+    | '/faq'
+    | '/how-it-works'
+    | '/privacy-policy'
     | '/reset-password'
     | '/search'
     | '/sitemap.xml'
+    | '/terms-of-service'
     | '/track'
     | '/unsubscribe'
     | '/wishlist'
@@ -365,13 +437,19 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRouteWithChildren
   CategoriesRoute: typeof CategoriesRoute
   CheckoutRoute: typeof CheckoutRoute
+  ContactRoute: typeof ContactRoute
+  FaqRoute: typeof FaqRoute
+  HowItWorksRoute: typeof HowItWorksRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermsOfServiceRoute: typeof TermsOfServiceRoute
   TrackRoute: typeof TrackRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WishlistRoute: typeof WishlistRoute
@@ -392,6 +470,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -422,6 +507,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -441,6 +554,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/track': {
@@ -614,13 +734,19 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   AccountRoute: AccountRoute,
   AdminRoute: AdminRouteWithChildren,
   CategoriesRoute: CategoriesRoute,
   CheckoutRoute: CheckoutRoute,
+  ContactRoute: ContactRoute,
+  FaqRoute: FaqRoute,
+  HowItWorksRoute: HowItWorksRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermsOfServiceRoute: TermsOfServiceRoute,
   TrackRoute: TrackRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WishlistRoute: WishlistRoute,
@@ -636,3 +762,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
