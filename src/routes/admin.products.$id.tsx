@@ -29,6 +29,7 @@ import {
 } from "@/lib/admin-store";
 import CategorySelect from "@/components/admin/CategorySelect";
 import SpecificationsCard from "@/components/admin/SpecificationsCard";
+import GrabFromUrl from "@/components/admin/GrabFromUrl";
 
 
 export const Route = createFileRoute("/admin/products/$id")({
@@ -376,7 +377,27 @@ function ProductEditor() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-2">
+          <GrabFromUrl
+            maxImages={MAX_IMAGES}
+            currentImageCount={form.images.length}
+            onApply={(patch) => {
+              setForm((f) => ({
+                ...f,
+                ...patch,
+                links: patch.links
+                  ? {
+                      shopee: patch.links.shopee || f.links.shopee,
+                      tokopedia: patch.links.tokopedia || f.links.tokopedia,
+                      tiktok: patch.links.tiktok || f.links.tiktok,
+                    }
+                  : f.links,
+                images: patch.images ? [...f.images, ...patch.images].slice(0, MAX_IMAGES) : f.images,
+              }));
+              setErrors({});
+            }}
+          />
           <Card title="General information" description="Basic details buyers see first.">
+
             <Field label="Product name" error={errors.title} hint="Keep it descriptive — max 140 characters.">
               <input
                 value={form.title}
