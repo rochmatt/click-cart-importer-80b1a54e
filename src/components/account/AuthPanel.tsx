@@ -81,7 +81,13 @@ function scorePassword(password: string) {
   return { checks, score, ...meta };
 }
 
-export function AuthPanel({ initialMode }: { initialMode: Mode }) {
+export function AuthPanel({
+  initialMode,
+  nextPath,
+}: {
+  initialMode: Mode;
+  nextPath?: string;
+}) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
