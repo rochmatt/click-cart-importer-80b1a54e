@@ -99,13 +99,13 @@ function FAQPage() {
       heading="Frequently asked questions"
       lead="Answers to common questions about PasarPilih orders, payments, shipping, and returns."
     >
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion type="multiple" className="w-full">
         {faqs.map(({ question, answer }, i) => (
           <AccordionItem key={i} value={`item-${i}`}>
-            <AccordionTrigger className="py-4 text-left text-sm font-medium text-foreground sm:text-base">
+            <AccordionTrigger className="min-h-12 gap-3 py-4 text-left text-[0.95rem] font-medium leading-snug text-foreground sm:text-base">
               {question}
             </AccordionTrigger>
-            <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
+            <AccordionContent className="pb-5 pr-2 text-sm leading-relaxed text-muted-foreground">
               {answer}
             </AccordionContent>
           </AccordionItem>
