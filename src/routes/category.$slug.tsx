@@ -332,8 +332,11 @@ function CategoryPage() {
                   return (
                     <div key={group.title} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           {group.title}
+                          <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+                            {group.items.length} kategori
+                          </span>
                         </h2>
                         <button
                           type="button"
@@ -345,6 +348,7 @@ function CategoryPage() {
                           }
                           aria-expanded={!collapsed}
                           aria-controls={`category-group-${group.title}`}
+                          aria-label={`${collapsed ? "Buka" : "Tutup"} grup ${group.title} (${group.items.length} kategori)`}
                           className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
                         >
                           {collapsed ? (
