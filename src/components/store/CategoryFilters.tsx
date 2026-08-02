@@ -192,6 +192,50 @@ export function CategoryFilters({
         {count === 0 ? "Tidak ada filter aktif." : `${count} filter aktif.`}
       </p>
 
+      {hasGroups && (
+        <div className="mt-4 space-y-4 border-b border-border pb-4">
+          {groups.map((group) => {
+            const collapsed = !!collapsedGroups?.[group.title];
+            return (
+              <div key={group.title} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.title}
+                    <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+                      {group.items.length} kategori
+                    </span>
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => onToggleGroup?.(group.title)}
+                    aria-expanded={!collapsed}
+                    aria-controls={`category-group-${group.title}`}
+                    aria-label={`${collapsed ? "Buka" : "Tutup"} grup ${group.title} (${group.items.length} kategori)`}
+                    className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {collapsed ? (
+                      <>
+                        Buka <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                      </>
+                    ) : (
+                      <>
+                        Tutup <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                      </>
+                    )}
+                  </button>
+                </div>
+                <CategoryChipGroup
+                  groupTitle={group.title}
+                  items={group.items}
+                  activeSlug={activeSlug || ""}
+                  collapsed={collapsed}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div
         className={cn(
           "mt-4 grid min-w-0 gap-4",
