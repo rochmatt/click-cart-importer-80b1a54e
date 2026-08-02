@@ -37,7 +37,11 @@ function Index() {
       <AnnouncementBar />
       <Header query={query} onQueryChange={setQuery} />
       <main>
+        <h1 className="sr-only">
+          PasarPilih — Personalised Picks, Vouchers &amp; Daily Deals across Indonesia
+        </h1>
         <HeroCarousel />
+
         <QuickActions />
         <ForYou />
         <PromoBanners />
