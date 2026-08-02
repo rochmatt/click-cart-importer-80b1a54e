@@ -73,15 +73,18 @@ function MoreList({
   children,
   limit = 4,
   label,
+  labels,
 }: {
   children: React.ReactNode[];
   limit?: number;
   label: string;
+  /** Plain text labels used for the hidden-items tooltip. */
+  labels: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? children : children.slice(0, limit);
   const hasMore = children.length > limit;
-  const hiddenItems = children.slice(limit);
+  const hiddenLabels = expanded ? [] : labels.slice(limit);
 
   return (
     <div>
@@ -107,26 +110,24 @@ function MoreList({
               <button
                 type="button"
                 className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                aria-label={`Lihat subkategori tersembunyi untuk ${label}`}
+                aria-label={`Lihat ${hiddenLabels.length} item tersembunyi untuk ${label}`}
               >
                 <HelpCircle className="h-4 w-4" aria-hidden="true" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-xs">
-              <p className="mb-1 font-semibold">{expanded ? "Semua item ditampilkan" : `${hiddenItems.length} item tersembunyi`}</p>
+              <p className="mb-1.5 font-semibold">
+                {expanded
+                  ? "Semua item ditampilkan"
+                  : `${hiddenLabels.length} item tersembunyi`}
+              </p>
               {!expanded ? (
                 <ul className="space-y-0.5">
-                  {hiddenItems.map((item, idx) => {
-                    const key = React.isValidElement(item) ? item.key ?? idx : idx;
-                    const text = React.isValidElement(item)
-                      ? (item.props.children as React.ReactElement)?.props?.children ?? item.props.label
-                      : null;
-                    return (
-                      <li key={key} className="text-xs">
-                        • {text}
-                      </li>
-                    );
-                  })}
+                  {hiddenLabels.map((item) => (
+                    <li key={item} className="text-xs">
+                      • {item}
+                    </li>
+                  ))}
                 </ul>
               ) : null}
             </TooltipContent>
