@@ -13,7 +13,7 @@ import { Mail, MapPin, Clock } from "lucide-react";
 
 const title = "Contact Us — PasarPilih";
 const description =
-  "Get in touch with PasarPilih support for questions about orders, tracking, accounts, or partnership opportunities.";
+  "Contact PT RAFA KPT, the operator of PasarPilih, for questions about orders, tracking, payments, returns, or partnerships.";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -29,6 +29,10 @@ export const Route = createFileRoute("/contact")({
   component: ContactPage,
 });
 
+const supportEmail = "adin@inipilihanku.com";
+const supportHours = "07:00 – 00:00";
+const officeAddress = "DS. LAHAR RT3 RW1";
+
 function ContactPage() {
   const [query, setQuery] = useState("");
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
@@ -38,7 +42,7 @@ function ContactPage() {
     const body = encodeURIComponent(
       `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`,
     );
-    const mailto = `mailto:support@pasarpilih.com?subject=${encodeURIComponent(
+    const mailto = `mailto:${supportEmail}?subject=${encodeURIComponent(
       form.subject || "Contact form - PasarPilih",
     )}&body=${body}`;
     window.location.href = mailto;
@@ -61,8 +65,9 @@ function ContactPage() {
           Contact us
         </h1>
         <p className="mt-4 text-sm text-muted-foreground sm:text-base">
-          This page is maintained by PasarPilih so you can reach our support
-          team. Response times may vary based on inquiry volume.
+          This page is maintained by PT RAFA KPT. Our support team is available
+          during the hours listed below. Response times may vary based on inquiry
+          volume.
         </p>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
@@ -70,10 +75,10 @@ function ContactPage() {
             <Mail className="h-5 w-5 text-primary" />
             <h2 className="mt-3 text-sm font-semibold text-foreground">Email</h2>
             <a
-              href="mailto:support@pasarpilih.com"
-              className="mt-1 text-sm text-primary hover:underline"
+              href={`mailto:${supportEmail}`}
+              className="mt-1 break-words text-sm text-primary hover:underline"
             >
-              support@pasarpilih.com
+              {supportEmail}
             </a>
           </div>
 
@@ -81,16 +86,14 @@ function ContactPage() {
             <Clock className="h-5 w-5 text-primary" />
             <h2 className="mt-3 text-sm font-semibold text-foreground">Support hours</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Monday – Friday, 09:00 – 18:00 WIB
+              {supportHours} WIB
             </p>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-card)] sm:col-span-2">
             <MapPin className="h-5 w-5 text-primary" />
             <h2 className="mt-3 text-sm font-semibold text-foreground">Office</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Indonesia (virtual-first team). No walk-in service at this time.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{officeAddress}</p>
           </div>
         </div>
 
@@ -149,8 +152,8 @@ function ContactPage() {
           </Button>
           <p className="text-xs text-muted-foreground">
             This opens your default email app. If it does not open, you can copy{" "}
-            <a href="mailto:support@pasarpilih.com" className="text-primary hover:underline">
-              support@pasarpilih.com
+            <a href={`mailto:${supportEmail}`} className="text-primary hover:underline">
+              {supportEmail}
             </a>{" "}
             manually.
           </p>

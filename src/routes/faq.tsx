@@ -14,7 +14,7 @@ import {
 
 const title = "FAQ — PasarPilih";
 const description =
-  "Find answers to common questions about PasarPilih, order tracking, returns, accounts, and how our product aggregator works.";
+  "Find answers about PasarPilih orders, payments, shipping, returns, and how we curate products from partner marketplaces.";
 
 export const Route = createFileRoute("/faq")({
   head: () => ({
@@ -34,42 +34,47 @@ const faqs = [
   {
     question: "What is PasarPilih?",
     answer:
-      "PasarPilih is a product aggregator. We curate products and deals from popular Indonesian marketplaces so you can browse and compare in one place. Purchases are completed on the destination marketplace, not on PasarPilih.",
+      "PasarPilih is operated by PT RAFA KPT. We are a product aggregator and direct seller. We curate products from trusted marketplaces such as Shopee, Tokopedia, and TikTok Shop, and for selected items we also process payment and shipping directly.",
   },
   {
-    question: "Do you handle payments or shipping?",
+    question: "Do you handle payments and shipping?",
     answer:
-      "No. PasarPilih does not process payments, hold inventory, or ship products. When you click to buy, you are redirected to the seller's marketplace page to complete checkout and delivery arrangements.",
+      "Yes. For products bought directly on PasarPilih, we handle the payment and arrange delivery. For products you click through to a partner marketplace, payment and shipping are handled by that marketplace and its seller.",
   },
   {
     question: "How do I track my order?",
     answer:
-      "Use the Track Order page and enter your order number. You can also add the email used at checkout to verify the order and manage email status updates.",
+      "Use the Track Order page and enter your order number. You can also add the email used at checkout to verify the order and manage email status updates. Orders placed through a partner marketplace should be tracked on that marketplace.",
   },
   {
     question: "Why do prices or availability sometimes change?",
     answer:
-      "Prices, stock, and vouchers are controlled by the destination marketplace and the seller. We refresh our catalog regularly, but the live listing on the marketplace is always the final source of truth.",
+      "Prices, stock, and vouchers on partner-marketplace listings are controlled by that marketplace and the seller. We refresh our catalog regularly, but the live listing on the marketplace is always the final source of truth. Direct-sale products on PasarPilih show our own live stock and price.",
   },
   {
-    question: "Can I return an item I bought?",
+    question: "What is your return and refund policy?",
     answer:
-      "Return and refund policies are set by the seller and the marketplace where you completed the purchase. Please check the marketplace's return policy or contact their support directly for order issues.",
+      "For direct purchases on PasarPilih, you may request a return within 7 days of receipt if the item is damaged, defective, or incorrect. Refunds are typically processed within 3–5 business days after we receive and inspect the returned item. For purchases made through a partner marketplace, returns and refunds follow that marketplace's policy.",
   },
   {
     question: "Do I need an account to use PasarPilih?",
     answer:
-      "You can browse products without an account. Creating an account lets you save a wishlist, track orders, and receive personalized recommendations.",
+      "You can browse products without an account. Creating an account lets you save a wishlist, track orders, manage email preferences, and receive personalized recommendations.",
   },
   {
     question: "How do I report a wrong or broken listing?",
     answer:
-      "Please contact our support team through the Contact page with the product link or name. We will review the listing and update or remove it when needed.",
+      "Please contact our support team at adin@inipilihanku.com or through the Contact page with the product link or name. We will review the listing and update or remove it when needed.",
   },
   {
     question: "Is my personal data safe?",
     answer:
       "We take data protection seriously. You can read how we collect, use, and store data in our Privacy Policy and Terms of Service. We use industry-standard authentication and secure backend services.",
+  },
+  {
+    question: "When is customer support available?",
+    answer:
+      "Our support team is available from 07:00 to 00:00 WIB. We aim to respond to email inquiries as quickly as possible, usually within one business day.",
   },
 ];
 
@@ -93,8 +98,8 @@ function FAQPage() {
           Frequently asked questions
         </h1>
         <p className="mt-4 text-sm text-muted-foreground sm:text-base">
-          This page is maintained by PasarPilih to answer common questions about
-          the service. If you need more help, please contact support.
+          This page is maintained by PT RAFA KPT to answer common questions about
+          PasarPilih. If you need more help, please contact support.
         </p>
 
         <Accordion type="single" collapsible className="mt-8 w-full">
@@ -117,7 +122,14 @@ function FAQPage() {
             <Link to="/contact" className="text-primary hover:underline">
               Contact page
             </Link>{" "}
-            and we will get back to you as soon as possible.
+            or email{" "}
+            <a
+              href="mailto:adin@inipilihanku.com"
+              className="text-primary hover:underline"
+            >
+              adin@inipilihanku.com
+            </a>
+            .
           </p>
         </div>
       </main>
