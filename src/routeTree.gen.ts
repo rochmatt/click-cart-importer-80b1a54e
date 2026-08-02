@@ -40,6 +40,7 @@ import { Route as CategoryIndexRouteImport } from './routes/category.index'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as OrdersOrderNumberRouteImport } from './routes/orders.$orderNumber'
 import { Route as ProductsIdRouteImport } from './routes/products.$id'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
 import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
 import { Route as ApiPublicHooksOrderStatusEmailsRouteImport } from './routes/api/public/hooks/order-status-emails'
@@ -202,6 +203,11 @@ const ProductsIdRoute = ProductsIdRouteImport.update({
   path: '/products/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminProductsIndexRoute = AdminProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -267,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/products/$id': typeof ProductsIdRoute
   '/admin/': typeof AdminIndexRoute
   '/category/': typeof CategoryIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByTo {
   '/products/$id': typeof ProductsIdRoute
   '/admin': typeof AdminIndexRoute
   '/category': typeof CategoryIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -345,6 +353,7 @@ export interface FileRoutesById {
   '/products/$id': typeof ProductsIdRoute
   '/admin/': typeof AdminIndexRoute
   '/category/': typeof CategoryIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -386,6 +395,7 @@ export interface FileRouteTypes {
     | '/products/$id'
     | '/admin/'
     | '/category/'
+    | '/.lovable/oauth/consent'
     | '/admin/products/$id'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/products/$id'
     | '/admin'
     | '/category'
+    | '/.lovable/oauth/consent'
     | '/admin/products/$id'
     | '/admin/products'
     | '/api/public/hooks/order-status-emails'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/products/$id'
     | '/admin/'
     | '/category/'
+    | '/.lovable/oauth/consent'
     | '/admin/products/$id'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
@@ -496,6 +508,7 @@ export interface RootRouteChildren {
   OrdersOrderNumberRoute: typeof OrdersOrderNumberRoute
   ProductsIdRoute: typeof ProductsIdRoute
   CategoryIndexRoute: typeof CategoryIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicHooksOrderStatusEmailsRoute: typeof ApiPublicHooksOrderStatusEmailsRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -721,6 +734,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/products/': {
       id: '/admin/products/'
       path: '/products'
@@ -817,6 +837,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersOrderNumberRoute: OrdersOrderNumberRoute,
   ProductsIdRoute: ProductsIdRoute,
   CategoryIndexRoute: CategoryIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicHooksOrderStatusEmailsRoute: ApiPublicHooksOrderStatusEmailsRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

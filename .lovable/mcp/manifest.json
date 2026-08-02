@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://sfrrtastiwngrweifdor.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "click-cart-importer",
+      "version": "0.1.0",
+      "title": "Click Cart Importer"
+    },
+    "tools": [
+      {
+        "name": "search_products",
+        "title": "Search products",
+        "description": "Search the PasarPilih catalog by keyword, category, or brand. Returns matching products with price and stock.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "description": "Keyword matched against product title and brand.",
+              "type": "string"
+            },
+            "category": {
+              "description": "Category slug or name filter.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Max results, default 20, max 50.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_product",
+        "title": "Get product",
+        "description": "Fetch one PasarPilih product by its id, including description, images, variations and marketplace links.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Product id (uuid)."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_orders",
+        "title": "List my orders",
+        "description": "List the signed-in user's PasarPilih orders, newest first, with status, total and tracking info.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Optional status filter, e.g. pending, shipped.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Max results, default 20, max 50.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_my_order",
+        "title": "Get my order",
+        "description": "Fetch one of the signed-in user's orders by order number, including its line items and shipping details.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "order_number": {
+              "type": "string",
+              "description": "Order number, e.g. PP-00123."
+            }
+          },
+          "required": [
+            "order_number"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_wishlist",
+        "title": "List my wishlist",
+        "description": "List the products the signed-in user saved to their PasarPilih wishlist.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_to_my_wishlist",
+        "title": "Add to my wishlist",
+        "description": "Save a PasarPilih product to the signed-in user's wishlist. Pass a product id from search_products.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "product_id": {
+              "type": "string",
+              "description": "Product id (uuid) to save."
+            }
+          },
+          "required": [
+            "product_id"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
