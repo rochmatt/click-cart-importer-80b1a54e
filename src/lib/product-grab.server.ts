@@ -146,7 +146,7 @@ async function aiExtract(text: string, url: string) {
       method: "POST",
       headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-3-flash",
+        model: "google/gemini-3.6-flash",
         response_format: { type: "json_object" },
         messages: [
           {
