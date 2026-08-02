@@ -189,7 +189,11 @@ export function CategoryFilters({
           </p>
           {subcategories && subcategories.length > 0 ? (
             <div className="mt-2 pl-4">
-              <MoreList label={`subkategori ${activeLabel}`} limit={5}>
+              <MoreList
+                label={`subkategori ${activeLabel}`}
+                limit={5}
+                labels={subcategories}
+              >
                 {subcategories.map((sub) => {
                   const n = subcategoryCounts?.[sub];
                   return (
