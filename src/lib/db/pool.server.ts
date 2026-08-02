@@ -7,7 +7,52 @@
 //   app     -> role `inipilihanku_app`, TUNDUK RLS.
 //              Untuk query atas nama pengguna.
 
-import { Pool, type PoolClient } from "pg";
+import { Pool, types, type PoolClient } from "pg";
+
+/**
+ * Menyamakan tipe hasil query dengan yang dikirim PostgREST/Supabase.
+ *
+ * Ini BUKAN kosmetik. node-pg secara default mengembalikan bigint dan numeric
+ * sebagai STRING (karena bigint bisa melampaui Number), serta date dan
+ * timestamptz sebagai objek Date. PostgREST mengirim semuanya lewat JSON:
+ * angka sebagai number, tanggal sebagai string.
+ *
+ * Tanpa penyamaan ini, kode pemanggil yang sudah ada rusak DIAM-DIAM:
+ *
+ *   0 + row.total   ->  "0150000"     bukan 150000
+ *   a.total + b.total -> "150000200000"  bukan 350000
+ *
+ * Tidak ada error, tidak ada peringatan — hanya laporan penjualan dan lifetime
+ * value pelanggan yang jadi sampah. Lihat admin.functions.ts dan
+ * sales-analytics.ts yang menjumlahkan kolom-kolom ini.
+ *
+ * Dipasang di tingkat modul pg, jadi berlaku untuk kedua pool.
+ */
+function samakanTipeDenganPostgrest(): void {
+  // bigint: dijadikan number seperti PostgREST, tapi kalau nilainya melampaui
+  // rentang aman JavaScript, string dipertahankan — lebih baik pemanggil
+  // melihat tipe tak terduga daripada angka yang diam-diam salah.
+  types.setTypeParser(types.builtins.INT8, (v) => {
+    const n = Number(v);
+    return Number.isSafeInteger(n) ? n : v;
+  });
+
+  types.setTypeParser(types.builtins.NUMERIC, (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : v;
+  });
+
+  // date: PostgREST mengirim "2026-07-04". Objek Date akan bergeser satu hari
+  // di zona waktu negatif, jadi teks aslinya dibiarkan apa adanya.
+  types.setTypeParser(types.builtins.DATE, (v) => v);
+
+  types.setTypeParser(types.builtins.TIMESTAMPTZ, (v) => new Date(v).toISOString());
+  // timestamp tanpa zona disimpan PostgreSQL sebagai waktu polos; ditafsirkan
+  // UTC agar konsisten dengan kolom timestamptz.
+  types.setTypeParser(types.builtins.TIMESTAMP, (v) => new Date(`${v}Z`).toISOString());
+}
+
+samakanTipeDenganPostgrest();
 
 let servicePool: Pool | undefined;
 let appPool: Pool | undefined;

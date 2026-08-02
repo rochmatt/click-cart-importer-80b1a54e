@@ -22,6 +22,9 @@ async function bersihkan() {
   await run("DELETE FROM public.admin_products WHERE title LIKE $1", [`${PREFIX}%`], {
     rls: false,
   });
+  await run("DELETE FROM public.sales_events WHERE marketplace LIKE $1", [`${PREFIX}%`], {
+    rls: false,
+  });
   await run("DELETE FROM auth.users WHERE id = ANY($1)", [[BUDI, SITI, ADMIN]], { rls: false });
 }
 
@@ -59,9 +62,7 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
       expect(dibuat.error).toBeNull();
       expect(dibuat.data).toHaveLength(1);
       expect(dibuat.data![0].title).toBe(`${PREFIX}kursi`);
-      // bigint dikembalikan pg sebagai string; ini perilaku yang harus diketahui
-      // pemanggil, bukan dikoreksi diam-diam di lapisan ini.
-      expect(String(dibuat.data![0].price)).toBe("250000");
+      expect(dibuat.data![0].price).toBe(250000);
     });
 
     it("insert tanpa select memberi data null, bukan array kosong", async () => {
@@ -84,7 +85,7 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
 
       expect(hasil.error).toBeNull();
       expect(hasil.data).toHaveLength(1);
-      expect(String(hasil.data![0].price)).toBe("999");
+      expect(hasil.data![0].price).toBe(999);
     });
 
     it("delete menghapus hanya yang difilter", async () => {
@@ -166,6 +167,104 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
         .select("title")
         .ilike("title", `${PREFIX.toUpperCase()}ALFA`);
       expect(hasil.data).toHaveLength(1);
+    });
+  });
+
+  describe("tipe hasil menyamai PostgREST", () => {
+    // Regresi untuk bug diam-diam: node-pg mengembalikan bigint/numeric sebagai
+    // string dan tanggal sebagai objek Date. Kode yang menjumlahkan kolom uang
+    // akan merangkai string ("0" + "150000" = "0150000") tanpa error apa pun.
+    it("bigint dan numeric jadi number, bukan string", async () => {
+      const hasil = await service()
+        .from("admin_products")
+        .insert({ title: `${PREFIX}tipe`, price: 150000, rating: 4.5 })
+        .select("price, rating");
+
+      const baris = hasil.data![0];
+      expect(typeof baris.price).toBe("number");
+      expect(typeof baris.rating).toBe("number");
+      expect(0 + baris.price).toBe(150000);
+      expect(baris.price + baris.price).toBe(300000);
+    });
+
+    it("timestamptz jadi string ISO, bukan objek Date", async () => {
+      const hasil = await service()
+        .from("admin_products")
+        .select("created_at")
+        .ilike("title", `${PREFIX}tipe`)
+        .maybeSingle();
+
+      expect(typeof hasil.data.created_at).toBe("string");
+      expect(hasil.data.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    });
+
+    it("date tetap YYYY-MM-DD tanpa pergeseran zona waktu", async () => {
+      await service()
+        .from("sales_events")
+        .insert({
+          event_date: "2026-07-04",
+          marketplace: `${PREFIX}mp`,
+          product_ref: `${PREFIX}p`,
+          revenue: 1000,
+        });
+      const hasil = await service()
+        .from("sales_events")
+        .select("event_date, revenue")
+        .eq("marketplace", `${PREFIX}mp`)
+        .maybeSingle();
+
+      expect(hasil.data.event_date).toBe("2026-07-04");
+      expect(typeof hasil.data.revenue).toBe("number");
+    });
+  });
+
+  describe("or() sintaks PostgREST", () => {
+    it("eq pada dua kolom mengembalikan yang cocok salah satunya", async () => {
+      await service()
+        .from("admin_products")
+        .insert({ title: `${PREFIX}orA`, catalog_ref: "REF-OR-1", price: 10 });
+      const hasil = await service()
+        .from("admin_products")
+        .select("title, catalog_ref")
+        .or("catalog_ref.eq.REF-OR-1,id.eq.REF-OR-1");
+
+      expect(hasil.error).toBeNull();
+      expect(hasil.data).toHaveLength(1);
+      expect(hasil.data![0].catalog_ref).toBe("REF-OR-1");
+    });
+
+    it("nilai bukan uuid pada kolom uuid tidak melempar, hanya tidak cocok", async () => {
+      // Pola persis dari commerce.server.ts:142 saat productRef bukan uuid.
+      // Tanpa cast ke text, PostgreSQL menolak dengan invalid input syntax.
+      const hasil = await service()
+        .from("admin_products")
+        .select("id")
+        .or("catalog_ref.eq.bukan-uuid,id.eq.bukan-uuid");
+      expect(hasil.error).toBeNull();
+    });
+
+    it("ilike pada dua kolom", async () => {
+      const hasil = await service()
+        .from("admin_products")
+        .select("title")
+        .or(`title.ilike.%${PREFIX}orA%,brand.ilike.%${PREFIX}orA%`);
+      expect(hasil.error).toBeNull();
+      expect(hasil.data!.length).toBeGreaterThan(0);
+    });
+
+    it("digabung AND dengan filter lain, bukan menggantikannya", async () => {
+      const hasil = await service()
+        .from("admin_products")
+        .select("title")
+        .eq("title", "tidak-akan-pernah-ada")
+        .or("catalog_ref.eq.REF-OR-1,id.eq.REF-OR-1");
+      expect(hasil.data).toHaveLength(0);
+    });
+
+    it("operator tak dikenal ditolak sebagai error, bukan diabaikan", async () => {
+      const hasil = await service().from("admin_products").select("id").or("title.gt.5");
+      expect(hasil.data).toBeNull();
+      expect(hasil.error?.message).toContain("tidak didukung");
     });
   });
 

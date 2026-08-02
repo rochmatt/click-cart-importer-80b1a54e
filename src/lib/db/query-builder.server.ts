@@ -1,12 +1,21 @@
 // Query builder berbentuk API Supabase, di baliknya SQL ke PostgreSQL lokal.
 //
 // Dibangun hanya untuk method yang benar-benar dipakai kode ini:
-//   select insert update upsert delete | eq neq in gte ilike | order limit
+//   select insert update upsert delete | eq neq in gte ilike or | order limit
 //   single maybeSingle
-// Sengaja TIDAK meniru embed relasi (select("*, other(*)")), .or(), .filter(),
-// atau .textSearch() — tidak ada satu pun pemanggilannya di repo ini, dan
-// meniru separuh jalan lebih berbahaya daripada tidak sama sekali: pemanggil
-// akan mengira fiturnya ada.
+//
+// KOREKSI: versi pertama berkas ini menyatakan .or() "tidak ada satu pun
+// pemanggilannya di repo ini". Itu SALAH — ada tiga (commerce.server.ts:61 dan
+// :142, mcp/tools/search-products.ts:31), dua di antaranya di tengah alur
+// createOrder. Method yang tidak ada melempar TypeError, bukan mengembalikan
+// { error }, sehingga pesanan sudah tersimpan tapi keranjang tidak dikosongkan
+// dan email tidak terkirim — pelanggan menekan checkout lagi lalu terjadi
+// pesanan ganda. Jangan mengulangi kesalahan itu: verifikasi dengan grep
+// sebelum menyatakan sebuah method tidak dipakai.
+//
+// Sengaja TIDAK meniru embed relasi (select("*, other(*)")), .filter(), atau
+// .textSearch() — sudah diverifikasi tidak dipakai. Meniru separuh jalan lebih
+// berbahaya daripada tidak sama sekali: pemanggil akan mengira fiturnya ada.
 //
 // Bentuk kembalian mengikuti Supabase: { data, error }, TIDAK PERNAH melempar.
 // Pemanggil yang sudah ada memeriksa `error`, bukan try/catch.
@@ -31,6 +40,46 @@ interface Filter {
   column: string;
   operator: "=" | "<>" | ">=" | "IN" | "ILIKE";
   value: unknown;
+}
+
+/** Satu grup OR hasil parsing sintaks PostgREST "kolom.op.nilai,kolom.op.nilai". */
+interface OrGroup {
+  parts: { column: string; operator: "=" | "ILIKE"; value: string }[];
+}
+
+const OR_OPERATOR: Record<string, "=" | "ILIKE"> = { eq: "=", ilike: "ILIKE" };
+
+/**
+ * Mengurai sintaks .or() PostgREST.
+ *
+ * Bentuknya "kolom.operator.nilai" dipisah koma, contoh:
+ *   catalog_ref.eq.abc,id.eq.abc
+ *   title.ilike.%kaos%,brand.ilike.%kaos%
+ *
+ * Batasan yang sama dengan PostgREST: nilai tidak boleh mengandung koma,
+ * karena koma adalah pemisah antar kondisi.
+ */
+function parseOr(expression: string): OrGroup {
+  const parts = expression
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      // split dibatasi 3 supaya nilai yang mengandung titik tetap utuh,
+      // misalnya email atau nilai desimal.
+      const pisah = entry.split(".");
+      const column = pisah.shift() ?? "";
+      const op = pisah.shift() ?? "";
+      const value = pisah.join(".");
+      const operator = OR_OPERATOR[op];
+      if (!operator) {
+        throw new Error(`Operator .or() tidak didukung: ${JSON.stringify(op)} pada ${entry}`);
+      }
+      return { column, operator, value };
+    });
+
+  if (parts.length === 0) throw new Error(".or() dipanggil tanpa kondisi");
+  return { parts };
 }
 
 const IDENT = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -73,6 +122,7 @@ export class QueryBuilder<T = any> implements PromiseLike<Result<T>> {
   private payload: Record<string, unknown>[] = [];
   private conflictTarget: string | null = null;
   private filters: Filter[] = [];
+  private orExpressions: string[] = [];
   private orderings: { column: string; ascending: boolean }[] = [];
   private limitCount: number | null = null;
   private rowMode: RowMode = "many";
@@ -141,6 +191,22 @@ export class QueryBuilder<T = any> implements PromiseLike<Result<T>> {
     return this;
   }
 
+  /**
+   * Beberapa kondisi yang digabung OR, sintaks PostgREST.
+   *
+   * Antar-grup dan terhadap filter lain tetap digabung AND, sama seperti
+   * PostgREST — jadi .eq("status","active").or("a.eq.1,b.eq.2") berarti
+   * status = 'active' AND (a = 1 OR b = 2).
+   */
+  or(expression: string): this {
+    // Ekspresi disimpan mentah dan baru diurai saat build(), yang berjalan di
+    // dalam try/catch execute(). Kalau diurai di sini, ekspresi cacat akan
+    // melempar SINKRON di call site — persis kegagalan yang membuat checkout
+    // menyisakan pesanan tanpa email dan tanpa keranjang dikosongkan.
+    this.orExpressions.push(expression);
+    return this;
+  }
+
   order(column: string, options?: { ascending?: boolean }): this {
     this.orderings.push({ column, ascending: options?.ascending !== false });
     return this;
@@ -162,7 +228,6 @@ export class QueryBuilder<T = any> implements PromiseLike<Result<T>> {
   }
 
   private buildWhere(values: unknown[]): string {
-    if (this.filters.length === 0) return "";
     const parts = this.filters.map((f) => {
       const col = ident(f.column);
       if (f.operator === "IN") {
@@ -175,6 +240,20 @@ export class QueryBuilder<T = any> implements PromiseLike<Result<T>> {
       values.push(f.value);
       return `${col} ${f.operator} $${values.length}`;
     });
+
+    for (const group of this.orExpressions.map(parseOr)) {
+      const alternatif = group.parts.map((p) => {
+        values.push(p.value);
+        // Dicasting ke text supaya kolom uuid bisa dibandingkan dengan nilai
+        // sembarang tanpa melempar "invalid input syntax for type uuid".
+        // PostgREST menolak nilai semacam itu; di sini cukup tidak cocok.
+        const kolom = p.operator === "=" ? `${ident(p.column)}::text` : ident(p.column);
+        return `${kolom} ${p.operator} $${values.length}`;
+      });
+      parts.push(`(${alternatif.join(" OR ")})`);
+    }
+
+    if (parts.length === 0) return "";
     return ` WHERE ${parts.join(" AND ")}`;
   }
 
