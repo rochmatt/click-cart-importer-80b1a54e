@@ -88,7 +88,7 @@ function BackToTop() {
       aria-label="Kembali ke atas"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       className={cn(
-        "fixed bottom-36 right-4 z-40 h-10 w-10 shrink-0 rounded-full shadow-lg transition-all duration-300 sm:bottom-20 sm:right-6",
+        "fixed bottom-36 right-4 z-40 h-11 w-11 shrink-0 rounded-full shadow-lg transition-all duration-300 sm:bottom-20 sm:right-6",
         visible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0 pointer-events-none",
       )}
     >
@@ -132,6 +132,7 @@ function Newsletter() {
             onChange={(e) => setEmail(e.target.value)}
             className="h-10 pl-9"
             required
+            aria-label="Alamat email untuk berlangganan promo"
           />
         </div>
         <Button type="submit" className="h-10 px-4">
@@ -148,7 +149,7 @@ function AssuranceBar() {
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-6 sm:px-6 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
         {assurances.map(({ icon: Icon, title, description }) => (
           <div key={title} className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary sm:h-11 sm:w-11" aria-hidden="true">
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
@@ -188,9 +189,9 @@ function PaymentAndSecurity() {
             {paymentMethods.map(({ label, icon: Icon }) => (
               <li
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground sm:min-h-10 sm:px-2.5 sm:py-1.5"
               >
-                <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <Icon className="h-4 w-4 shrink-0 text-primary sm:h-3.5 sm:w-3.5" aria-hidden="true" />
                 <span className="whitespace-nowrap">{label}</span>
               </li>
             ))}
@@ -205,9 +206,9 @@ function PaymentAndSecurity() {
             {securityBadges.map(({ label, icon: Icon }) => (
               <li
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground sm:min-h-10 sm:px-2.5 sm:py-1.5"
               >
-                <Icon className="h-3.5 w-3.5 shrink-0 text-success" />
+                <Icon className="h-4 w-4 shrink-0 text-success sm:h-3.5 sm:w-3.5" aria-hidden="true" />
                 <span className="whitespace-nowrap">{label}</span>
               </li>
             ))}
@@ -238,16 +239,20 @@ export function Footer() {
             products directly and help you compare deals across trusted
             marketplaces.
           </p>
-          <div className="mt-5 flex gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {socials.map(({ label, icon: Icon }) => (
-              <a
+              <Button
                 key={label}
-                href="#"
-                aria-label={label}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                asChild
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 rounded-full sm:h-10 sm:w-10"
+                aria-label={`Kunjungi ${label} PasarPilih`}
               >
-                <Icon className="h-4 w-4" />
-              </a>
+                <a href="#" target="_blank" rel="noopener noreferrer">
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                </a>
+              </Button>
             ))}
           </div>
         </div>
@@ -257,7 +262,10 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {companyLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link to={to} className="transition-colors hover:text-primary">
+                <Link
+                  to={to}
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   {label}
                 </Link>
               </li>
@@ -270,7 +278,10 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {supportLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link to={to} className="transition-colors hover:text-primary">
+                <Link
+                  to={to}
+                  className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
                   {label}
                 </Link>
               </li>
@@ -292,7 +303,11 @@ export function Footer() {
           </p>
           <nav aria-label="Legal" className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground sm:justify-start">
             {legalLinks.map(({ label, to }) => (
-              <Link key={label} to={to} className="transition-colors hover:text-primary">
+              <Link
+                key={label}
+                to={to}
+                className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 {label}
               </Link>
             ))}
