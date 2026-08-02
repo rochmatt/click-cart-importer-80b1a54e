@@ -45,7 +45,24 @@ interface Props {
   subcategories?: string[];
   collapsedGroups?: Record<string, boolean>;
   onToggleGroup?: (title: string) => void;
+  /** Result counts per option so users see what is available. */
+  categoryCounts?: Record<string, number>;
+  subcategoryCounts?: Record<string, number>;
+  ratingCounts?: Record<string, number>;
 }
+
+/** Small trailing count badge for a filter option. */
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span
+      className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground"
+      aria-hidden="true"
+    >
+      {count}
+    </span>
+  );
+}
+
 
 const idr = (n: number) =>
   new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n);
