@@ -130,11 +130,6 @@ function CategoryPage() {
   const [sort, setSort] = useState<SortKey>("popular");
   const [quickView, setQuickView] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    categoryGroups.forEach((g) => (initial[g.title] = false));
-    return initial;
-  });
 
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
 
@@ -230,13 +225,8 @@ function CategoryPage() {
               className="mt-0"
               groups={categoryGroups}
               activeSlug={category.slug}
-              collapsedGroups={collapsedGroups}
-              onToggleGroup={(title) =>
-                setCollapsedGroups((prev) => ({
-                  ...prev,
-                  [title]: !prev[title],
-                }))
-              }
+              activeLabel={category.label}
+              subcategories={category.subcategories}
             />
           </aside>
 
