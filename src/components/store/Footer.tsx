@@ -38,8 +38,9 @@ export function Footer() {
             </span>
           </div>
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            A product aggregator. We curate the catalog — you check out on your
-            favourite marketplace.
+            A curated shopping platform operated by PT RAFA KPT. We sell selected
+            products directly and help you compare deals across trusted
+            marketplaces.
           </p>
           <div className="mt-5 flex gap-2">
             {socials.map(({ label, icon: Icon }) => (
@@ -60,10 +61,7 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {companyLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link
-                  to={to}
-                  className="transition-colors hover:text-primary"
-                >
+                <Link to={to} className="transition-colors hover:text-primary">
                   {label}
                 </Link>
               </li>
@@ -76,10 +74,7 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {supportLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link
-                  to={to}
-                  className="transition-colors hover:text-primary"
-                >
+                <Link to={to} className="transition-colors hover:text-primary">
                   {label}
                 </Link>
               </li>
@@ -92,10 +87,7 @@ export function Footer() {
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
             {legalLinks.map(({ label, to }) => (
               <li key={label}>
-                <Link
-                  to={to}
-                  className="transition-colors hover:text-primary"
-                >
+                <Link to={to} className="transition-colors hover:text-primary">
                   {label}
                 </Link>
               </li>
@@ -106,8 +98,9 @@ export function Footer() {
 
       <div className="border-t border-border">
         <p className="mx-auto max-w-7xl px-4 py-5 text-xs text-muted-foreground sm:px-6 lg:px-8">
-          © {new Date().getFullYear()} PasarPilih. Prices and availability are set
-          by the destination marketplace.
+          © {new Date().getFullYear()} PT RAFA KPT (PasarPilih). Prices and
+          availability on partner marketplaces are set by the destination
+          marketplace.
         </p>
       </div>
     </footer>
