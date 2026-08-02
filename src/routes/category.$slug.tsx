@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, ChevronDown, ChevronUp, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { CategoryFilters, emptyCategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
