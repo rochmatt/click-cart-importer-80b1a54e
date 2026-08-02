@@ -300,7 +300,11 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
   if (currency && currency.toUpperCase() !== "IDR") {
     normalized.issues.push({
       level: "warning",
-      message: `Harga di halaman ini memakai mata uang ${currency.toUpperCase()} — konversi manual bila perlu.`,
+      code: "currency_mismatch",
+      field: "both",
+      title: "Mata uang bukan Rupiah",
+      detail: `Halaman sumber mencantumkan harga dalam ${currency.toUpperCase()}, sedangkan form produk memakai Rupiah.`,
+      action: "Angka diterapkan apa adanya — konversi manual bila perlu.",
     });
   }
 

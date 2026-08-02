@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Link2, Loader2, Sparkles, Wand2, Check, AlertTriangle } from "lucide-react";
+import { Link2, Loader2, Sparkles, Wand2, Check, AlertTriangle, XCircle } from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
 import { formatRupiah, type AdminProduct } from "@/lib/admin-store";
 import { normalizePrices } from "@/lib/price-normalize";
@@ -112,7 +112,7 @@ export default function GrabFromUrl({
     if (fields.price && checked.price !== null) patch.price = checked.price;
     if (fields.salePrice && checked.salePrice !== null) patch.salePrice = checked.salePrice;
     const blocking = checked.issues.filter((i) => i.level === "error");
-    if (blocking.length > 0) toast.warning(blocking[0]!.message);
+    if (blocking.length > 0) toast.warning(`${blocking[0]!.title}: ${blocking[0]!.action}`);
     if (fields.link && result.marketplace) {
       patch.links = {
         shopee: result.marketplace === "shopee" ? result.sourceUrl : "",
@@ -225,19 +225,52 @@ export default function GrabFromUrl({
             )}
 
             {allIssues.length > 0 && (
-              <ul className="space-y-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
-                {allIssues.map((issue, index) => (
-                  <li
-                    key={`${issue.level}-${index}`}
-                    className={`flex items-start gap-2 ${
-                      issue.level === "error" ? "text-destructive" : "text-foreground"
-                    }`}
-                  >
-                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                    <span>{issue.message}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Periksa {allIssues.length} catatan harga sebelum menerapkan
+                </p>
+                <ul className="space-y-2">
+                  {allIssues.map((issue, index) => (
+                    <li
+                      key={`${issue.code}-${issue.field}-${index}`}
+                      className="flex items-start gap-2 text-xs"
+                    >
+                      {issue.level === "error" ? (
+                        <XCircle
+                          className="mt-0.5 size-3.5 shrink-0 text-destructive"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <AlertTriangle
+                          className="mt-0.5 size-3.5 shrink-0 text-amber-600"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`font-semibold ${
+                              issue.level === "error" ? "text-destructive" : "text-foreground"
+                            }`}
+                          >
+                            {issue.title}
+                          </span>
+                          <span className="rounded bg-background px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {FIELD_LABELS[issue.field === "both" ? "price" : issue.field]}
+                            {issue.field === "both" ? " & diskon" : ""}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 block break-words text-muted-foreground">
+                          {issue.detail}
+                        </span>
+                        <span className="mt-0.5 block break-words font-medium text-foreground">
+                          Tindakan: {issue.action}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {available.length > 0 && (
@@ -445,6 +478,29 @@ export default function GrabFromUrl({
                       <li className="text-muted-foreground">Tidak ada data yang dipilih.</li>
                     )}
                   </ul>
+                  {allIssues.length > 0 && (
+                    <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
+                      {allIssues.map((issue, index) => (
+                        <li
+                          key={`confirm-${issue.code}-${index}`}
+                          className="flex items-start gap-2"
+                        >
+                          <AlertTriangle
+                            className={`mt-0.5 size-3.5 shrink-0 ${
+                              issue.level === "error" ? "text-destructive" : "text-amber-600"
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span className="min-w-0 text-left">
+                            <span className="block font-semibold">{issue.title}</span>
+                            <span className="block break-words text-muted-foreground">
+                              {issue.action}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Batal</AlertDialogCancel>
