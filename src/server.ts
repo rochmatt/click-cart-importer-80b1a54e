@@ -44,11 +44,50 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/**
+ * Menaikkan skema request dari http ke https saat proxy di depan menyatakannya.
+ *
+ * KENAPA PERLU: nginx menerminasi TLS lalu meneruskan ke Node lewat HTTP biasa,
+ * jadi request.url selalu berskema http. Apa pun yang menurunkan URL publik dari
+ * request.url ikut salah — yang paling merugikan adalah metadata OAuth milik
+ * integrasi MCP, yang mengumumkan resource sebagai "http://inipilihanku.com/mcp".
+ * Resource indicator OAuth dicocokkan sebagai string persis, jadi ketidakcocokan
+ * skema membuat klien MCP gagal 401.
+ *
+ * Route MCP di-generate oleh @lovable.dev/mcp-js dan hanya menyetel
+ * trustForwardedHost; opsi trustForwardedProto ada di implementasi library tapi
+ * TIDAK diekspos lewat tipe publik maupun opsi plugin. Diperbaiki di sini supaya
+ * keempat berkas generated itu tidak perlu diambil alih — kalau diambil alih,
+ * plugin berhenti meregenerasinya dan pembaruan mcp-js tidak akan pernah masuk.
+ *
+ * KENAPA DIGERBANGI ENV: memercayai X-Forwarded-Proto hanya aman kalau proxy di
+ * depan MENIMPA header itu, bukan meneruskan apa pun dari klien. nginx di server
+ * ini melakukannya (proxy_set_header X-Forwarded-Proto $scheme). Di lingkungan
+ * lain belum tentu, jadi default-nya mati — tanpa TRUST_PROXY_PROTO=1 fungsi ini
+ * tidak melakukan apa-apa.
+ */
+function applyForwardedProto(request: Request): Request {
+  if (process.env.TRUST_PROXY_PROTO !== "1") return request;
+
+  const forwarded = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  if (forwarded !== "https") return request;
+
+  const url = new URL(request.url);
+  if (url.protocol === "https:") return request;
+  url.protocol = "https:";
+
+  // Request diteruskan sebagai init, bukan disebar dengan spread: properti
+  // Request ada di prototype sebagai getter, jadi spread tidak menyalin apa pun
+  // dan method/header/body akan hilang. Konstruktor Request menangani bentuk ini
+  // secara khusus, termasuk body-nya.
+  return new Request(url.href, request);
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
+      const response = await handler.fetch(applyForwardedProto(request), env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);
