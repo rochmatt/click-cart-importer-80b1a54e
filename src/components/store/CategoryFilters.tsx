@@ -1,7 +1,8 @@
 import { useId, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp, LayoutList, ListFilter, Search, Star } from "lucide-react";
+import { ChevronDown, ChevronUp, HelpCircle, LayoutList, ListFilter, Search, Star } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface CategoryFilterState {
   query: string;
