@@ -157,9 +157,7 @@ export function AuthPanel({ initialMode }: { initialMode: Mode }) {
         if (!data.session) {
           setSentConfirmation(true);
           toast.success("Cek inbox kamu untuk konfirmasi email");
-          window.location.assign(
-            `/verify-email?email=${encodeURIComponent(parsed.data.email)}`,
-          );
+          navigate({ to: "/verify-email", search: { email: parsed.data.email } });
         } else {
           toast.success("Akun berhasil dibuat. Selamat berbelanja!");
         }
