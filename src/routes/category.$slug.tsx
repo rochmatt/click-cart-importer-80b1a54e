@@ -26,6 +26,17 @@ import {
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
 
+const sortKeys: SortKey[] = ["popular", "rating", "price-low", "price-high"];
+
+const categorySearchSchema = z.object({
+  q: fallback(z.string(), "").default(""),
+  min: fallback(z.string(), "").default(""),
+  max: fallback(z.string(), "").default(""),
+  rating: fallback(z.number(), 0).default(0),
+  sort: fallback(z.string(), "popular").default("popular"),
+});
+
+
 const categoryGroups = [
   {
     title: "Gaya & Penampilan",
