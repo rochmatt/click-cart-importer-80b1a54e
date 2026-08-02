@@ -132,6 +132,7 @@ function Newsletter() {
             onChange={(e) => setEmail(e.target.value)}
             className="h-10 pl-9"
             required
+            aria-label="Alamat email untuk berlangganan promo"
           />
         </div>
         <Button type="submit" className="h-10 px-4">
@@ -148,7 +149,7 @@ function AssuranceBar() {
       <div className="mx-auto grid max-w-7xl gap-4 px-4 py-6 sm:px-6 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
         {assurances.map(({ icon: Icon, title, description }) => (
           <div key={title} className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary sm:h-11 sm:w-11" aria-hidden="true">
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
