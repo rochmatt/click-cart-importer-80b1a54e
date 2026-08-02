@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Shirt,
   Smartphone,
@@ -149,6 +149,8 @@ export function CategoryMegaMenu({ onQueryChange }: CategoryMegaMenuProps) {
   const pick = (term: string) => {
     onQueryChange(term);
     closeMenu(true);
+    // always land on a page that can show results for the term
+    navigate({ to: "/search", search: { q: term } });
   };
 
   const onTriggerKeyDown = (event: React.KeyboardEvent) => {
