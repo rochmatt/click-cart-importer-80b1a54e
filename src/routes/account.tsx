@@ -55,6 +55,44 @@ function AccountPage() {
   const search = Route.useSearch();
   const { loading, user } = useAuth();
   const [query, setQuery] = useState("");
+  const isAuthScreen = !loading && !user;
+
+  if (isAuthScreen) {
+    return (
+      <div className="min-h-screen bg-background font-sans antialiased">
+        {/* Chrome hanya untuk desktop; mobile pakai layar penuh khusus */}
+        <div className="hidden md:block">
+          <AnnouncementBar />
+          <Header query={query} onQueryChange={setQuery} />
+        </div>
+
+        <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-6 md:min-h-0 md:py-12 lg:px-8">
+          <div className="md:hidden">
+            <Link
+              to="/"
+              className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke beranda
+            </Link>
+          </div>
+
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+            {search.mode === "register" ? "Daftar akun" : "Masuk ke akun"}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            Masuk atau daftar untuk checkout lebih cepat dan melacak pesanan otomatis.
+          </p>
+
+          <AuthPanel initialMode={search.mode ?? "signin"} />
+        </main>
+
+        <div className="hidden md:block">
+          <Footer />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
@@ -63,7 +101,7 @@ function AccountPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-          {user ? "Akun saya" : search.mode === "register" ? "Daftar akun" : "Masuk ke akun"}
+          {user ? "Akun saya" : "Masuk ke akun"}
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           {user
@@ -76,11 +114,8 @@ function AccountPage() {
             <Loader2 className="h-4 w-4 animate-spin" />
             Memuat akun kamu…
           </div>
-
-        ) : user ? (
-          <SignedInView />
         ) : (
-          <AuthPanel initialMode={search.mode ?? "signin"} />
+          <SignedInView />
         )}
       </main>
 
@@ -89,6 +124,7 @@ function AccountPage() {
     </div>
   );
 }
+
 
 
 
