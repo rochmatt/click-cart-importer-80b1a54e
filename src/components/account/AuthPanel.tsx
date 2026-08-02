@@ -151,12 +151,15 @@ export function AuthPanel({
         });
         if (error) throw error;
         toast.success("Berhasil masuk. Selamat datang kembali!");
+        if (nextPath) window.location.href = nextPath;
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            emailRedirectTo: window.location.origin + "/verify-email",
+            emailRedirectTo:
+              window.location.origin +
+              (nextPath ? `/verify-email?next=${encodeURIComponent(nextPath)}` : "/verify-email"),
             data: { display_name: parsed.data.name ?? "" },
           },
         });
@@ -167,6 +170,7 @@ export function AuthPanel({
           navigate({ to: "/verify-email", search: { email: parsed.data.email } });
         } else {
           toast.success("Akun berhasil dibuat. Selamat berbelanja!");
+          if (nextPath) window.location.href = nextPath;
         }
       }
     } catch (error) {
