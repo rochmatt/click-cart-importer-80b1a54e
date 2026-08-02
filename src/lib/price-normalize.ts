@@ -64,7 +64,6 @@ export function parsePriceValue(value: unknown): number | null {
     normalized = cleaned;
   } else {
     const decimalIndex = Math.max(lastDot, lastComma);
-    const decimalChar = decimalIndex === lastDot ? "." : ",";
     const tail = cleaned.slice(decimalIndex + 1);
     // Ekor 3 digit = pemisah ribuan (1.250.000), bukan desimal.
     const isDecimal = tail.length > 0 && tail.length <= 2;
@@ -74,7 +73,6 @@ export function parsePriceValue(value: unknown): number | null {
     } else {
       normalized = cleaned.replace(/[.,]/g, "");
     }
-    void decimalChar;
   }
 
   const n = Number(normalized);
