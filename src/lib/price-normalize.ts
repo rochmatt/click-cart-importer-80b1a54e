@@ -127,35 +127,64 @@ export function parsePriceValue(value: unknown): number | null {
   return Math.round(n);
 }
 
+const RANGE_RE = /\d[\d.,\s]*\s*(?:-|–|—|s\/d|sampai|to)\s*\d/i;
+
 function validateSingle(
-  value: number | null,
+  raw: unknown,
+  field: "price" | "salePrice",
   label: string,
   issues: PriceIssue[],
 ): number | null {
+  const original = rawText(raw);
+  const value = parsePriceValue(raw);
+
+  if (raw !== null && raw !== undefined && original !== "kosong" && value === null) {
+    issues.push({
+      level: "error",
+      code: "unparsable",
+      field,
+      title: PRICE_ISSUE_LABELS.unparsable,
+      detail: `${label} di halaman sumber berbunyi "${original}" dan tidak berisi angka harga yang jelas.`,
+      action: `${label} dikosongkan — isi manual di form.`,
+    });
+    return null;
+  }
   if (value === null) return null;
-  if (!Number.isFinite(value) || value <= 0) {
-    issues.push({ level: "error", message: `${label} tidak valid dan diabaikan.` });
-    return null;
+
+  if (typeof raw === "string" && RANGE_RE.test(raw)) {
+    issues.push({
+      level: "warning",
+      code: "range_collapsed",
+      field,
+      title: PRICE_ISSUE_LABELS.range_collapsed,
+      detail: `${label} di halaman sumber berupa rentang "${original}", bukan satu angka pasti.`,
+      action: `Nilai terendah dipakai: ${idr(value)}.`,
+    });
   }
-  const rounded = Math.round(value);
-  if (rounded !== value) {
-    issues.push({ level: "warning", message: `${label} dibulatkan ke ${rounded}.` });
-  }
-  if (rounded < MIN_PRICE) {
+
+  if (value < MIN_PRICE) {
     issues.push({
       level: "error",
-      message: `${label} (${rounded}) terlalu kecil — kemungkinan salah baca, jadi diabaikan.`,
+      code: "too_low",
+      field,
+      title: PRICE_ISSUE_LABELS.too_low,
+      detail: `${label} terbaca ${idr(value)} dari "${original}", di bawah batas minimum ${idr(MIN_PRICE)} — biasanya ini potongan angka (mis. rating atau jumlah terjual).`,
+      action: `${label} tidak diterapkan ke form.`,
     });
     return null;
   }
-  if (rounded > MAX_PRICE) {
+  if (value > MAX_PRICE) {
     issues.push({
       level: "error",
-      message: `${label} (${rounded}) melebihi batas wajar dan diabaikan.`,
+      code: "too_high",
+      field,
+      title: PRICE_ISSUE_LABELS.too_high,
+      detail: `${label} terbaca ${idr(value)} dari "${original}", melebihi batas wajar ${idr(MAX_PRICE)} — kemungkinan pemisah ribuan salah baca.`,
+      action: `${label} tidak diterapkan ke form.`,
     });
     return null;
   }
-  return rounded;
+  return value;
 }
 
 /**
@@ -166,23 +195,32 @@ export function normalizePrices(
   rawSalePrice: unknown,
 ): NormalizedPrices {
   const issues: PriceIssue[] = [];
-  let price = validateSingle(parsePriceValue(rawPrice), "Harga normal", issues);
-  let salePrice = validateSingle(parsePriceValue(rawSalePrice), "Harga diskon", issues);
+  let price = validateSingle(rawPrice, "price", "Harga normal", issues);
+  let salePrice = validateSingle(rawSalePrice, "salePrice", "Harga diskon", issues);
 
   if (price !== null && salePrice !== null) {
     if (salePrice > price) {
-      // Sumber sering menukar posisi harga normal & diskon.
+      const before = { price, salePrice };
       [price, salePrice] = [salePrice, price];
       issues.push({
         level: "warning",
-        message: "Harga diskon lebih besar dari harga normal — posisinya ditukar otomatis.",
+        code: "swapped",
+        field: "both",
+        title: PRICE_ISSUE_LABELS.swapped,
+        detail: `Halaman sumber memberi harga diskon ${idr(before.salePrice)} lebih besar dari harga normal ${idr(before.price)} — urutannya tidak konsisten.`,
+        action: `Ditukar otomatis: harga normal ${idr(price)}, harga diskon ${idr(salePrice)}.`,
       });
     }
     if (salePrice === price) {
+      const same = price;
       salePrice = null;
       issues.push({
         level: "warning",
-        message: "Harga diskon sama dengan harga normal, jadi diskon dikosongkan.",
+        code: "identical",
+        field: "salePrice",
+        title: PRICE_ISSUE_LABELS.identical,
+        detail: `Kedua nilai terbaca sama, yaitu ${idr(same)}, jadi tidak ada diskon nyata.`,
+        action: "Harga diskon dikosongkan, hanya harga normal yang diterapkan.",
       });
     }
   }
@@ -192,7 +230,11 @@ export function normalizePrices(
     salePrice = null;
     issues.push({
       level: "warning",
-      message: "Harga normal tidak terbaca — harga diskon dipakai sebagai harga normal.",
+      code: "sale_as_price",
+      field: "price",
+      title: PRICE_ISSUE_LABELS.sale_as_price,
+      detail: "Hanya satu angka harga yang valid terbaca dari halaman sumber, yaitu harga diskon.",
+      action: `Angka itu dipakai sebagai harga normal: ${idr(price)}.`,
     });
   }
 
@@ -200,19 +242,30 @@ export function normalizePrices(
   if (price !== null && salePrice !== null) {
     discountPercent = Math.round(((price - salePrice) / price) * 100);
     if (discountPercent < 1) {
+      const gap = price - salePrice;
       salePrice = null;
       discountPercent = null;
       issues.push({
         level: "warning",
-        message: "Selisih diskon kurang dari 1% sehingga tidak dipakai.",
+        code: "discount_too_small",
+        field: "salePrice",
+        title: PRICE_ISSUE_LABELS.discount_too_small,
+        detail: `Selisih hanya ${idr(gap)} (di bawah 1% dari harga normal ${idr(price)}).`,
+        action: "Harga diskon dikosongkan agar tidak tampil sebagai promo palsu.",
       });
     } else if (discountPercent > 95) {
       issues.push({
         level: "warning",
-        message: `Diskon terdeteksi ${discountPercent}% — periksa lagi sebelum menyimpan.`,
+        code: "discount_too_large",
+        field: "both",
+        title: PRICE_ISSUE_LABELS.discount_too_large,
+        detail: `Diskon terhitung ${discountPercent}% (${idr(price)} → ${idr(salePrice)}), jauh di atas batas normal 95%.`,
+        action: "Nilai tetap dipakai, tapi periksa ulang sebelum menyimpan.",
       });
     }
   }
+
+
 
   return { price, salePrice, discountPercent, issues };
 }
