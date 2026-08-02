@@ -163,13 +163,14 @@ export function CategoryFilters({
   );
 
   return (
-    <section
-      aria-labelledby={`${uid}-heading`}
-      className={cn(
-        "rounded-2xl border border-border bg-card px-4 py-5 sm:px-5",
-        className,
-      )}
-    >
+    <TooltipProvider>
+      <section
+        aria-labelledby={`${uid}-heading`}
+        className={cn(
+          "rounded-2xl border border-border bg-card px-4 py-5 sm:px-5",
+          className,
+        )}
+      >
       {/* Semua Kategori */}
       <h2
         id={`${uid}-heading`}
