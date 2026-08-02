@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Heart, Home, Search, ShoppingBag, User } from "lucide-react";
+import { Home, LayoutGrid, Search, ShoppingBag, User } from "lucide-react";
 import { useCart, useCartSync } from "@/lib/cart";
-import { useWishlist, useWishlistSync } from "@/lib/wishlist";
+import { useWishlistSync } from "@/lib/wishlist";
 import { cn } from "@/lib/utils";
 
 type Item = {
@@ -19,15 +19,14 @@ export function MobileBottomNav() {
   useCartSync();
   useWishlistSync();
   const cart = useCart();
-  const wishlist = useWishlist();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const cartCount = cart.reduce((sum, line) => sum + (line.qty ?? 1), 0);
 
   const items: Item[] = [
     { to: "/", label: "Home", icon: Home },
+    { to: "/categories", label: "Kategori", icon: LayoutGrid },
     { to: "/search", label: "Search", icon: Search },
-    { to: "/wishlist", label: "Wishlist", icon: Heart, badge: wishlist.length },
     { to: "/checkout", label: "Cart", icon: ShoppingBag, badge: cartCount },
     { to: "/account", label: "Account", icon: User },
   ];

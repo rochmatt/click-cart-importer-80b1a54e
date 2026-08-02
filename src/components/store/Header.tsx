@@ -1,4 +1,4 @@
-import { Heart, Search, ShoppingBag, Truck, BadgeCheck, Ticket, Zap, HelpCircle, Store } from "lucide-react";
+import { Heart, Search, ShoppingBag, Truck, BadgeCheck, Ticket, Zap, HelpCircle, Store, LayoutGrid } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CartMenu } from "@/components/store/CartMenu";
 import { AccountMenu } from "@/components/store/AccountMenu";
@@ -131,6 +131,13 @@ export function Header({ query, onQueryChange }: HeaderProps) {
       <nav className="hidden border-b border-header-muted/15 bg-header-background lg:block">
         <div className="mx-auto flex h-10 max-w-7xl items-center gap-5 px-4 text-sm sm:px-6 lg:px-8">
           <CategoryMegaMenu onQueryChange={onQueryChange} />
+          <Link
+            to="/categories"
+            className="inline-flex items-center gap-1.5 font-medium text-header-foreground transition-colors hover:text-primary"
+          >
+            <LayoutGrid className="h-4 w-4 text-primary" />
+            Semua Kategori
+          </Link>
           <span className="h-4 w-px bg-header-muted/20" />
           {navLinks.map(({ label, icon: Icon }) => (
             <button
