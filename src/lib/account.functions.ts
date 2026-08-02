@@ -1,26 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-export const preferencesSchema = z.object({
-  language: z.enum(["id", "en"]),
-  currency: z.enum(["IDR", "USD"]),
-  email_promos: z.boolean(),
-  email_order_updates: z.boolean(),
-  email_price_drop: z.boolean(),
-  whatsapp_updates: z.boolean(),
-});
-
-export type AccountPreferences = z.infer<typeof preferencesSchema>;
-
-export const DEFAULT_PREFERENCES: AccountPreferences = {
-  language: "id",
-  currency: "IDR",
-  email_promos: true,
-  email_order_updates: true,
-  email_price_drop: false,
-  whatsapp_updates: false,
-};
+import {
+  type AccountPreferences,
+  parsePreferences,
+  preferencesSchema,
+} from "@/lib/account-preferences";
 
 export interface AccountProfile {
   display_name: string;
@@ -29,6 +14,7 @@ export interface AccountProfile {
   email: string;
   preferences: AccountPreferences;
 }
+
 
 
 export interface AccountOrder {
