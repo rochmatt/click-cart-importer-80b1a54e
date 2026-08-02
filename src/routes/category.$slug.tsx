@@ -139,11 +139,48 @@ export const Route = createFileRoute("/category/$slug")({
 
 function CategoryPage() {
   const category = Route.useLoaderData();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState<CategoryFilterState>(emptyCategoryFilters);
-  const [sort, setSort] = useState<SortKey>("popular");
   const [quickView, setQuickView] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  const filters: CategoryFilterState = useMemo(
+    () => ({
+      query: search.q,
+      minPrice: search.min.replace(/[^\d]/g, ""),
+      maxPrice: search.max.replace(/[^\d]/g, ""),
+      minRating: [0, 3.5, 4, 4.5].includes(search.rating) ? search.rating : 0,
+    }),
+    [search.q, search.min, search.max, search.rating],
+  );
+
+  const sort: SortKey = sortKeys.includes(search.sort as SortKey)
+    ? (search.sort as SortKey)
+    : "popular";
+
+  const setFilters = (next: CategoryFilterState) => {
+    navigate({
+      search: (prev) => ({
+        ...prev,
+        q: next.query || undefined,
+        min: next.minPrice || undefined,
+        max: next.maxPrice || undefined,
+        rating: next.minRating || undefined,
+      }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
+
+  const setSort = (next: SortKey) => {
+    navigate({
+      search: (prev) => ({ ...prev, sort: next === "popular" ? undefined : next }),
+      replace: true,
+      resetScroll: false,
+    });
+  };
+
 
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
 
