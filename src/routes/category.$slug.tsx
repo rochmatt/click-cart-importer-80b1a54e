@@ -358,32 +358,12 @@ function CategoryPage() {
                           )}
                         </button>
                       </div>
-                      <ul
-                        id={`category-group-${group.title}`}
-                        className={`${
-                          collapsed ? "hidden" : "flex"
-                        } -mx-4 snap-x snap-mandatory items-center gap-3 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:mx-0 sm:px-0 sm:py-1 lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden`}
-                      >
-                        {group.items.map((c) => {
-                          const active = c.slug === category.slug;
-                          return (
-                            <li key={c.slug} className="shrink-0 snap-start">
-                              <Link
-                                to="/category/$slug"
-                                params={{ slug: c.slug }}
-                                aria-current={active ? "page" : undefined}
-                                className={`inline-flex h-10 w-[8.5rem] shrink-0 items-center justify-center truncate rounded-full border px-3 text-center text-sm font-medium leading-none transition-colors ${
-                                  active
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-border bg-secondary text-foreground hover:border-primary/40 hover:text-primary"
-                                }`}
-                              >
-                                {c.label}
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                      <CategoryChipGroup
+                        groupTitle={group.title}
+                        items={group.items}
+                        activeSlug={category.slug}
+                        collapsed={collapsed}
+                      />
                     </div>
                   );
                 })}
