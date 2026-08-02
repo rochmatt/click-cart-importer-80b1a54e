@@ -37,6 +37,7 @@ export const Route = createFileRoute("/categories")({
 });
 
 function CategoriesPage() {
+  const [headerQuery, setHeaderQuery] = useState("");
   const [query, setQuery] = useState("");
 
   const cards = useMemo(() => {
@@ -60,7 +61,7 @@ function CategoriesPage() {
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       <AnnouncementBar />
-      <Header query={query} onQueryChange={setQuery} />
+      <Header query={headerQuery} onQueryChange={setHeaderQuery} />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted-foreground">
