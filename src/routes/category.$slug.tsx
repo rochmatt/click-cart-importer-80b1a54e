@@ -347,10 +347,9 @@ function CategoryPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground" aria-live="polite">
-                    Menampilkan
-                    <span className="mx-1 font-bold text-foreground">{items.length}</span>
+                    Menampilkan{" "}
+                    <span className="font-bold text-foreground">{items.length}</span>{" "}
                     produk
-                    {items.length === 1 ? "" : ""}
                     {searchTerm ? ` untuk “${searchTerm}”` : ""}
                     {activeFilterCount(filters) > 0 ? " yang cocok dengan filter" : ""}
                   </p>
