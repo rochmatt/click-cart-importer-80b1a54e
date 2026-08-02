@@ -9,7 +9,8 @@ import { ArrowLeft, Loader2, LogOut, Package, Settings } from "lucide-react";
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
-import { MobileBottomNav } from "@/components/store/MobileBottomNav";
+import { AccountHeader } from "@/components/account/AccountHeader";
+import { AccountFooter } from "@/components/account/AccountFooter";
 import { AddressBook } from "@/components/account/AddressBook";
 import { AuthPanel } from "@/components/account/AuthPanel";
 import { ResendVerification } from "@/components/account/ResendVerification";
@@ -95,11 +96,10 @@ function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background font-sans antialiased">
-      <AnnouncementBar />
-      <Header query={query} onQueryChange={setQuery} />
+    <div className="flex min-h-screen flex-col bg-background font-sans antialiased">
+      <AccountHeader />
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
           {user ? "Akun saya" : "Masuk ke akun"}
         </h1>
@@ -119,8 +119,7 @@ function AccountPage() {
         )}
       </main>
 
-      <Footer />
-      <MobileBottomNav />
+      <AccountFooter />
     </div>
   );
 }

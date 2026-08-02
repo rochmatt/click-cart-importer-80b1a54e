@@ -27,6 +27,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AdminFooter } from "@/components/admin/AdminFooter";
+import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
 
 const NAV = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
@@ -43,6 +45,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user } = useAuth();
+  const adminName = displayNameFor(user) || "Administrator";
 
   const isActive = (to: string, exact: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
@@ -159,11 +163,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted">
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  AR
+                  {initialsFor(adminName)}
                 </span>
                 <span className="hidden text-left sm:block">
-                  <span className="block text-xs font-semibold leading-tight text-foreground">
-                    Andi Rahman
+                  <span className="block max-w-[10rem] truncate text-xs font-semibold leading-tight text-foreground">
+                    {adminName}
                   </span>
                   <span className="block text-[11px] leading-tight text-muted-foreground">
                     Administrator
@@ -174,8 +178,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>My account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <UserCog className="mr-2 h-4 w-4" /> Profile
+                <DropdownMenuItem asChild>
+                  <Link to="/account">
+                    <UserCog className="mr-2 h-4 w-4" /> Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/admin/settings">
@@ -194,6 +200,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </header>
 
         <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+
+        <AdminFooter />
       </div>
     </div>
   );
