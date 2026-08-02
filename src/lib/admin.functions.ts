@@ -154,15 +154,18 @@ export const listAdminCustomers = createServerFn({ method: "GET" })
     });
   });
 
+// MIGRASI FASE 2 — store_settings dilayani PostgreSQL lokal.
+//
+// Tabel ini dipilih lebih dulu karena satu-satunya yang TIDAK pernah disentuh
+// dari browser: seluruh aksesnya lewat kedua server function di berkas ini.
+// admin_products, announcements, dan sales_events juga dibaca kode browser,
+// jadi memindahkan sisi servernya saja akan menghasilkan dua sumber data
+// berbeda untuk baris yang sama — admin mengedit di browser (Supabase)
+// sementara checkout membaca lokal.
 export const getStoreSettings = createServerFn({ method: "GET" }).handler(
   async (): Promise<StoreSettings | null> => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(
-      process.env["SUPABASE_URL"]!,
-      process.env["SUPABASE_PUBLISHABLE_KEY"]!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-    const { data, error } = await client
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const { data, error } = await createServiceClient()
       .from("store_settings")
       .select(
         "id, store_name, tagline, support_email, support_phone, store_address, logo_url, shopee_link_template, tokopedia_link_template, tiktok_link_template, utm_source, utm_medium, utm_campaign",
@@ -195,9 +198,21 @@ export const updateStoreSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => settingsSchema.parse(input))
   .handler(async ({ data, context }) => {
+    // Otorisasi tetap diperiksa lewat Supabase karena auth belum dipindahkan
+    // (itu Fase 3). assertAdmin melempar sebelum baris di bawah tersentuh.
     await assertAdmin(context.supabase, context.userId);
+
+    // Penulisan memakai klien service yang melewati RLS. Policy tulis
+    // store_settings lokal bergantung pada has_role(auth.uid(), 'admin'),
+    // sedangkan user_roles lokal masih kosong — tanpa ini update ditolak
+    // diam-diam dengan nol baris terubah. Aman karena assertAdmin di atas
+    // sudah menjadi gerbangnya.
+    const { createServiceClient } = await import("@/lib/db/client.server");
     const { id, ...fields } = data;
-    const { error } = await context.supabase.from("store_settings").update(fields).eq("id", id);
+    const { error } = await createServiceClient()
+      .from("store_settings")
+      .update(fields)
+      .eq("id", id);
     if (error) throw error;
     return { ok: true };
   });
