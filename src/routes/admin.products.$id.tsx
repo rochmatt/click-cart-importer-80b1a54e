@@ -29,6 +29,7 @@ import {
 } from "@/lib/admin-store";
 import CategorySelect from "@/components/admin/CategorySelect";
 import SpecificationsCard from "@/components/admin/SpecificationsCard";
+import GrabFromUrl from "@/components/admin/GrabFromUrl";
 
 
 export const Route = createFileRoute("/admin/products/$id")({
