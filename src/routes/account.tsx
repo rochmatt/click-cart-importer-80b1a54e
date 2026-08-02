@@ -4,19 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
-import {
-  Heart,
-  KeyRound,
-  Loader2,
-  LogIn,
-  LogOut,
-  Mail,
-  Package,
-  Settings,
-  
-  Truck,
-  UserPlus,
-} from "lucide-react";
+import { Loader2, LogOut, Package, Settings } from "lucide-react";
+
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
