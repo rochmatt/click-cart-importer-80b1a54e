@@ -133,6 +133,11 @@ function MoreList({
             </TooltipContent>
           </Tooltip>
         </div>
+        {!expanded ? (
+          <p className="mt-0.5 pl-1 text-[11px] text-muted-foreground">
+            Klik ikon info untuk melihat subkategori tersembunyi.
+          </p>
+        ) : null}
       ) : null}
     </div>
   );
