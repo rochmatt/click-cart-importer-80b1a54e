@@ -213,8 +213,7 @@ function CategoryPage() {
               showFilters ? "block" : "hidden"
             } lg:block`}
           >
-            <div className="flex items-center justify-between lg:hidden">
-              <h2 className="text-sm font-semibold text-foreground">Filter produk</h2>
+            <div className="flex items-center justify-end lg:hidden">
               <button
                 type="button"
                 onClick={() => setShowFilters(false)}
