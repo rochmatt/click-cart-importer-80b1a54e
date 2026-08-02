@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Link2, Loader2, Sparkles, Wand2, Check, AlertTriangle } from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
 import { formatRupiah, type AdminProduct } from "@/lib/admin-store";
+import { normalizePrices } from "@/lib/price-normalize";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +90,14 @@ export default function GrabFromUrl({
     );
   }
 
+  const priceCheck = result
+    ? normalizePrices(
+        fields.price ? result.price : null,
+        fields.salePrice ? result.salePrice : null,
+      )
+    : null;
+  const allIssues = result ? [...result.priceIssues, ...(priceCheck?.issues ?? [])] : [];
+
   function apply() {
     if (!result) return;
     setShowConfirm(false);
@@ -96,8 +105,14 @@ export default function GrabFromUrl({
     if (fields.title && result.title) patch.title = result.title;
     if (fields.description && result.description) patch.description = result.description;
     if (fields.brand && result.brand) patch.brand = result.brand;
-    if (fields.price && result.price !== null) patch.price = result.price;
-    if (fields.salePrice && result.salePrice !== null) patch.salePrice = result.salePrice;
+    const checked = normalizePrices(
+      fields.price ? result.price : null,
+      fields.salePrice ? result.salePrice : null,
+    );
+    if (fields.price && checked.price !== null) patch.price = checked.price;
+    if (fields.salePrice && checked.salePrice !== null) patch.salePrice = checked.salePrice;
+    const blocking = checked.issues.filter((i) => i.level === "error");
+    if (blocking.length > 0) toast.warning(blocking[0]!.message);
     if (fields.link && result.marketplace) {
       patch.links = {
         shopee: result.marketplace === "shopee" ? result.sourceUrl : "",
@@ -139,7 +154,11 @@ export default function GrabFromUrl({
       case "price":
         return result.price !== null ? formatRupiah(result.price) : "";
       case "salePrice":
-        return result.salePrice !== null ? formatRupiah(result.salePrice) : "";
+        return result.salePrice !== null
+          ? `${formatRupiah(result.salePrice)}${
+              result.discountPercent !== null ? ` · hemat ${result.discountPercent}%` : ""
+            }`
+          : "";
       case "link":
         return `${result.marketplace} · ${result.sourceUrl}`;
     }
@@ -203,6 +222,22 @@ export default function GrabFromUrl({
               <p className="text-xs text-muted-foreground">
                 Sebagian data dilengkapi otomatis oleh AI — mohon periksa sebelum menyimpan.
               </p>
+            )}
+
+            {allIssues.length > 0 && (
+              <ul className="space-y-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+                {allIssues.map((issue, index) => (
+                  <li
+                    key={`${issue.level}-${index}`}
+                    className={`flex items-start gap-2 ${
+                      issue.level === "error" ? "text-destructive" : "text-foreground"
+                    }`}
+                  >
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                    <span>{issue.message}</span>
+                  </li>
+                ))}
+              </ul>
             )}
 
             {available.length > 0 && (
@@ -302,21 +337,26 @@ export default function GrabFromUrl({
                   <div>
                     <dt className="text-muted-foreground">Harga</dt>
                     <dd className="font-medium text-foreground">
-                      {fields.salePrice && result.salePrice !== null && (
-                        <span className="mr-2 text-primary">{formatRupiah(result.salePrice)}</span>
+                      {priceCheck?.salePrice != null && (
+                        <span className="mr-2 text-primary">
+                          {formatRupiah(priceCheck.salePrice)}
+                        </span>
                       )}
-                      {fields.price && result.price !== null ? (
+                      {priceCheck?.price != null ? (
                         <span
                           className={
-                            fields.salePrice && result.salePrice !== null
-                              ? "text-muted-foreground line-through"
-                              : ""
+                            priceCheck.salePrice != null ? "text-muted-foreground line-through" : ""
                           }
                         >
-                          {formatRupiah(result.price)}
+                          {formatRupiah(priceCheck.price)}
                         </span>
                       ) : (
-                        !(fields.salePrice && result.salePrice !== null) && "—"
+                        priceCheck?.salePrice == null && "—"
+                      )}
+                      {priceCheck?.discountPercent != null && (
+                        <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          -{priceCheck.discountPercent}%
+                        </span>
                       )}
                     </dd>
                   </div>
