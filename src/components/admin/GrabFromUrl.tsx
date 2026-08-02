@@ -256,6 +256,98 @@ export default function GrabFromUrl({
               </div>
             )}
 
+            <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+              <p className="text-xs font-semibold text-foreground">
+                Pratinjau lengkap sebelum diterapkan
+              </p>
+              <div className="flex gap-3">
+                {pickedImages[0] && (
+                  <img
+                    src={pickedImages[0]}
+                    alt="Pratinjau gambar utama produk"
+                    loading="lazy"
+                    className="size-20 shrink-0 rounded-lg border border-border object-cover"
+                  />
+                )}
+                <dl className="min-w-0 flex-1 space-y-1.5 text-xs">
+                  <div>
+                    <dt className="text-muted-foreground">Judul</dt>
+                    <dd className="break-words font-medium text-foreground">
+                      {fields.title && result.title ? result.title : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Brand</dt>
+                    <dd className="break-words font-medium text-foreground">
+                      {fields.brand && result.brand ? result.brand : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Harga</dt>
+                    <dd className="font-medium text-foreground">
+                      {fields.salePrice && result.salePrice !== null && (
+                        <span className="mr-2 text-primary">{formatRupiah(result.salePrice)}</span>
+                      )}
+                      {fields.price && result.price !== null ? (
+                        <span
+                          className={
+                            fields.salePrice && result.salePrice !== null
+                              ? "text-muted-foreground line-through"
+                              : ""
+                          }
+                        >
+                          {formatRupiah(result.price)}
+                        </span>
+                      ) : (
+                        !(fields.salePrice && result.salePrice !== null) && "—"
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="space-y-1 text-xs">
+                <p className="text-muted-foreground">Deskripsi</p>
+                <p className="max-h-32 overflow-y-auto whitespace-pre-line break-words text-foreground">
+                  {fields.description && result.description ? result.description : "—"}
+                </p>
+              </div>
+              <div className="space-y-1 text-xs">
+                <p className="text-muted-foreground">
+                  Link marketplace{result.marketplace ? ` (${result.marketplace})` : ""}
+                </p>
+                {fields.link && result.marketplace ? (
+                  <a
+                    href={result.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-primary underline"
+                  >
+                    {result.sourceUrl}
+                  </a>
+                ) : (
+                  <p className="text-foreground">—</p>
+                )}
+              </div>
+              <div className="space-y-1 text-xs">
+                <p className="text-muted-foreground">Gambar ({pickedImages.length} dipilih)</p>
+                {pickedImages.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {pickedImages.map((src) => (
+                      <img
+                        key={src}
+                        src={src}
+                        alt="Pratinjau gambar produk terpilih"
+                        loading="lazy"
+                        className="size-12 rounded-md border border-border object-cover"
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-foreground">—</p>
+                )}
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={apply}
