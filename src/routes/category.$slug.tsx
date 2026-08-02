@@ -263,14 +263,15 @@ function CategoryPage() {
   const subcategoryCounts = useMemo(() => {
     const entries: Record<string, number> = {};
     for (const sub of category.subcategories) {
-      const words = sub
+      const words: string[] = sub
         .toLowerCase()
         .split(/[^a-z0-9]+/)
-        .filter((w) => w.length > 2);
+        .filter((w: string) => w.length > 2);
       entries[sub] = all.filter((p) => {
         const haystack = `${p.title} ${p.description}`.toLowerCase();
-        return words.some((w) => haystack.includes(w));
+        return words.some((w: string) => haystack.includes(w));
       }).length;
+
     }
     return entries;
   }, [all, category.subcategories]);
