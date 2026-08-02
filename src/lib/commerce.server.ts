@@ -357,8 +357,8 @@ export async function resendOrderConfirmation(input: {
 }
 
 /**
- * Delivery history for an order's confirmation/status emails. Reads Lovable's
- * managed email logs (source of truth) — the project stores no email table.
+ * Delivery history for an order's confirmation/status emails. Sejak pindah ke
+ * Resend belum ada sumber log-nya, jadi selalu mengembalikan unavailable.
  */
 export async function fetchOrderEmailHistory(input: {
   orderNumber: string;
@@ -394,30 +394,14 @@ export async function fetchOrderEmailHistory(input: {
     lastResendAt: lastResend ? new Date(lastResend).toISOString() : null,
   };
 
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return { ...base, events: [], historyStartsAt: null, unavailable: true };
-
-  try {
-    const { listEmailLogs } = await import("@lovable.dev/email-js");
-    const logs = await listEmailLogs(
-      {
-        recipient,
-        since: order.created_at ? new Date(order.created_at).toISOString() : undefined,
-        limit: 20,
-      },
-      { apiKey },
-    );
-    return {
-      ...base,
-      historyStartsAt: logs.history_starts_at ?? null,
-      events: (logs.data ?? []).map((e) => ({
-        timestamp: e.timestamp,
-        type: e.event_type,
-        status: e.status ?? null,
-      })),
-    };
-  } catch (error) {
-    console.error("email history lookup failed", orderNumber, error);
-    return { ...base, events: [], historyStartsAt: null, unavailable: true };
-  }
+  // Riwayat pengiriman dulu dibaca dari log terkelola Lovable. Setelah pindah
+  // ke Resend sumber itu hilang: Resend tidak menyediakan endpoint "cari email
+  // berdasarkan penerima" — status pengiriman hanya didorong lewat webhook
+  // (email.sent, email.delivered, email.bounced, ...).
+  //
+  // Untuk menghidupkan lagi: buat tabel email_events, daftarkan endpoint
+  // webhook Resend yang menulis ke tabel itu, lalu baca dari sini.
+  // Sampai itu ada, ditandai unavailable — UI sudah menangani kasus ini dan
+  // tetap menampilkan alamat serta cooldown kirim ulang.
+  return { ...base, events: [], historyStartsAt: null, unavailable: true };
 }
