@@ -12,7 +12,7 @@ export const grabProductByUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ data, context }): Promise<GrabbedProduct> => {
-    await assertAdmin(context);
+    await assertAdmin(context.supabase, context.userId);
     const { grabProductFromUrl } = await import("@/lib/product-grab.server");
     return grabProductFromUrl(data.url);
   });
