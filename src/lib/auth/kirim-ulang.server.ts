@@ -11,12 +11,14 @@
 
 import { batasi } from "./rate-limit.server";
 import {
+  batalkanKirim,
   catatKirim,
   catatPercobaan,
   sebabPenolakan,
   statusKirim,
   type JenisKirim,
 } from "./email-throttle.server";
+import { EmailSendError } from "@/lib/email/resend.server";
 
 export interface HasilKirimUlang {
   ok: true;
@@ -76,7 +78,44 @@ export async function prosesKirimUlang(
   }
 
   const hasil = await catatKirim(jenis, email);
-  const emailDikirim = hasil.diizinkan ? await kirim() : false;
+
+  let emailDikirim = false;
+  if (hasil.diizinkan) {
+    try {
+      emailDikirim = await kirim();
+    } catch (error) {
+      // PENCATATAN DILAKUKAN SEBELUM MELEMPAR ULANG. Sebelum ini, lemparan dari
+      // layanan email melewati pencatatan sepenuhnya — sehingga percobaan yang
+      // SUDAH memakan kuota tidak meninggalkan jejak apa pun. Justru itulah
+      // kasus yang paling perlu dilihat saat menyelidiki keluhan email tidak
+      // sampai.
+      await catatPercobaan({
+        jenis,
+        email,
+        hasil: sebabPenolakan(hasil),
+        emailDikirim: false,
+        sisaDetik: hasil.sisaDetik,
+        terpakai: hasil.terpakai,
+        ip,
+        errorKirim: error instanceof Error ? error.message : String(error),
+      });
+
+      // 429 dan 5xx adalah gangguan di pihak penyedia, bukan kesalahan pengguna.
+      // Jatahnya dikembalikan supaya ia bisa mencoba lagi seketika; tanpa ini,
+      // gangguan Resend berubah menjadi cooldown 30 menit bagi orang yang tidak
+      // melakukan apa-apa. Galat permanen sengaja TIDAK dikembalikan — mencoba
+      // ulang tidak menolong, dan mengembalikannya membuka jalan menembak
+      // berulang tanpa batas.
+      if (error instanceof EmailSendError && error.retryable) {
+        await batalkanKirim(jenis, email);
+      }
+
+      // Dilempar ulang: pemanggil di UI sudah punya jalur galatnya sendiri, dan
+      // menelan kegagalan di sini akan menampilkan "email terkirim" untuk email
+      // yang tidak pernah terkirim.
+      throw error;
+    }
+  }
 
   await catatPercobaan({
     jenis,

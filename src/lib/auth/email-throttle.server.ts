@@ -107,10 +107,12 @@ export async function catatPercobaan(catatan: {
   sisaDetik: number;
   terpakai: number;
   ip: string | null;
+  /** Pesan galat dari layanan email. null saat tidak ada galat. */
+  errorKirim?: string | null;
 }): Promise<void> {
   try {
     await run(
-      "SELECT public.catat_percobaan_kirim($1, $2, $3, $4, $5, $6, $7)",
+      "SELECT public.catat_percobaan_kirim($1, $2, $3, $4, $5, $6, $7, $8)",
       [
         catatan.jenis,
         normalkan(catatan.email),
@@ -119,11 +121,30 @@ export async function catatPercobaan(catatan: {
         catatan.sisaDetik,
         catatan.terpakai,
         catatan.ip,
+        catatan.errorKirim ?? null,
       ],
       OWNER,
     );
   } catch (error) {
     console.error("percobaan kirim gagal dicatat", error);
+  }
+}
+
+/**
+ * Mengembalikan satu jatah yang terlanjur terpakai.
+ *
+ * Dipakai hanya ketika layanan email gagal dengan galat yang layak dicoba
+ * ulang. Alasannya ada di db/005-kegagalan-kirim.sql; ringkasnya, pengguna
+ * tidak pantas kena cooldown karena penyedia email sedang bermasalah.
+ *
+ * Tidak melempar: kegagalan mengembalikan jatah tidak boleh menambah kegagalan
+ * di atas kegagalan yang sedang ditangani.
+ */
+export async function batalkanKirim(jenis: JenisKirim, email: string): Promise<void> {
+  try {
+    await run("SELECT auth.batalkan_kirim_email($1, $2)", [jenis, normalkan(email)], OWNER);
+  } catch (error) {
+    console.error("pembatalan jatah kirim gagal", error);
   }
 }
 
