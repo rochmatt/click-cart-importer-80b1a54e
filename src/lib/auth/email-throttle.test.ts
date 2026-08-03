@@ -119,10 +119,17 @@ describe.skipIf(!CONFIGURED)("pembatas kirim email", () => {
     expect((await catatKirim("verifikasi", EMAIL)).diizinkan).toBe(true);
   });
 
-  it("jenis kiriman berbeda punya kuota sendiri", async () => {
+  it("jenis kiriman berbeda punya kuota sendiri, di kedua arah", async () => {
+    // Penting untuk pemulihan akun: orang yang kehabisan kiriman verifikasi
+    // tidak boleh ikut kehilangan jalan untuk mereset passwordnya, dan
+    // sebaliknya.
     await catatKirim("verifikasi", EMAIL);
-    // reset belum pernah dipakai untuk alamat ini, jadi harus lolos.
+    expect((await catatKirim("verifikasi", EMAIL)).diizinkan).toBe(false);
     expect((await catatKirim("reset", EMAIL)).diizinkan).toBe(true);
+
+    // Kuota reset yang terpakai juga tidak mengurangi sisa kuota verifikasi.
+    expect((await statusKirim("verifikasi", EMAIL)).terpakai).toBe(1);
+    expect((await statusKirim("reset", EMAIL)).terpakai).toBe(1);
   });
 
   it("dua permintaan bersamaan hanya meloloskan satu", async () => {

@@ -196,10 +196,18 @@ export function AuthPanel({ initialMode, nextPath }: { initialMode: Mode; nextPa
     }
     setResetBusy(true);
     try {
-      // Server selalu menjawab ok, termasuk untuk email tak dikenal.
-      await requestPasswordReset({ data: { email: parsed.data } });
-      setResetSent(true);
-      toast.success("Link reset password terkirim");
+      // Server selalu menjawab ok, termasuk untuk email tak dikenal. Yang
+      // membedakan hanya apakah PEMBATAS meloloskannya — dan pembatas itu
+      // bekerja atas alamat sebagai teks, jadi tidak membocorkan apa pun.
+      const hasil = await requestPasswordReset({ data: { email: parsed.data } });
+      if (hasil.diizinkan) {
+        setResetSent(true);
+        toast.success("Kalau alamat itu terdaftar, link reset sudah dikirim");
+      } else if (hasil.terpakai >= hasil.maks) {
+        toast.error("Batas permintaan reset tercapai. Coba lagi nanti.");
+      } else {
+        toast.error(`Tunggu ${hasil.sisaDetik}s sebelum meminta link lagi`);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Gagal mengirim link reset");
     } finally {

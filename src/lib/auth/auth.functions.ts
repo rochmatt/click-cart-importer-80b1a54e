@@ -109,17 +109,52 @@ export const me = createServerFn({ method: "GET" }).handler(async (): Promise<Se
   getSessionUser(),
 );
 
+/**
+ * Permintaan tautan reset password.
+ *
+ * Memakai pembatas dan pola jawaban yang sama persis dengan resendVerification
+ * di bawah — termasuk alasan-alasannya, yang ditulis lengkap di sana. Kuotanya
+ * TERPISAH: jenis "reset" punya jatah sendiri, supaya orang yang kehabisan
+ * kiriman verifikasi tidak ikut kehilangan jalan untuk memulihkan passwordnya.
+ */
 export const requestPasswordReset = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ email: emailSchema }).parse(input))
-  .handler(async ({ data }): Promise<HasilAuth> => {
-    const batas = batasi(kunciLaju("reset", data.email), 5, 60 * 60);
-    // Bahkan saat dibatasi, jawabannya tetap sama supaya batas laju tidak
-    // berubah menjadi cara memeriksa keberadaan akun.
-    if (batas.diizinkan) {
+  .handler(async ({ data }): Promise<HasilKirimUlang> => {
+    const { catatKirim, statusKirim } = await import("./email-throttle.server");
+
+    const perIp = batasi(kunciLaju("reset-ip", ""), 20, 60 * 60);
+    if (!perIp.diizinkan) {
+      const status = await statusKirim("reset", data.email);
+      return {
+        ok: true,
+        diizinkan: false,
+        sisaDetik: Math.max(perIp.sisaDetik, status.sisaDetik),
+        terpakai: status.terpakai,
+        maks: status.maks,
+      };
+    }
+
+    const hasil = await catatKirim("reset", data.email);
+    if (hasil.diizinkan) {
       const siap = await siapkanReset(data.email);
       if (siap) await kirimEmailReset(data.email, siap.token);
     }
-    return { ok: true };
+
+    return {
+      ok: true,
+      diizinkan: hasil.diizinkan,
+      sisaDetik: hasil.sisaDetik,
+      terpakai: hasil.terpakai,
+      maks: hasil.maks,
+    };
+  });
+
+/** Status cooldown reset password. Alasan POST sama seperti verificationCooldown. */
+export const passwordResetCooldown = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ email: emailSchema }).parse(input))
+  .handler(async ({ data }) => {
+    const { statusKirim } = await import("./email-throttle.server");
+    return statusKirim("reset", data.email);
   });
 
 export const resetPassword = createServerFn({ method: "POST" })
@@ -144,7 +179,8 @@ export const verifyEmail = createServerFn({ method: "POST" })
   });
 
 /**
- * Hasil kirim-ulang verifikasi.
+ * Hasil permintaan kiriman email — dipakai kirim-ulang verifikasi maupun reset
+ * password, karena keduanya menghadapi persoalan yang sama.
  *
  * ok SELALU true. Yang membedakan hanya angka cooldown, dan angka itu berasal
  * dari alamat email sebagai teks — bukan dari ada-tidaknya akun. Jawaban yang

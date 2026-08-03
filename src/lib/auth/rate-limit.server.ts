@@ -1,13 +1,19 @@
-// Pembatas laju sederhana untuk percobaan login dan permintaan email.
+// Pembatas laju di memori: percobaan login, pendaftaran, dan kuota per-IP.
+//
+// PERANNYA SUDAH MENYEMPIT. Batas pengiriman email — kirim ulang verifikasi dan
+// permintaan reset password — pindah ke email-throttle.server.ts yang bersandar
+// pada database, karena batas itu harus terlihat sama di semua perangkat dan
+// bertahan melewati restart. Yang tersisa di sini adalah pembatas yang tidak
+// perlu dibagi antar-perangkat dan tidak ditampilkan ke pengguna.
 //
 // BATASNYA JELAS DAN DISENGAJA: penghitungnya ada di memori proses, jadi ia
 // hilang saat pm2 me-restart aplikasi dan tidak dibagi antar-proses. Itu dapat
-// diterima di sini karena pm2 menjalankan SATU instance fork untuk app ini.
-// Kalau kelak dijalankan berkelompok, penghitung ini harus pindah ke database
-// atau Redis — kalau tidak, batasnya terbagi dan efektifnya melonggar.
+// diterima untuk pemakaian yang tersisa karena pm2 menjalankan SATU instance
+// fork untuk app ini. Kalau kelak dijalankan berkelompok, penghitung ini harus
+// ikut pindah — kalau tidak, batasnya terbagi dan efektifnya melonggar.
 //
 // Ini bukan pengganti scrypt sebagai penahan utama; ia hanya membuat tebakan
-// beruntun mahal secara waktu, dan meredam penyalahgunaan pengiriman email.
+// beruntun mahal secara waktu.
 
 interface Jendela {
   hitung: number;

@@ -19,7 +19,7 @@ import { Footer } from "@/components/store/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { requestPasswordReset } from "@/lib/auth/auth.functions";
+import { passwordResetCooldown, requestPasswordReset } from "@/lib/auth/auth.functions";
 
 const title = "Lupa Kata Sandi — PasarPilih";
 const description =
@@ -53,7 +53,10 @@ const emailSchema = z
   .email({ message: "Format email tidak valid" })
   .max(255, { message: "Email terlalu panjang" });
 
-const COOLDOWN_SECONDS = 60;
+// COOLDOWN_SECONDS lokal dihapus. Angkanya 60 detik datar dan hanya hidup di
+// state React, jadi memuat ulang halaman langsung mengembalikan tombolnya —
+// sementara server memakai angka lain lagi. Sisa waktunya kini datang dari
+// server dan berlaku sama di semua perangkat.
 
 const steps = [
   { label: "Masukkan email", icon: Mail },
@@ -68,13 +71,40 @@ function ForgotPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  // Waktu absolut, bukan angka yang dikurangi tiap detik: browser memperlambat
+  // timer pada tab yang tidak aktif, sehingga hitungan mundur berbasis
+  // pengurangan tertinggal dan menampilkan sisa lebih lama dari kenyataan.
+  const [bolehPada, setBolehPada] = useState(0);
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = window.setInterval(() => setCooldown((v) => (v <= 1 ? 0 : v - 1)), 1000);
+    const hitung = () => setCooldown(Math.max(0, Math.ceil((bolehPada - Date.now()) / 1000)));
+    hitung();
+    if (bolehPada <= Date.now()) return;
+    const id = window.setInterval(hitung, 1000);
     return () => window.clearInterval(id);
-  }, [cooldown]);
+  }, [bolehPada]);
+
+  // Cooldown yang sedang berjalan ikut terbawa saat halaman dibuka di perangkat
+  // lain, karena sumbernya database — bukan state halaman ini.
+  useEffect(() => {
+    const parsed = emailSchema.safeParse(email);
+    if (!parsed.success) return;
+    let batal = false;
+    void passwordResetCooldown({ data: { email: parsed.data } })
+      .then((s) => {
+        if (!batal && s.sisaDetik > 0) setBolehPada(Date.now() + s.sisaDetik * 1000);
+      })
+      .catch(() => {
+        /* gagal membaca status bukan alasan mengunci tombol; server tetap menolak */
+      });
+    return () => {
+      batal = true;
+    };
+    // Sengaja hanya saat halaman dibuka, bukan tiap ketikan: memanggil server
+    // pada setiap huruf yang diketik akan menembakkan puluhan permintaan.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function submit(event?: React.FormEvent) {
     event?.preventDefault();
@@ -92,10 +122,19 @@ function ForgotPasswordPage() {
     try {
       // Server selalu menjawab ok, termasuk untuk email tak dikenal — halaman
       // ini tidak boleh bisa dipakai memeriksa keberadaan akun.
-      await requestPasswordReset({ data: { email: parsed.data } });
-      setSent(true);
-      setCooldown(COOLDOWN_SECONDS);
-      toast.success("Tautan pemulihan terkirim");
+      const hasil = await requestPasswordReset({ data: { email: parsed.data } });
+      setBolehPada(Date.now() + hasil.sisaDetik * 1000);
+
+      if (hasil.diizinkan) {
+        setSent(true);
+        // Tidak menjanjikan "terkirim": apakah alamatnya terdaftar memang tidak
+        // pernah diberitahukan, jadi kalimatnya dibuat sesuai kenyataan.
+        toast.success("Kalau alamat itu terdaftar, tautan pemulihan sudah dikirim");
+      } else if (hasil.terpakai >= hasil.maks) {
+        toast.error("Batas permintaan tercapai. Coba lagi nanti.");
+      } else {
+        toast.error(`Tunggu ${hasil.sisaDetik}s sebelum meminta tautan lagi`);
+      }
     } catch (sendError) {
       const message =
         sendError instanceof Error
@@ -275,7 +314,10 @@ function ForgotPasswordPage() {
             </Button>
 
             <p className="inline-flex items-start gap-2 text-xs text-muted-foreground">
-              <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
+              <ShieldCheck
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success"
+                aria-hidden="true"
+              />
               Demi keamanan, kami tidak memberi tahu apakah email terdaftar. Tautan hanya sampai ke
               email yang benar.
             </p>
