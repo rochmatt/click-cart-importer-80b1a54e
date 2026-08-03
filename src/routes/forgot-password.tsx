@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  Clock,
   KeyRound,
   Loader2,
   Mail,
@@ -20,6 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { passwordResetCooldown, requestPasswordReset } from "@/lib/auth/auth.functions";
+import {
+  AMBANG_JAM_DINDING_DETIK,
+  formatSisa,
+  jamKembali,
+  useKuotaKirim,
+} from "@/lib/auth/use-kuota-kirim";
 
 const title = "Lupa Kata Sandi — PasarPilih";
 const description =
@@ -58,6 +65,8 @@ const emailSchema = z
 // sementara server memakai angka lain lagi. Sisa waktunya kini datang dari
 // server dan berlaku sama di semua perangkat.
 
+const ambilStatusReset = (email: string) => passwordResetCooldown({ data: { email } });
+
 const steps = [
   { label: "Masukkan email", icon: Mail },
   { label: "Buka tautan di email", icon: MailCheck },
@@ -71,40 +80,16 @@ function ForgotPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
-  // Waktu absolut, bukan angka yang dikurangi tiap detik: browser memperlambat
-  // timer pada tab yang tidak aktif, sehingga hitungan mundur berbasis
-  // pengurangan tertinggal dan menampilkan sisa lebih lama dari kenyataan.
-  const [bolehPada, setBolehPada] = useState(0);
-  const [cooldown, setCooldown] = useState(0);
+  // Alamat yang statusnya sedang dipantau. Dikunci saat halaman dibuka dan
+  // setelah setiap pengiriman — TIDAK ikut tiap ketikan, karena memanggil
+  // server pada setiap huruf yang diketik akan menembakkan puluhan permintaan.
+  const [emailDipantau] = useState(() => {
+    const parsed = emailSchema.safeParse(search.email ?? "");
+    return parsed.success ? parsed.data : "";
+  });
 
-  useEffect(() => {
-    const hitung = () => setCooldown(Math.max(0, Math.ceil((bolehPada - Date.now()) / 1000)));
-    hitung();
-    if (bolehPada <= Date.now()) return;
-    const id = window.setInterval(hitung, 1000);
-    return () => window.clearInterval(id);
-  }, [bolehPada]);
-
-  // Cooldown yang sedang berjalan ikut terbawa saat halaman dibuka di perangkat
-  // lain, karena sumbernya database — bukan state halaman ini.
-  useEffect(() => {
-    const parsed = emailSchema.safeParse(email);
-    if (!parsed.success) return;
-    let batal = false;
-    void passwordResetCooldown({ data: { email: parsed.data } })
-      .then((s) => {
-        if (!batal && s.sisaDetik > 0) setBolehPada(Date.now() + s.sisaDetik * 1000);
-      })
-      .catch(() => {
-        /* gagal membaca status bukan alasan mengunci tombol; server tetap menolak */
-      });
-    return () => {
-      batal = true;
-    };
-    // Sengaja hanya saat halaman dibuka, bukan tiap ketikan: memanggil server
-    // pada setiap huruf yang diketik akan menembakkan puluhan permintaan.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const kuota = useKuotaKirim(ambilStatusReset, emailDipantau);
+  const cooldown = kuota.sisa;
 
   async function submit(event?: React.FormEvent) {
     event?.preventDefault();
@@ -123,7 +108,7 @@ function ForgotPasswordPage() {
       // Server selalu menjawab ok, termasuk untuk email tak dikenal — halaman
       // ini tidak boleh bisa dipakai memeriksa keberadaan akun.
       const hasil = await requestPasswordReset({ data: { email: parsed.data } });
-      setBolehPada(Date.now() + hasil.sisaDetik * 1000);
+      kuota.terapkan(hasil);
 
       if (hasil.diizinkan) {
         setSent(true);
@@ -131,9 +116,11 @@ function ForgotPasswordPage() {
         // pernah diberitahukan, jadi kalimatnya dibuat sesuai kenyataan.
         toast.success("Kalau alamat itu terdaftar, tautan pemulihan sudah dikirim");
       } else if (hasil.terpakai >= hasil.maks) {
-        toast.error("Batas permintaan tercapai. Coba lagi nanti.");
+        toast.error(
+          `Batas ${hasil.maks} permintaan per jam tercapai. Coba lagi dalam ${formatSisa(hasil.sisaDetik)}.`,
+        );
       } else {
-        toast.error(`Tunggu ${hasil.sisaDetik}s sebelum meminta tautan lagi`);
+        toast.error(`Tunggu ${formatSisa(hasil.sisaDetik)} sebelum meminta tautan lagi`);
       }
     } catch (sendError) {
       const message =
@@ -306,12 +293,54 @@ function ForgotPasswordPage() {
               disabled={busy || cooldown > 0}
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-              {busy
-                ? "Mengirim tautan…"
-                : cooldown > 0
-                  ? `Tunggu ${cooldown}s`
-                  : "Kirim tautan pemulihan"}
+              {busy ? "Mengirim tautan…" : cooldown > 0 ? "Menunggu…" : "Kirim tautan pemulihan"}
             </Button>
+
+            {/*
+              Hitungan mundur di LUAR tombol dan tanpa aria-live: teksnya berubah
+              tiap detik, dan region yang mengumumkannya akan dibacakan pembaca
+              layar sekali per detik. Perubahan keadaan yang layak diumumkan
+              ditangani region tersendiri di bawah.
+            */}
+            {cooldown > 0 && (
+              <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/40 p-3 text-xs">
+                <Clock
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="text-muted-foreground">
+                  {kuota.maksTercapai && (
+                    <>
+                      <span className="font-semibold text-foreground">Maksimal tercapai</span> —{" "}
+                      {kuota.status?.maks} permintaan dalam satu jam.{" "}
+                    </>
+                  )}
+                  {cooldown >= AMBANG_JAM_DINDING_DETIK ? (
+                    <>
+                      Bisa dicoba lagi sekitar pukul{" "}
+                      <span className="font-medium text-foreground">{jamKembali(cooldown)}</span>{" "}
+                      <span className="tabular-nums">({formatSisa(cooldown)} lagi)</span>
+                    </>
+                  ) : (
+                    <>
+                      Bisa dicoba lagi dalam{" "}
+                      <span className="font-medium tabular-nums text-foreground">
+                        {formatSisa(cooldown)}
+                      </span>
+                    </>
+                  )}
+                  . Batas ini berlaku untuk semua perangkat.
+                </p>
+              </div>
+            )}
+
+            <p role="status" aria-live="polite" className="sr-only">
+              {kuota.maksTercapai
+                ? `Maksimal ${kuota.status?.maks} permintaan per jam tercapai. Tombol kirim tidak aktif.`
+                : cooldown > 0
+                  ? "Menunggu jeda sebelum permintaan berikutnya."
+                  : "Tombol kirim tautan aktif."}
+            </p>
 
             <p className="inline-flex items-start gap-2 text-xs text-muted-foreground">
               <ShieldCheck

@@ -1,7 +1,14 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, LogOut, Package, ShoppingBag, SlidersHorizontal, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  LogOut,
+  Package,
+  ShoppingBag,
+  SlidersHorizontal,
+  UserRound,
+} from "lucide-react";
 
 import { signOut } from "@/lib/auth/auth.functions";
 import { setAuthUser } from "@/lib/auth";
@@ -13,7 +20,6 @@ const TABS = [
   { label: "Pesanan", to: "/track", icon: Package },
   { label: "Wishlist", to: "/wishlist", icon: ShoppingBag },
 ] as const;
-
 
 /** Header khusus panel akun pengguna (bukan header storefront). */
 export function AccountHeader() {

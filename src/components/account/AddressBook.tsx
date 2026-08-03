@@ -42,8 +42,7 @@ export function AddressBook() {
     queryFn: () => fetchAddresses(),
   });
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["account", "addresses"] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["account", "addresses"] });
 
   const saveMutation = useMutation({
     mutationFn: (input: Draft) => save({ data: input }),
@@ -109,12 +108,42 @@ export function AddressBook() {
           }}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Label" value={draft.label} onChange={(v) => setDraft({ ...draft, label: v })} placeholder="Home / Office" />
-            <Field label="Recipient name" value={draft.recipient_name} onChange={(v) => setDraft({ ...draft, recipient_name: v })} placeholder="Budi Santoso" />
-            <Field label="Phone" value={draft.phone} onChange={(v) => setDraft({ ...draft, phone: v })} placeholder="+62 812 3456 7890" />
-            <Field label="City" value={draft.city} onChange={(v) => setDraft({ ...draft, city: v })} placeholder="Jakarta Selatan" />
-            <Field label="Province" value={draft.province} onChange={(v) => setDraft({ ...draft, province: v })} placeholder="DKI Jakarta" />
-            <Field label="Postal code" value={draft.postal_code} onChange={(v) => setDraft({ ...draft, postal_code: v })} placeholder="12345" />
+            <Field
+              label="Label"
+              value={draft.label}
+              onChange={(v) => setDraft({ ...draft, label: v })}
+              placeholder="Home / Office"
+            />
+            <Field
+              label="Recipient name"
+              value={draft.recipient_name}
+              onChange={(v) => setDraft({ ...draft, recipient_name: v })}
+              placeholder="Budi Santoso"
+            />
+            <Field
+              label="Phone"
+              value={draft.phone}
+              onChange={(v) => setDraft({ ...draft, phone: v })}
+              placeholder="+62 812 3456 7890"
+            />
+            <Field
+              label="City"
+              value={draft.city}
+              onChange={(v) => setDraft({ ...draft, city: v })}
+              placeholder="Jakarta Selatan"
+            />
+            <Field
+              label="Province"
+              value={draft.province}
+              onChange={(v) => setDraft({ ...draft, province: v })}
+              placeholder="DKI Jakarta"
+            />
+            <Field
+              label="Postal code"
+              value={draft.postal_code}
+              onChange={(v) => setDraft({ ...draft, postal_code: v })}
+              placeholder="12345"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="address-line">Street address</Label>
@@ -245,7 +274,12 @@ function Field({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   );
 }
