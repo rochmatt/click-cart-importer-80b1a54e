@@ -13,8 +13,13 @@ type Row = {
   price: number;
   sale_price: number | null;
   stock: number;
-  rating: number | null;
-  reviews: number | null;
+  // NOT NULL DEFAULT di database — lihat db/schema.sql. Sebelumnya ditulis
+  // `number | null` di sini, dan ketidakcocokan itulah yang membuat cabang
+  // `?? seed?.rating` di toProduct terlihat seperti penjaga sungguhan padahal
+  // tidak pernah tereksekusi. Tipe yang berbohong tentang skema menyembunyikan
+  // bug, bukan mencegahnya.
+  rating: number;
+  reviews: number;
   brand: string | null;
   weight: string | null;
   dimensions: string | null;
@@ -54,6 +59,20 @@ function detailedSpecsFrom(row: Row): { label: string; value: string }[] {
     .map((a) => ({ label: String(a.name), value: String(a.value) }));
 }
 
+/**
+ * Menggabungkan baris database dengan produk seed.
+ *
+ * HATI-HATI DENGAN `??` DI SINI. Kolom rating, reviews, dan stock di
+ * admin_products bersifat NOT NULL dengan DEFAULT, jadi cabang `?? seed?.x`
+ * pada ketiganya TIDAK PERNAH tereksekusi — database selalu menang. Itu bukan
+ * kesalahan, tapi pernah menyembunyikan bug yang mahal: nilai DEFAULT kolom
+ * (4.7 dan 0) membuat kedelapan produk menampilkan "4.7 (0 ulasan)" yang sama
+ * persis, sementara JSON-LD membaca seed langsung dan memberi tahu Google angka
+ * yang berbeda. Cabang fallback-nya terlihat seolah menjaga, padahal mati.
+ *
+ * Jadi: kalau sebuah kolom NOT NULL terlihat salah di etalase, perbaiki DATANYA
+ * (lihat db/007-rating-awal.sql), bukan pemetaan ini.
+ */
 function toProduct(row: Row, seed?: Product): Product {
   const price = row.sale_price ?? row.price;
   const images = row.images?.length ? row.images : (seed?.images ?? []);
@@ -63,8 +82,8 @@ function toProduct(row: Row, seed?: Product): Product {
     category: row.category || seed?.category || "Fashion",
     price: idr(price),
     oldPrice: row.sale_price && row.price > row.sale_price ? idr(row.price) : seed?.oldPrice,
-    rating: Number(row.rating ?? seed?.rating ?? 4.7),
-    reviews: row.reviews ?? seed?.reviews ?? 0,
+    rating: Number(row.rating),
+    reviews: row.reviews,
     stock: row.stock ?? seed?.stock ?? 0,
     sold: seed?.sold ?? 0,
     images,

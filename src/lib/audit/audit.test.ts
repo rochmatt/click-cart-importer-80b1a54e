@@ -110,6 +110,24 @@ describe.skipIf(!CONFIGURED)("audit log", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("menerima entitas pesanan, pengguna, dan pengaturan", async () => {
+    // Ketiganya sudah ada di CHECK sejak awal tapi tidak pernah terisi, karena
+    // updateAdminOrder, grantRole/revokeRole, dan updateStoreSettings belum
+    // diinstrumentasi. Tes ini menjaga agar CHECK-nya tidak dipersempit
+    // belakangan dan diam-diam mematikan pencatatan ketiga jalur itu — kegagalan
+    // yang tidak akan terlihat, sebab catatAudit sengaja tidak melempar.
+    for (const entity of ["pesanan", "pengguna", "pengaturan"] as const) {
+      await catatAudit({ ...dasar, entity, entityLabel: `uji-${entity}` });
+    }
+
+    const rows = await run<{ entity: string }>(
+      "SELECT entity FROM audit_logs WHERE actor_email = $1 ORDER BY entity",
+      [dasar.actorEmail],
+      OWNER,
+    );
+    expect(rows.map((r) => r.entity)).toEqual(["pengaturan", "pengguna", "pesanan"]);
+  });
+
   it("menolak UPDATE dan DELETE lewat jalur RLS", async () => {
     await catatAudit({ ...dasar, entityLabel: "Tak Boleh Diubah" });
 

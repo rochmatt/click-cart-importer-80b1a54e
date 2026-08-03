@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/middleware.server";
 import { assertAdmin } from "@/lib/admin-access.server";
+import { catatAudit, pelaku } from "@/lib/audit/log.server";
 
 export interface AdminOrder {
   id: string;
@@ -86,6 +87,22 @@ export const updateAdminOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.db, context.userId);
     const { id, ...fields } = data;
+
+    // Keadaan SEBELUM diambil dulu. Perubahan status pesanan memicu email ke
+    // pelanggan; kalau kelak email itu dipertanyakan, catatan "status diubah"
+    // saja tidak menjawab apa pun — yang dicari adalah dari apa ke apa.
+    const { data: sebelum } = await context.db
+      .from("orders")
+      .select("order_number, status, courier, tracking_number")
+      .eq("id", id)
+      .maybeSingle();
+    const lama = sebelum as {
+      order_number?: string;
+      status?: string;
+      courier?: string | null;
+      tracking_number?: string | null;
+    } | null;
+
     const { error } = await context.db
       .from("orders")
       .update({
@@ -97,6 +114,31 @@ export const updateAdminOrder = createServerFn({ method: "POST" })
       })
       .eq("id", id);
     if (error) throw error;
+
+    const statusBerubah = lama?.status !== fields.status;
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pesanan",
+      entityId: id,
+      entityLabel: lama?.order_number ?? id,
+      action: statusBerubah ? "ubah_status" : "ubah",
+      detail: statusBerubah
+        ? `Status ${lama?.status ?? "?"} → ${fields.status}`
+        : "Memperbarui kurir, resi, atau ETA",
+      meta: {
+        dari: {
+          status: lama?.status ?? null,
+          courier: lama?.courier ?? null,
+          tracking_number: lama?.tracking_number ?? null,
+        },
+        ke: {
+          status: fields.status,
+          courier: fields.courier || null,
+          tracking_number: fields.tracking_number || null,
+        },
+      },
+    });
+
     return { ok: true };
   });
 
@@ -208,11 +250,44 @@ export const updateStoreSettings = createServerFn({ method: "POST" })
     // sudah menjadi gerbangnya.
     const { createServiceClient } = await import("@/lib/db/client.server");
     const { id, ...fields } = data;
-    const { error } = await createServiceClient()
+    const db = createServiceClient();
+
+    const { data: sebelum } = await db
       .from("store_settings")
-      .update(fields)
-      .eq("id", id);
+      .select(
+        "store_name, tagline, support_email, support_phone, store_address, logo_url, shopee_link_template, tokopedia_link_template, tiktok_link_template, utm_source, utm_medium, utm_campaign",
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+    const { error } = await db.from("store_settings").update(fields).eq("id", id);
     if (error) throw error;
+
+    // Template tautan marketplace dan UTM ada di sini. Salah satu huruf yang
+    // berubah bisa mengalihkan seluruh trafik keluar toko ke tujuan lain, dan
+    // itu tidak akan terlihat dari tampilan mana pun — hanya dari catatan ini.
+    const { kolomBerubah } = await import("@/lib/audit/log.server");
+    const berubah = kolomBerubah(sebelum as Record<string, unknown> | null, fields);
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pengaturan",
+      entityId: id,
+      entityLabel: (fields as { store_name?: string }).store_name || "Pengaturan toko",
+      action: "ubah",
+      detail: berubah.length ? `Mengubah: ${berubah.join(", ")}` : "Menyimpan tanpa perubahan",
+      meta: berubah.length
+        ? Object.fromEntries(
+            berubah.map((k) => [
+              k,
+              {
+                dari: (sebelum as Record<string, unknown> | null)?.[k] ?? null,
+                ke: (fields as Record<string, unknown>)[k] ?? null,
+              },
+            ]),
+          )
+        : undefined,
+    });
+
     return { ok: true };
   });
 
@@ -261,6 +336,21 @@ export const grantRole = createServerFn({ method: "POST" })
       .from("user_roles")
       .insert({ user_id: target.id, role: data.role });
     if (error && !error.message.includes("duplicate")) throw error;
+
+    // Pemberian peran adalah aksi paling berdampak di panel ini — sekali
+    // diberikan, penerimanya bisa melakukan segalanya yang tercatat di audit
+    // log ini. Kalau justru pemberiannya sendiri tak tercatat, jejak siapa yang
+    // membuka pintu hilang tepat di titik yang paling perlu diketahui.
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pengguna",
+      entityId: target.id,
+      entityLabel: data.email,
+      action: "tambah",
+      detail: `Memberikan peran ${data.role}`,
+      meta: { peran: data.role, duplikat: Boolean(error) },
+    });
+
     return { ok: true, message: `${data.email} is now a ${data.role}.` };
   });
 
@@ -276,11 +366,27 @@ export const revokeRole = createServerFn({ method: "POST" })
     if (data.user_id === context.userId && data.role === "admin") {
       return { ok: false, message: "You cannot remove your own admin role." };
     }
+    // Email diambil sebelum dicabut supaya catatannya menyebut orangnya, bukan
+    // uuid. Setelah pencabutan, menghubungkan uuid ke orang menuntut query lain.
+    const { findUserById } = await import("@/lib/auth/directory.server");
+    const target = await findUserById(data.user_id);
+
     const { error } = await context.db
       .from("user_roles")
       .delete()
       .eq("user_id", data.user_id)
       .eq("role", data.role);
     if (error) throw error;
+
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pengguna",
+      entityId: data.user_id,
+      entityLabel: target?.email ?? data.user_id,
+      action: "hapus",
+      detail: `Mencabut peran ${data.role}`,
+      meta: { peran: data.role },
+    });
+
     return { ok: true, message: "Role removed." };
   });

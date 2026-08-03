@@ -16,6 +16,24 @@ export type EntitasAudit =
 
 export type AksiAudit = "tambah" | "ubah" | "ubah_status" | "hapus" | "pulihkan";
 
+/**
+ * Identitas pelaku untuk audit log, diambil dari SESI — bukan dari kiriman
+ * klien. Kalau nilainya boleh datang dari permintaan, audit log berhenti
+ * menjadi bukti: siapa pun bisa menandatangani aksinya dengan nama orang lain.
+ *
+ * Ditaruh di sini, bukan disalin di tiap berkas yang memakainya, supaya tidak
+ * muncul dua versi yang perlahan berbeda dalam menangani email yang kosong.
+ */
+export function pelaku(context: { userId: string; claims: Record<string, unknown> }): {
+  actorId: string;
+  actorEmail: string;
+} {
+  return {
+    actorId: context.userId,
+    actorEmail: (context.claims.email as string | undefined) ?? "(tanpa email)",
+  };
+}
+
 export interface CatatanAudit {
   actorId: string;
   actorEmail: string;

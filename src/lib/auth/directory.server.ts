@@ -35,6 +35,28 @@ export async function listUsers(limit = 200): Promise<DirektoriUser[]> {
   );
 }
 
+/**
+ * Mencari pengguna lewat id.
+ *
+ * Dipakai audit log saat mencabut peran: emailnya harus diambil SEBELUM
+ * pencabutan, karena catatan yang hanya memuat uuid menuntut query tambahan
+ * untuk tahu siapa orangnya — persis saat orang membaca audit log.
+ */
+export async function findUserById(id: string): Promise<DirektoriUser | null> {
+  const rows = await run<DirektoriUser>(
+    `SELECT u.id,
+            u.email,
+            coalesce(p.display_name, '') AS "displayName",
+            u.created_at                 AS "createdAt"
+       FROM auth.users u
+       LEFT JOIN public.profiles p ON p.id = u.id
+      WHERE u.id = $1`,
+    [id],
+    OWNER,
+  );
+  return rows[0] ?? null;
+}
+
 /** Pencocokan email tidak membedakan kapitalisasi, sama seperti saat login. */
 export async function findUserByEmail(email: string): Promise<DirektoriUser | null> {
   const rows = await run<DirektoriUser>(

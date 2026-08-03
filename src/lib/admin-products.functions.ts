@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/middleware.server";
 import { assertAdmin } from "@/lib/admin-access.server";
-import { catatAudit, catatAuditBanyak, kolomBerubah } from "@/lib/audit/log.server";
+import { catatAudit, catatAuditBanyak, kolomBerubah, pelaku } from "@/lib/audit/log.server";
 
 // Operasi panel admin untuk admin_products, dipindahkan dari browser.
 //
@@ -62,14 +62,6 @@ async function db() {
 /** Melempar kalau query gagal, meniru `if (error) throw error` versi Supabase. */
 function lempar(error: { message: string } | null): void {
   if (error) throw new Error(error.message);
-}
-
-/** Identitas pelaku untuk audit log, diambil dari sesi — bukan dari kiriman klien. */
-function pelaku(context: { userId: string; claims: Record<string, unknown> }) {
-  return {
-    actorId: context.userId,
-    actorEmail: (context.claims.email as string | undefined) ?? "(tanpa email)",
-  };
 }
 
 /** Batas panjang nilai yang disimpan di meta audit. */

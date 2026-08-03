@@ -18,10 +18,16 @@ function orderFor(tab: Tab, products: Product[]) {
 }
 
 export function DiscoverFeed({ query }: { query: string }) {
-  const { products } = useCatalog();
+  // isLoading datang dari pemuatan katalog yang SEBENARNYA.
+  //
+  // Sebelumnya berkas ini memakai timer palsu: useState(true) lalu
+  // setTimeout(…, 600) yang tidak ada kaitannya dengan ketersediaan data.
+  // Beranda karenanya menahan produk selama 600 milidetik penuh meskipun
+  // datanya sudah siap — menunda LCP tanpa menukar apa pun, lalu menggeser
+  // layout saat 10 kerangka digantikan 8 kartu.
+  const { products, isLoading } = useCatalog();
   const [tab, setTab] = useState<Tab>("For You");
   const [count, setCount] = useState(PAGE);
-  const [isLoading, setIsLoading] = useState(true);
   const sentinel = useRef<HTMLDivElement>(null);
   const term = query.trim().toLowerCase();
 
@@ -43,11 +49,6 @@ export function DiscoverFeed({ query }: { query: string }) {
   const hasMore = base.length > 0 && visible.length < base.length * 5;
 
   useEffect(() => setCount(PAGE), [tab, term]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 600);
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const el = sentinel.current;
@@ -94,7 +95,7 @@ export function DiscoverFeed({ query }: { query: string }) {
         </h2>
 
         {isLoading ? (
-          <ProductGridSkeleton count={10} />
+          <ProductGridSkeleton count={PAGE} />
         ) : visible.length > 0 ? (
           <>
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5 lg:gap-5">

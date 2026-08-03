@@ -5,11 +5,7 @@ import { z } from "zod";
 import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
 import { CategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
-import {
-  categoryCatalog,
-  findCategory,
-  productsInCategory,
-} from "@/data/categories";
+import { categoryCatalog, findCategory, productsInCategory } from "@/data/categories";
 import { ProductCard } from "@/components/store/ProductCard";
 import { QuickViewModal } from "@/components/store/QuickViewModal";
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
@@ -18,11 +14,8 @@ import { Footer } from "@/components/store/Footer";
 import { ChatFab } from "@/components/store/ChatFab";
 import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import type { Product } from "@/data/products";
-import {
-  breadcrumbJsonLd,
-  itemListJsonLd,
-  jsonLdScript,
-} from "@/lib/structured-data";
+import { breadcrumbJsonLd, itemListJsonLd, jsonLdScript } from "@/lib/structured-data";
+import { NotFoundPage } from "@/components/store/NotFoundPage";
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
 
@@ -35,7 +28,6 @@ const categorySearchSchema = z.object({
   rating: fallback(z.number(), 0).default(0),
   sort: fallback(z.string(), "popular").default("popular"),
 });
-
 
 const categoryGroups = [
   {
@@ -137,7 +129,12 @@ export const Route = createFileRoute("/category/$slug")({
     };
   },
   component: CategoryPage,
-  notFoundComponent: CategoryNotFound,
+  notFoundComponent: () => (
+    <NotFoundPage
+      judul="Kategori tidak ditemukan"
+      pesan="Kategori ini tidak ada. Pilih salah satu di bawah."
+    />
+  ),
 });
 
 function CategoryPage() {
@@ -186,8 +183,6 @@ function CategoryPage() {
     });
   };
 
-
-
   const all = useMemo(() => productsInCategory(category.label), [category.label]);
 
   const priceBounds = useMemo(() => {
@@ -218,8 +213,7 @@ function CategoryPage() {
     });
     const sorted = [...list];
     if (sort === "rating") sorted.sort((a, b) => b.rating - a.rating);
-    else if (sort === "price-low")
-      sorted.sort((a, b) => priceValue(a.price) - priceValue(b.price));
+    else if (sort === "price-low") sorted.sort((a, b) => priceValue(a.price) - priceValue(b.price));
     else if (sort === "price-high")
       sorted.sort((a, b) => priceValue(b.price) - priceValue(a.price));
     else sorted.sort((a, b) => b.reviews - a.reviews);
@@ -271,11 +265,9 @@ function CategoryPage() {
         const haystack = `${p.title} ${p.description}`.toLowerCase();
         return words.some((w: string) => haystack.includes(w));
       }).length;
-
     }
     return entries;
   }, [all, category.subcategories]);
-
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
@@ -338,7 +330,6 @@ function CategoryPage() {
               categoryCounts={categoryCounts}
               subcategoryCounts={subcategoryCounts}
               ratingCounts={ratingCounts}
-
             />
           </aside>
 
@@ -347,8 +338,7 @@ function CategoryPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground" aria-live="polite">
-                    Menampilkan{" "}
-                    <span className="font-bold text-foreground">{items.length}</span>{" "}
+                    Menampilkan <span className="font-bold text-foreground">{items.length}</span>{" "}
                     produk
                     {searchTerm ? ` untuk “${searchTerm}”` : ""}
                     {activeFilterCount(filters) > 0 ? " yang cocok dengan filter" : ""}
@@ -396,7 +386,10 @@ function CategoryPage() {
               </div>
             ) : (
               <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
-                <PackageSearch className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
+                <PackageSearch
+                  className="mx-auto h-8 w-8 text-muted-foreground"
+                  aria-hidden="true"
+                />
                 <p className="mt-3 font-semibold text-foreground">No products here yet</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Try another category or clear your search.
@@ -422,26 +415,6 @@ function CategoryPage() {
       <Footer />
       <ChatFab />
       <MobileBottomNav />
-    </div>
-  );
-}
-
-function CategoryNotFound() {
-  return (
-    <div className="grid min-h-dvh place-items-center bg-background px-6 text-center">
-      <div>
-        <h1 className="text-2xl font-extrabold text-foreground">Category not found</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The category you are looking for is no longer available.
-        </p>
-        <Link
-          to="/"
-          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Back to home
-        </Link>
-      </div>
     </div>
   );
 }
