@@ -1,16 +1,7 @@
-import {
-  ArrowRight,
-  Eye,
-  Heart,
-  Star,
-  Flame,
-  AlertCircle,
-  Package,
-} from "lucide-react";
+import { ArrowRight, Eye, Heart, Star, Flame, AlertCircle, Package } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { Product } from "@/data/products";
 import { useCoverImage } from "@/lib/cover-overrides";
-
 
 const BESTSELLER_THRESHOLD = 1000;
 const LOW_STOCK_THRESHOLD = 15;
@@ -82,7 +73,6 @@ export function ProductCard({
             )}
           </div>
 
-
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
             <h3 className="line-clamp-2 min-h-[2.5rem] min-w-0 text-sm font-medium leading-snug text-foreground">
               {product.title}
@@ -111,9 +101,7 @@ export function ProductCard({
               {product.price}
             </span>
             {product.oldPrice && (
-              <span className="text-xs text-muted-foreground line-through">
-                {product.oldPrice}
-              </span>
+              <span className="text-xs text-muted-foreground line-through">{product.oldPrice}</span>
             )}
           </div>
 
@@ -126,13 +114,17 @@ export function ProductCard({
                 onQuickView(product);
               }}
               aria-label={`Quick view ${product.title}`}
+              data-testid="product-cta"
               className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
             >
               <Eye className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Quick view</span>
             </button>
           ) : (
-            <span className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary">
+            <span
+              data-testid="product-cta"
+              className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors group-hover:border-primary/40 group-hover:text-primary"
+            >
               <span className="truncate">View Product</span>
               <ArrowRight className="h-3.5 w-3.5 shrink-0" />
             </span>

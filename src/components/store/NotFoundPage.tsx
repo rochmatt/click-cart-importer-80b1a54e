@@ -29,8 +29,8 @@ interface Props {
 const KATEGORI_POPULER = categoryCatalog.slice(0, 6);
 
 export function NotFoundPage({
-  judul = "Halaman tidak ditemukan",
-  pesan = "Tautannya mungkin salah ketik, atau halamannya sudah dipindahkan.",
+  judul = "Page not found",
+  pesan = "The link may be mistyped, or the page has moved.",
 }: Props) {
   const navigate = useNavigate();
   const [kata, setKata] = useState("");
@@ -71,21 +71,21 @@ export function NotFoundPage({
             <Input
               value={kata}
               onChange={(e) => setKata(e.target.value)}
-              placeholder="Cari produk…"
-              aria-label="Cari produk"
+              placeholder="Search products…"
+              aria-label="Search products"
               className="pl-9"
             />
           </div>
-          <Button type="submit">Cari</Button>
+          <Button type="submit">Search</Button>
         </form>
 
-        <section className="mt-10" aria-labelledby="kategori-populer">
+        <section className="mt-10" aria-labelledby="popular-categories">
           <h2
-            id="kategori-populer"
+            id="popular-categories"
             className="flex items-center justify-center gap-2 text-sm font-semibold text-foreground"
           >
             <Compass className="h-4 w-4 text-primary" aria-hidden="true" />
-            Atau mulai dari kategori populer
+            Or start from a popular category
           </h2>
 
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -110,7 +110,7 @@ export function NotFoundPage({
             className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Kembali ke beranda
+            Go home
           </Link>
         </div>
       </main>

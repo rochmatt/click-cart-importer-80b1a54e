@@ -26,8 +26,8 @@ import { recordView } from "@/lib/recently-viewed";
 function ProdukTidakAda() {
   return (
     <NotFoundPage
-      judul="Produk tidak ditemukan"
-      pesan="Produk ini mungkin sudah dihapus, atau tautannya salah ketik."
+      judul="Product not found"
+      pesan="This product may have been removed, or the link is mistyped."
     />
   );
 }

@@ -4,7 +4,9 @@ test.describe("unknown slugs return a 404 page", () => {
   test("unknown product slug", async ({ page }) => {
     const response = await page.goto("/products/this-product-does-not-exist");
     expect(response?.status()).toBe(404);
-    await expect(page.getByRole("heading", { name: /product not found|404/i }).first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /product not found|404/i }).first(),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: /go home/i })).toBeVisible();
   });
 

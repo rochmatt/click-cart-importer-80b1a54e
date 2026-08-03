@@ -23,9 +23,6 @@ test.describe("storefront", () => {
     await page.goto("/category/fashion");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(page).toHaveTitle(/PasarPilih/i);
-    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
-      "content",
-      /Fashion/i,
-    );
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /Fashion/i);
   });
 });

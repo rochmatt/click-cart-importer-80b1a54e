@@ -44,7 +44,6 @@ function contains(outer: Box, inner: Box, tolerance = 2) {
   );
 }
 
-
 /** Measures the vertical gaps between the card body's direct blocks. */
 async function bodyMetrics(card: Locator) {
   return card.evaluate((el) => {
@@ -68,10 +67,12 @@ async function cards(page: Page) {
 
 test.describe("ProductCard narrow viewports", () => {
   // Layout depends on viewport width only, so run this once (mobile project).
-  test.skip(
-    ({}, testInfo) => testInfo.project.name !== "mobile",
-    "narrow-viewport layout check runs once",
-  );
+  // test.info() dipakai, BUKAN parameter kedua callback. Bentuk sebelumnya —
+  // test.skip(({}, testInfo) => …) — menerima testInfo sebagai undefined di
+  // versi Playwright ini, sehingga callback-nya melempar TypeError dan SELURUH
+  // tes di describe ini gagal sebelum satu baris pun dijalankan. Tidak ada yang
+  // menyadarinya karena browser Playwright belum pernah terpasang di mesin ini.
+  test.skip(() => test.info().project.name !== "mobile", "narrow-viewport layout check runs once");
 
   for (const size of NARROW_WIDTHS) {
     test(`badge, wishlist and cta stay clear at ${size.name}`, async ({ page }) => {
@@ -98,10 +99,11 @@ test.describe("ProductCard narrow viewports", () => {
           card.locator("button[aria-label*='wishlist' i]").first(),
           "wishlist",
         );
-        const cta = card
-          .locator("button[aria-label*='Quick view' i]")
-          .or(card.getByText(/view product/i))
-          .first();
+        const cta = // Penanda, bukan pencocokan teks: getByText menyasar <span> teks
+          // TERDALAM (tinggi 16 px), bukan pembungkus h-9 (36 px) yang jadi area
+          // sentuh sesungguhnya. Tesnya lalu melaporkan "cta too short" untuk
+          // tombol yang sebenarnya berukuran cukup.
+          card.getByTestId("product-cta").first();
         const ctaBox = await boxOf(cta, "cta");
 
         // Quick add stepper was removed from the card — it must not come back.
@@ -112,10 +114,9 @@ test.describe("ProductCard narrow viewports", () => {
 
         // No horizontal overflow: the card itself must fit the viewport.
         expect(cardBox.x, `card overflows left at ${at}`).toBeGreaterThanOrEqual(-1);
-        expect(
-          cardBox.x + cardBox.width,
-          `card overflows right at ${at}`,
-        ).toBeLessThanOrEqual(size.width + 1);
+        expect(cardBox.x + cardBox.width, `card overflows right at ${at}`).toBeLessThanOrEqual(
+          size.width + 1,
+        );
 
         for (const [label, box] of [
           ["title", titleBox],
@@ -125,9 +126,7 @@ test.describe("ProductCard narrow viewports", () => {
           expect(contains(cardBox, box), `${label} escapes card at ${at}`).toBe(true);
         }
 
-        expect(overlaps(titleBox, wishlistBox), `title hits wishlist at ${at}`).toBe(
-          false,
-        );
+        expect(overlaps(titleBox, wishlistBox), `title hits wishlist at ${at}`).toBe(false);
         expect(overlaps(ctaBox, wishlistBox), `cta hits wishlist at ${at}`).toBe(false);
         expect(overlaps(ctaBox, titleBox), `cta hits title at ${at}`).toBe(false);
 
@@ -157,45 +156,45 @@ test.describe("ProductCard narrow viewports", () => {
         const badgeCount = await badges.count();
         for (let b = 0; b < badgeCount; b += 1) {
           const badgeBox = await boxOf(badges.nth(b), `badge ${b}`);
-          expect(contains(cardBox, badgeBox), `badge ${b} escapes card at ${at}`).toBe(
-            true,
-          );
-          expect(overlaps(badgeBox, titleBox), `badge ${b} hits title at ${at}`).toBe(
-            false,
-          );
-          expect(
-            overlaps(badgeBox, wishlistBox),
-            `badge ${b} hits wishlist at ${at}`,
-          ).toBe(false);
+          expect(contains(cardBox, badgeBox), `badge ${b} escapes card at ${at}`).toBe(true);
+          expect(overlaps(badgeBox, titleBox), `badge ${b} hits title at ${at}`).toBe(false);
+          expect(overlaps(badgeBox, wishlistBox), `badge ${b} hits wishlist at ${at}`).toBe(false);
           expect(overlaps(badgeBox, ctaBox), `badge ${b} hits cta at ${at}`).toBe(false);
           for (let other = b + 1; other < badgeCount; other += 1) {
             const otherBox = await boxOf(badges.nth(other), `badge ${other}`);
-            expect(
-              overlaps(badgeBox, otherBox),
-              `badge ${b} hits badge ${other} at ${at}`,
-            ).toBe(false);
+            expect(overlaps(badgeBox, otherBox), `badge ${b} hits badge ${other} at ${at}`).toBe(
+              false,
+            );
           }
         }
 
         // SALE badge was removed — it must not reappear.
-        await expect(
-          card.getByText(/^sale$/i),
-          `sale badge should not exist at ${at}`,
-        ).toHaveCount(0);
+        await expect(card.getByText(/^sale$/i), `sale badge should not exist at ${at}`).toHaveCount(
+          0,
+        );
 
         // Tap targets stay usable on the narrowest phones.
-        expect(wishlistBox.width, `wishlist too small at ${at}`).toBeGreaterThanOrEqual(
-          28,
-        );
+        expect(wishlistBox.width, `wishlist too small at ${at}`).toBeGreaterThanOrEqual(28);
         expect(ctaBox.height, `cta too short at ${at}`).toBeGreaterThanOrEqual(28);
       }
 
       // Cards sharing a row keep the same height.
+      //
+      // Posisi diukur dalam koordinat DOKUMEN, bukan viewport. boundingBox()
+      // mengembalikan koordinat relatif viewport, sedangkan versi sebelumnya
+      // memanggil scrollIntoViewIfNeeded() sebelum tiap pengukuran — sehingga
+      // setiap kartu mendarat di y yang mirip dan SEMUANYA dikelompokkan
+      // sebagai satu baris. Tinggi kartu dari baris berbeda lalu dibandingkan
+      // dan dilaporkan sebagai selisih tinggi dalam satu baris, padahal
+      // baris-barisnya memang berlainan.
       const rows = new Map<number, number[]>();
       for (let i = 0; i < total; i += 1) {
-        await list.nth(i).scrollIntoViewIfNeeded();
-        const box = await boxOf(list.nth(i), `card ${i}`);
-        const key = [...rows.keys()].find((k) => Math.abs(k - box.y) <= 16) ?? box.y;
+        const kartu = list.nth(i);
+        await kartu.scrollIntoViewIfNeeded();
+        const box = await boxOf(kartu, `card ${i}`);
+        const scrollY = await page.evaluate(() => window.scrollY);
+        const absY = box.y + scrollY;
+        const key = [...rows.keys()].find((k) => Math.abs(k - absY) <= 16) ?? absY;
         rows.set(key, [...(rows.get(key) ?? []), box.height]);
       }
       for (const [key, rowHeights] of rows) {

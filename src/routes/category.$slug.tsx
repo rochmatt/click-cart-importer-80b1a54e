@@ -131,8 +131,8 @@ export const Route = createFileRoute("/category/$slug")({
   component: CategoryPage,
   notFoundComponent: () => (
     <NotFoundPage
-      judul="Kategori tidak ditemukan"
-      pesan="Kategori ini tidak ada. Pilih salah satu di bawah."
+      judul="Category not found"
+      pesan="That category does not exist. Pick one below."
     />
   ),
 });

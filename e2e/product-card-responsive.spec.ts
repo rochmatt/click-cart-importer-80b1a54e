@@ -29,10 +29,8 @@ async function boxOf(locator: Locator): Promise<Box> {
 }
 
 function overlaps(a: Box, b: Box, tolerance = 1) {
-  const horizontal =
-    a.x + a.width - tolerance > b.x && b.x + b.width - tolerance > a.x;
-  const vertical =
-    a.y + a.height - tolerance > b.y && b.y + b.height - tolerance > a.y;
+  const horizontal = a.x + a.width - tolerance > b.x && b.x + b.width - tolerance > a.x;
+  const vertical = a.y + a.height - tolerance > b.y && b.y + b.height - tolerance > a.y;
   return horizontal && vertical;
 }
 
@@ -44,7 +42,6 @@ function contains(outer: Box, inner: Box, tolerance = 2) {
     inner.y + inner.height <= outer.y + outer.height + tolerance
   );
 }
-
 
 /** Measures the vertical gaps between the card body's direct blocks. */
 async function bodyMetrics(card: Locator) {
@@ -68,18 +65,20 @@ async function firstCard(page: Page) {
 }
 
 function ctaOf(card: Locator) {
-  return card
-    .locator("button[aria-label*='Quick view' i]")
-    .or(card.getByText(/view product/i))
-    .first();
+  // Penanda, bukan pencocokan teks: getByText menyasar <span> teks TERDALAM
+  // (tinggi 16 px), bukan pembungkus h-9 (36 px) yang jadi area sentuh
+  // sesungguhnya.
+  return card.getByTestId("product-cta").first();
 }
 
 test.describe("ProductCard responsive layout", () => {
   // Layout only depends on viewport width, so run this once (desktop project).
-  test.skip(
-    ({}, testInfo) => testInfo.project.name !== "desktop",
-    "viewport-driven layout check runs once",
-  );
+  // test.info() dipakai, BUKAN parameter kedua callback. Bentuk sebelumnya —
+  // test.skip(({}, testInfo) => …) — menerima testInfo sebagai undefined di
+  // versi Playwright ini, sehingga callback-nya melempar TypeError dan SELURUH
+  // tes di describe ini gagal sebelum satu baris pun dijalankan. Tidak ada yang
+  // menyadarinya karena browser Playwright belum pernah terpasang di mesin ini.
+  test.skip(() => test.info().project.name !== "desktop", "viewport-driven layout check runs once");
 
   for (const size of WIDTHS) {
     test(`no overlap at ${size.name}`, async ({ page }) => {
@@ -110,24 +109,18 @@ test.describe("ProductCard responsive layout", () => {
         ["wishlist", wishlistBox],
         ["cta", ctaBox],
       ] as const) {
-        expect(contains(cardBox, box), `${label} escapes the card at ${size.name}`).toBe(
-          true,
-        );
+        expect(contains(cardBox, box), `${label} escapes the card at ${size.name}`).toBe(true);
       }
 
       // Title and wishlist share a row but must not collide.
-      expect(
-        overlaps(titleBox, wishlistBox),
-        `title overlaps wishlist at ${size.name}`,
-      ).toBe(false);
+      expect(overlaps(titleBox, wishlistBox), `title overlaps wishlist at ${size.name}`).toBe(
+        false,
+      );
 
       // CTA sits below the title block and never collides with it.
       expect(ctaBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height - 2);
       expect(overlaps(ctaBox, titleBox), `cta overlaps title at ${size.name}`).toBe(false);
-      expect(
-        overlaps(ctaBox, wishlistBox),
-        `cta overlaps wishlist at ${size.name}`,
-      ).toBe(false);
+      expect(overlaps(ctaBox, wishlistBox), `cta overlaps wishlist at ${size.name}`).toBe(false);
 
       // No dead space: blocks are packed and the CTA hugs the bottom padding.
       const metrics = await bodyMetrics(card);
@@ -155,21 +148,17 @@ test.describe("ProductCard responsive layout", () => {
       const badgeCount = await badges.count();
       for (let i = 0; i < badgeCount; i += 1) {
         const badgeBox = await boxOf(badges.nth(i));
-        expect(
-          contains(cardBox, badgeBox),
-          `badge ${i} escapes the card at ${size.name}`,
-        ).toBe(true);
-        expect(
-          overlaps(badgeBox, titleBox),
-          `badge ${i} overlaps title at ${size.name}`,
-        ).toBe(false);
+        expect(contains(cardBox, badgeBox), `badge ${i} escapes the card at ${size.name}`).toBe(
+          true,
+        );
+        expect(overlaps(badgeBox, titleBox), `badge ${i} overlaps title at ${size.name}`).toBe(
+          false,
+        );
         expect(
           overlaps(badgeBox, wishlistBox),
           `badge ${i} overlaps wishlist at ${size.name}`,
         ).toBe(false);
-        expect(overlaps(badgeBox, ctaBox), `badge ${i} overlaps cta at ${size.name}`).toBe(
-          false,
-        );
+        expect(overlaps(badgeBox, ctaBox), `badge ${i} overlaps cta at ${size.name}`).toBe(false);
       }
 
       // Cards on the same row must all be the same height.

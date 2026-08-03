@@ -29,24 +29,28 @@ test.describe("schema.org structured data", () => {
     const items = await jsonLd(page);
 
     const product = typeOf(items, "Product") as
-      | { name: string; offers: { price?: string; priceCurrency?: string } }
-      | undefined;
+      { name: string; offers: { price?: string; priceCurrency?: string } } | undefined;
     expect(product).toBeTruthy();
     expect(product!.name.length).toBeGreaterThan(0);
     expect(product!.offers.priceCurrency).toBe("IDR");
     expect(product!.offers.price).toMatch(/^\d+$/);
 
-    const reviews = (product as unknown as {
-      review?: { "@type": string; author: { name: string }; reviewRating: { ratingValue: number } }[];
-    }).review;
+    const reviews = (
+      product as unknown as {
+        review?: {
+          "@type": string;
+          author: { name: string };
+          reviewRating: { ratingValue: number };
+        }[];
+      }
+    ).review;
     expect(reviews?.length).toBeGreaterThan(0);
     expect(reviews![0]["@type"]).toBe("Review");
     expect(reviews![0].author.name.length).toBeGreaterThan(0);
     expect(reviews![0].reviewRating.ratingValue).toBeGreaterThan(0);
 
     const crumbs = typeOf(items, "BreadcrumbList") as
-      | { itemListElement: { position: number; name: string }[] }
-      | undefined;
+      { itemListElement: { position: number; name: string }[] } | undefined;
     expect(crumbs).toBeTruthy();
     expect(crumbs!.itemListElement).toHaveLength(3);
     expect(crumbs!.itemListElement[0].name).toBe("Home");
@@ -57,8 +61,7 @@ test.describe("schema.org structured data", () => {
     const items = await jsonLd(page);
 
     const crumbs = typeOf(items, "BreadcrumbList") as
-      | { itemListElement: { name: string; item: string }[] }
-      | undefined;
+      { itemListElement: { name: string; item: string }[] } | undefined;
     expect(crumbs).toBeTruthy();
     expect(crumbs!.itemListElement.at(-1)).toMatchObject({
       name: "Fashion",
