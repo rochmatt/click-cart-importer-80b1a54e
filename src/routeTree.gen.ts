@@ -47,6 +47,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
 import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
+import { Route as ApiAdminUploadRouteImport } from './routes/api/admin/upload'
 import { Route as ApiAuthSendEmailRouteImport } from './routes/api/auth/send-email'
 import { Route as ApiPublicHooksOrderStatusEmailsRouteImport } from './routes/api/public/hooks/order-status-emails'
 
@@ -243,6 +244,11 @@ const AdminProductsIdRoute = AdminProductsIdRouteImport.update({
   path: '/products/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const ApiAdminUploadRoute = ApiAdminUploadRouteImport.update({
+  id: '/api/admin/upload',
+  path: '/api/admin/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSendEmailRoute = ApiAuthSendEmailRouteImport.update({
   id: '/api/auth/send-email',
   path: '/api/auth/send-email',
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
+  '/api/admin/upload': typeof ApiAdminUploadRoute
   '/api/auth/send-email': typeof ApiAuthSendEmailRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
+  '/api/admin/upload': typeof ApiAdminUploadRoute
   '/api/auth/send-email': typeof ApiAuthSendEmailRoute
   '/admin/products': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -377,6 +385,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
+  '/api/admin/upload': typeof ApiAdminUploadRoute
   '/api/auth/send-email': typeof ApiAuthSendEmailRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
@@ -421,6 +430,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/products/$id'
+    | '/api/admin/upload'
     | '/api/auth/send-email'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/products/$id'
+    | '/api/admin/upload'
     | '/api/auth/send-email'
     | '/admin/products'
     | '/api/public/hooks/order-status-emails'
@@ -504,6 +515,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/products/$id'
+    | '/api/admin/upload'
     | '/api/auth/send-email'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
@@ -539,6 +551,7 @@ export interface RootRouteChildren {
   CategoryIndexRoute: typeof CategoryIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiAdminUploadRoute: typeof ApiAdminUploadRoute
   ApiAuthSendEmailRoute: typeof ApiAuthSendEmailRoute
   ApiPublicHooksOrderStatusEmailsRoute: typeof ApiPublicHooksOrderStatusEmailsRoute
 }
@@ -811,6 +824,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/api/admin/upload': {
+      id: '/api/admin/upload'
+      path: '/api/admin/upload'
+      fullPath: '/api/admin/upload'
+      preLoaderRoute: typeof ApiAdminUploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/send-email': {
       id: '/api/auth/send-email'
       path: '/api/auth/send-email'
@@ -885,6 +905,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategoryIndexRoute: CategoryIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiAdminUploadRoute: ApiAdminUploadRoute,
   ApiAuthSendEmailRoute: ApiAuthSendEmailRoute,
   ApiPublicHooksOrderStatusEmailsRoute: ApiPublicHooksOrderStatusEmailsRoute,
 }

@@ -1,8 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-// Masih dipakai HANYA untuk unggahan gambar ke Supabase Storage; seluruh
-// operasi tabel admin_products sudah pindah ke server function. Penggantian
-// storage adalah Fase 4.
-import { supabase } from "@/integrations/supabase/client";
 import {
   adminDeleteProducts,
   adminGetProduct,
@@ -187,25 +183,33 @@ function toRow(p: AdminProduct) {
   };
 }
 
-const YEAR_SECONDS = 60 * 60 * 24 * 365;
-
-/** Uploads picked files to storage and returns durable signed URLs. */
+/**
+ * Mengunggah gambar produk ke disk server dan mengembalikan URL publiknya.
+ *
+ * Menggantikan Supabase Storage. Dikirim ke route handler, bukan server
+ * function: server function menyerialkan argumennya sebagai JSON sedangkan
+ * berkas biner perlu multipart/form-data.
+ *
+ * URL yang dikembalikan permanen dan relatif (/uploads/produk/...), bukan
+ * signed URL berumur setahun seperti sebelumnya — tidak ada lagi tanggal
+ * kedaluwarsa yang diam-diam mematikan gambar produk setahun kemudian.
+ */
 export async function uploadProductImages(files: File[]): Promise<string[]> {
-  const urls: string[] = [];
-  for (const file of files) {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${newId()}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
-    if (error) throw error;
-    const { data, error: signError } = await supabase.storage
-      .from("product-images")
-      .createSignedUrl(path, YEAR_SECONDS);
-    if (signError) throw signError;
-    if (data?.signedUrl) urls.push(data.signedUrl);
+  if (files.length === 0) return [];
+
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+
+  const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+  if (!res.ok) {
+    const pesan = await res
+      .json()
+      .then((b: { error?: string }) => b.error)
+      .catch(() => null);
+    throw new Error(pesan || `Unggahan gagal (${res.status})`);
   }
+
+  const { urls } = (await res.json()) as { urls: string[] };
   return urls;
 }
 
