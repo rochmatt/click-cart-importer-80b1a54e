@@ -4,7 +4,7 @@
 // dilewati — bukan gagal — supaya `bun run test` tetap berguna di mesin yang
 // tidak punya database lokal.
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createServiceClient, createUserClient } from "./client.server";
 import { closePools, run } from "./pool.server";
 
@@ -131,7 +131,7 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
         .ilike("title", `${PREFIX}%`)
         .order("price", { ascending: true })
         .limit(3);
-      const harga = naik.data!.map((r: any) => Number(r.price));
+      const harga = naik.data!.map((r: { price: number }) => Number(r.price));
       expect(harga).toEqual([...harga].sort((a, b) => a - b));
 
       const turun = await service()
@@ -140,7 +140,7 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
         .ilike("title", `${PREFIX}%`)
         .order("price", { ascending: false })
         .limit(3);
-      const hargaTurun = turun.data!.map((r: any) => Number(r.price));
+      const hargaTurun = turun.data!.map((r: { price: number }) => Number(r.price));
       expect(hargaTurun).toEqual([...hargaTurun].sort((a, b) => b - a));
     });
 
@@ -158,7 +158,7 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
         .neq("category", "Beauty")
         .gte("price", 200);
       expect(hasil.error).toBeNull();
-      expect(hasil.data!.every((r: any) => Number(r.price) >= 200)).toBe(true);
+      expect(hasil.data!.every((r: { price: number }) => Number(r.price) >= 200)).toBe(true);
     });
 
     it("ilike tidak membedakan huruf besar-kecil", async () => {
@@ -354,13 +354,17 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
         .select("order_number")
         .ilike("order_number", `${PREFIX}%`);
       expect(budi.error).toBeNull();
-      expect(budi.data!.map((r: any) => r.order_number)).toEqual([`${PREFIX}budi`]);
+      expect(budi.data!.map((r: { order_number: string }) => r.order_number)).toEqual([
+        `${PREFIX}budi`,
+      ]);
 
       const siti = await createUserClient(SITI)
         .from("orders")
         .select("order_number")
         .ilike("order_number", `${PREFIX}%`);
-      expect(siti.data!.map((r: any) => r.order_number)).toEqual([`${PREFIX}siti`]);
+      expect(siti.data!.map((r: { order_number: string }) => r.order_number)).toEqual([
+        `${PREFIX}siti`,
+      ]);
     });
 
     it("admin melihat semua pesanan", async () => {
@@ -415,6 +419,186 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
         .select("order_number")
         .ilike("order_number", `${PREFIX}%`);
       expect(semua.data).toHaveLength(2);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Penulisan produk oleh anonim dan non-admin.
+  //
+  // Policy products_write memakai has_role(auth.uid(), 'admin'), sedangkan
+  // products_read memakai USING (true) supaya storefront tetap terbaca
+  // pengunjung. Gabungan itulah yang berbahaya kalau salah: katalog memang
+  // harus terbuka untuk DIBACA, dan tabel yang terbuka untuk dibaca mudah
+  // dianggap "publik" seluruhnya.
+  //
+  // KENAPA UJI POSITIFNYA WAJIB ADA. Tanpa pembanding admin yang BERHASIL,
+  // seluruh tes di bawah akan tetap hijau seandainya query builder rusak dan
+  // tidak melakukan apa pun — nol baris terubah terlihat sama persis dengan
+  // ditolak RLS.
+  //
+  // Dulu jalur ini lewat PostgREST milik Supabase. Setelah pindah ke
+  // PostgreSQL sendiri, penegakannya tetap di tempat yang sama — policy RLS —
+  // hanya pemanggilnya yang berganti dari HTTP menjadi koneksi pool ber-RLS.
+  // Yang diuji di sini policy-nya, jadi maksud tesnya tidak berubah.
+  describe("RLS penulisan produk", () => {
+    const JUDUL = `${PREFIX}produk-rls`;
+    const SELUNDUPAN = `${PREFIX}selundupan`;
+    const barisUji = {
+      title: JUDUL,
+      category: `${PREFIX}kategori`,
+      description: "asli",
+      images: [],
+      price: 150000,
+      status: "active",
+      stock: 7,
+    };
+
+    /** Baris uji dibuat ulang sebelum tiap kasus, memakai klien service. */
+    beforeEach(async () => {
+      await run("DELETE FROM public.admin_products WHERE title IN ($1, $2)", [JUDUL, SELUNDUPAN], {
+        rls: false,
+      });
+      await service().from("admin_products").insert(barisUji);
+    });
+
+    const bacaAsli = async () => {
+      const { data } = await service()
+        .from("admin_products")
+        .select("id, title, price, description, status")
+        .eq("title", JUDUL)
+        .maybeSingle();
+      return data;
+    };
+
+    it("anonim tidak bisa mengubah produk", async () => {
+      const hasil = await createUserClient(null)
+        .from("admin_products")
+        .update({ price: 1, description: "DIBAJAK" })
+        .eq("title", JUDUL)
+        .select("id");
+
+      // Bukan error: RLS menyaring barisnya, jadi UPDATE mengenai nol baris.
+      // Perbedaan ini penting — kode yang hanya memeriksa error akan mengira
+      // penulisannya berhasil.
+      expect(hasil.error).toBeNull();
+      expect(hasil.data ?? []).toHaveLength(0);
+
+      const sesudah = await bacaAsli();
+      expect(sesudah.price).toBe(150000);
+      expect(sesudah.description).toBe("asli");
+    });
+
+    it("anonim tidak bisa menghapus produk", async () => {
+      const hasil = await createUserClient(null)
+        .from("admin_products")
+        .delete()
+        .eq("title", JUDUL)
+        .select("id");
+
+      expect(hasil.error).toBeNull();
+      expect(hasil.data ?? []).toHaveLength(0);
+      expect(await bacaAsli()).not.toBeNull();
+    });
+
+    it("pengguna biasa yang sudah masuk tidak bisa mengubah produk", async () => {
+      // BUDI punya sesi sah dan baris di auth.users; yang tidak ia punya hanya
+      // peran admin. Ini lebih dekat dengan penyalahgunaan nyata daripada
+      // anonim — penyerang biasanya sudah punya akun.
+      const hasil = await createUserClient(BUDI)
+        .from("admin_products")
+        .update({ price: 1, status: "draft" })
+        .eq("title", JUDUL)
+        .select("id");
+
+      expect(hasil.error).toBeNull();
+      expect(hasil.data ?? []).toHaveLength(0);
+
+      const sesudah = await bacaAsli();
+      expect(sesudah.price).toBe(150000);
+      expect(sesudah.status).toBe("active");
+    });
+
+    it("pengguna biasa yang sudah masuk tidak bisa menghapus produk", async () => {
+      const hasil = await createUserClient(BUDI)
+        .from("admin_products")
+        .delete()
+        .eq("title", JUDUL)
+        .select("id");
+
+      expect(hasil.error).toBeNull();
+      expect(hasil.data ?? []).toHaveLength(0);
+      expect(await bacaAsli()).not.toBeNull();
+    });
+
+    it("anonim dan pengguna biasa tidak bisa menyisipkan produk", async () => {
+      // Ditolak lewat WITH CHECK, bukan USING — jalur berbeda dari update dan
+      // delete, jadi tidak ikut terbukti oleh keduanya.
+      for (const siapa of [null, BUDI]) {
+        await createUserClient(siapa)
+          .from("admin_products")
+          .insert({ ...barisUji, title: SELUNDUPAN });
+      }
+
+      const { data } = await service().from("admin_products").select("id").eq("title", SELUNDUPAN);
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("menargetkan id langsung juga tidak menembus", async () => {
+      // Menutup dugaan bahwa penolakan di atas hanya akibat filter judul.
+      // Penyerang yang sudah tahu uuid produk tetap tidak bisa apa-apa.
+      const id = (await bacaAsli()).id as string;
+
+      const ubah = await createUserClient(BUDI)
+        .from("admin_products")
+        .update({ price: 1 })
+        .eq("id", id)
+        .select("id");
+      expect(ubah.data ?? []).toHaveLength(0);
+
+      const hapus = await createUserClient(null)
+        .from("admin_products")
+        .delete()
+        .eq("id", id)
+        .select("id");
+      expect(hapus.data ?? []).toHaveLength(0);
+
+      expect((await bacaAsli()).price).toBe(150000);
+    });
+
+    it("anonim dan pengguna biasa TETAP bisa membaca produk", async () => {
+      // Sisi lain dari policy yang sama. Kalau penolakan di atas suatu saat
+      // "diperbaiki" dengan menutup tabelnya rapat-rapat, storefront ikut mati
+      // — dan tes inilah yang menangkapnya.
+      for (const siapa of [null, BUDI]) {
+        const baca = await createUserClient(siapa)
+          .from("admin_products")
+          .select("title")
+          .eq("title", JUDUL);
+        expect(baca.error).toBeNull();
+        expect(baca.data).toHaveLength(1);
+      }
+    });
+
+    it("admin BISA mengubah dan menghapus — pembanding positif", async () => {
+      // Tanpa kasus ini, semua tes di atas tetap hijau seandainya query builder
+      // rusak dan tidak mengirim apa pun ke database.
+      const ubah = await createUserClient(ADMIN)
+        .from("admin_products")
+        .update({ price: 99000 })
+        .eq("title", JUDUL)
+        .select("id");
+      expect(ubah.error).toBeNull();
+      expect(ubah.data).toHaveLength(1);
+      expect((await bacaAsli()).price).toBe(99000);
+
+      const hapus = await createUserClient(ADMIN)
+        .from("admin_products")
+        .delete()
+        .eq("title", JUDUL)
+        .select("id");
+      expect(hapus.error).toBeNull();
+      expect(hapus.data).toHaveLength(1);
+      expect(await bacaAsli()).toBeNull();
     });
   });
 });
