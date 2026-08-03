@@ -15,8 +15,6 @@ export interface AccountProfile {
   preferences: AccountPreferences;
 }
 
-
-
 export interface AccountOrder {
   order_number: string;
   product_name: string;
@@ -60,16 +58,14 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => profileSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("profiles")
-      .upsert(
-        {
-          id: context.userId,
-          display_name: data.display_name,
-          phone: data.phone,
-        },
-        { onConflict: "id" },
-      );
+    const { error } = await context.supabase.from("profiles").upsert(
+      {
+        id: context.userId,
+        display_name: data.display_name,
+        phone: data.phone,
+      },
+      { onConflict: "id" },
+    );
     if (error) throw error;
     return { ok: true };
   });
@@ -84,7 +80,6 @@ export const updateMyPreferences = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
-
 
 export const listMyOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -156,7 +151,10 @@ export const getMyOrder = createServerFn({ method: "GET" })
     if (!row) return null;
     if (row.customer_email.trim().toLowerCase() !== email) return null;
 
-    const { data: product } = await supabaseAdmin
+    // admin_products dibaca dari PostgreSQL lokal — sumber yang sama dengan
+    // storefront dan panel admin. Baris pesanannya sendiri masih dari Supabase.
+    const { createUserClient } = await import("@/lib/db/client.server");
+    const { data: product } = await createUserClient(null)
       .from("admin_products")
       .select("id, title, price, sale_price, images")
       .ilike("title", row.product_name)

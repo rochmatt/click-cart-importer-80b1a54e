@@ -1,5 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+// Masih dipakai HANYA untuk unggahan gambar ke Supabase Storage; seluruh
+// operasi tabel admin_products sudah pindah ke server function. Penggantian
+// storage adalah Fase 4.
 import { supabase } from "@/integrations/supabase/client";
+import {
+  adminDeleteProducts,
+  adminGetProduct,
+  adminListProducts,
+  adminRestoreProducts,
+  adminSaveProduct,
+  adminSetStatus,
+  adminUpdateCategory,
+} from "@/lib/admin-products.functions";
 import { products as catalog } from "@/data/products";
 
 export type ProductStatus = "active" | "draft";
@@ -55,7 +67,6 @@ export const WARRANTY_OPTIONS: { value: WarrantyStatus; label: string }[] = [
   { value: "store", label: "Store Warranty" },
   { value: "official", label: "Official / Brand Warranty" },
 ];
-
 
 export function formatRupiah(value: number): string {
   return `Rp ${value.toLocaleString("id-ID")}`;
@@ -121,8 +132,7 @@ function toProduct(row: Row): AdminProduct {
     seoDescription: row.seo_description,
     brand: row.brand ?? "",
     sizeOptions: Array.isArray(row.size_options) ? row.size_options : [],
-    warrantyStatus:
-      warranty === "store" || warranty === "official" ? warranty : "none",
+    warrantyStatus: warranty === "store" || warranty === "official" ? warranty : "none",
     warrantyDuration: row.warranty_duration ?? "",
     customAttributes: Array.isArray(row.custom_attributes)
       ? (row.custom_attributes as CustomAttribute[])
@@ -177,7 +187,6 @@ function toRow(p: AdminProduct) {
   };
 }
 
-
 const YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 /** Uploads picked files to storage and returns durable signed URLs. */
@@ -202,13 +211,11 @@ export async function uploadProductImages(files: File[]): Promise<string[]> {
 
 export const productsQueryKey = ["admin-products"] as const;
 
+// Seluruh operasi admin_products di bawah ini kini lewat server function yang
+// membaca dan menulis PostgreSQL lokal — lihat admin-products.functions.ts.
+
 async function fetchProducts(): Promise<AdminProduct[]> {
-  const { data, error } = await supabase
-    .from("admin_products")
-    .select("*")
-    .order("updated_at", { ascending: false });
-  if (error) throw error;
-  return (data as unknown as Row[]).map(toProduct);
+  return ((await adminListProducts()) as unknown as Row[]).map(toProduct);
 }
 
 export function useAdminProductsQuery() {
@@ -220,13 +227,8 @@ export function useAdminProduct(id: string) {
     enabled: Boolean(id),
     queryKey: [...productsQueryKey, id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("admin_products")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return data ? toProduct(data as unknown as Row) : null;
+      const row = (await adminGetProduct({ data: id })) as unknown as Row | null;
+      return row ? toProduct(row) : null;
     },
   });
 }
@@ -267,24 +269,10 @@ export function useSaveProduct() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (product: AdminProduct) => {
-      const payload = toRow(product);
-      if (product.id) {
-        const { data, error } = await supabase
-          .from("admin_products")
-          .update(payload)
-          .eq("id", product.id)
-          .select()
-          .single();
-        if (error) throw error;
-        return toProduct(data as unknown as Row);
-      }
-      const { data, error } = await supabase
-        .from("admin_products")
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw error;
-      return toProduct(data as unknown as Row);
+      const row = await adminSaveProduct({
+        data: { id: product.id || null, payload: toRow(product) },
+      });
+      return toProduct(row as unknown as Row);
     },
     onSuccess: invalidate,
   });
@@ -294,8 +282,7 @@ export function useDeleteProducts() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from("admin_products").delete().in("id", ids);
-      if (error) throw error;
+      await adminDeleteProducts({ data: ids });
     },
     onSuccess: invalidate,
   });
@@ -306,9 +293,7 @@ export function useRestoreProducts() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async (items: AdminProduct[]) => {
-      const payload = items.map((p) => ({ id: p.id, ...toRow(p) }));
-      const { error } = await supabase.from("admin_products").insert(payload);
-      if (error) throw error;
+      await adminRestoreProducts({ data: items.map((p) => ({ id: p.id, ...toRow(p) })) });
     },
     onSuccess: invalidate,
   });
@@ -318,8 +303,7 @@ export function useSetStatus() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: ProductStatus }) => {
-      const { error } = await supabase.from("admin_products").update({ status }).in("id", ids);
-      if (error) throw error;
+      await adminSetStatus({ data: { ids, status } });
     },
     onSuccess: invalidate,
   });
@@ -345,13 +329,8 @@ export function useUpdateCategory() {
       }
       if (status) payload.status = status;
       if (Object.keys(payload).length === 0) return;
-      // Match case-insensitively so legacy rows with odd capitalisation are merged.
-      const { error } = await supabase
-        .from("admin_products")
-        .update(payload)
-        .ilike("category", normalizeCategoryName(from));
-      if (error) throw error;
-
+      // Pencocokan case-insensitive ditangani server function.
+      await adminUpdateCategory({ data: { from: normalizeCategoryName(from), payload } });
     },
     onSuccess: invalidate,
   });

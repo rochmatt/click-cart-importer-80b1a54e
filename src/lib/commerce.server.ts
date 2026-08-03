@@ -49,13 +49,15 @@ const DEFAULT_MARKETPLACE_LINKS: MarketplaceLinks = {
   tiktok: "https://www.tiktok.com/shop",
 };
 
-async function resolveMarketplaceLinks(
-  supabaseAdmin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
-  productRefs: string[],
-): Promise<MarketplaceLinks> {
+// Parameter supabaseAdmin dihapus: admin_products kini dibaca dari PostgreSQL
+// lokal, sementara orders dan order_items masih di Supabase. Selama keduanya
+// terpisah, tabel produk HARUS dibaca dari satu tempat saja — kalau tidak, stok
+// yang dilihat admin berbeda dengan yang dipakai transaksi.
+async function resolveMarketplaceLinks(productRefs: string[]): Promise<MarketplaceLinks> {
   if (productRefs.length === 0) return DEFAULT_MARKETPLACE_LINKS;
   const conditions = productRefs.map((ref) => `catalog_ref.eq.${ref},id.eq.${ref}`).join(",");
-  const { data: rows } = await supabaseAdmin
+  const { createUserClient } = await import("@/lib/db/client.server");
+  const { data: rows } = await createUserClient(null)
     .from("admin_products")
     .select("links")
     .or(conditions)
@@ -135,15 +137,22 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
   }
 
   // Best-effort stock decrement for catalog-linked products.
+  //
+  // Stok dibaca DAN ditulis ke PostgreSQL lokal, sumber yang sama dengan panel
+  // admin dan storefront. Klien service dipakai karena penulisan stok adalah
+  // aksi sistem di tengah checkout — pembelinya bukan admin, jadi policy tulis
+  // admin_products akan menolaknya.
+  const { createServiceClient } = await import("@/lib/db/client.server");
+  const katalog = createServiceClient();
   for (const item of data.items) {
-    const { data: rows } = await supabaseAdmin
+    const { data: rows } = await katalog
       .from("admin_products")
       .select("id, stock")
       .or(`catalog_ref.eq.${item.productRef},id.eq.${item.productRef}`)
       .limit(1);
     const row = rows?.[0] as { id: string; stock: number } | undefined;
     if (row && typeof row.stock === "number") {
-      await supabaseAdmin
+      await katalog
         .from("admin_products")
         .update({ stock: Math.max(0, row.stock - item.qty) })
         .eq("id", row.id);
@@ -152,10 +161,7 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
 
   if (userId) await supabaseAdmin.from("cart_items").delete().eq("user_id", userId);
 
-  const marketplaceLinks = await resolveMarketplaceLinks(
-    supabaseAdmin,
-    data.items.map((i) => i.productRef),
-  );
+  const marketplaceLinks = await resolveMarketplaceLinks(data.items.map((i) => i.productRef));
 
   const { sendOrderConfirmationEmail } = await import("./order-emails.server");
   await sendOrderConfirmationEmail({
@@ -182,7 +188,6 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
 
   return { ok: true, orderNumber: order.order_number, total: totals.total };
 }
-
 
 const ORDER_COLUMNS =
   "id, order_number, status, total, subtotal, discount, shipping_fee, promo_code, payment_method, quantity, created_at, product_name, courier, tracking_number, eta_date, destination_city, last_update, shipping_name, shipping_phone, shipping_address, shipping_postal_code, customer_email, user_id";
@@ -319,7 +324,6 @@ export async function resendOrderConfirmation(input: {
     .eq("order_id", order.id);
 
   const marketplaceLinks = await resolveMarketplaceLinks(
-    supabaseAdmin,
     (items ?? []).map((i: any) => i.product_ref).filter(Boolean),
   );
 

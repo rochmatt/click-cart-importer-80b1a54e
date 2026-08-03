@@ -1,6 +1,5 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { supabaseForUser } from "../supabase";
 
 export default defineTool({
   name: "get_product",
@@ -13,8 +12,12 @@ export default defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
-    const supabase = supabaseForUser(ctx);
-    const { data, error } = await supabase
+    // Katalog dibaca dari PostgreSQL lokal; createUserClient(null) supaya
+    // policy katalog tetap yang menentukan, bukan dilewati klien service.
+    // Pemeriksaan autentikasi di atas tetap lewat Supabase.
+    const { createUserClient } = await import("@/lib/db/client.server");
+    const katalog = createUserClient(null);
+    const { data, error } = await katalog
       .from("admin_products")
       .select("*")
       .eq("id", id)

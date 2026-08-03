@@ -14,7 +14,11 @@ export default defineTool({
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
     const supabase = supabaseForUser(ctx);
-    const { data: product, error: productError } = await supabase
+    // Katalog dibaca dari PostgreSQL lokal; createUserClient(null) supaya
+    // policy katalog tetap yang menentukan, bukan dilewati klien service.
+    const { createUserClient } = await import("@/lib/db/client.server");
+    const katalog = createUserClient(null);
+    const { data: product, error: productError } = await katalog
       .from("admin_products")
       .select("id,title,price,sale_price,images")
       .eq("id", product_id)
