@@ -10,6 +10,8 @@ import {
   Loader2,
   Mail,
   Search,
+  ShieldAlert,
+  Timer,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { adminListEmailLogs } from "@/lib/audit/audit.functions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { adminListEmailLogs, adminListResendAttempts } from "@/lib/audit/audit.functions";
 
 export const Route = createFileRoute("/admin/email-logs")({
   head: () => ({
@@ -41,7 +44,265 @@ const waktu = (iso: string) =>
     timeZone: "Asia/Jakarta",
   }).format(new Date(iso));
 
+const LABEL_HASIL: Record<string, { teks: string; gaya: string }> = {
+  diizinkan: {
+    teks: "Diizinkan",
+    gaya: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  },
+  ditolak_cooldown: {
+    teks: "Ditolak — jeda",
+    gaya: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  },
+  ditolak_kuota: {
+    teks: "Ditolak — kuota habis",
+    gaya: "border-destructive/20 bg-destructive/10 text-destructive",
+  },
+  ditolak_ip: {
+    teks: "Ditolak — batas IP",
+    gaya: "border-destructive/20 bg-destructive/10 text-destructive",
+  },
+};
+
+/**
+ * Riwayat SETIAP percobaan kirim ulang, termasuk yang ditolak pembatas.
+ *
+ * Bedanya dengan tab sebelah: "Email terkirim" hanya memuat yang benar-benar
+ * sampai ke Resend. Percobaan yang ditolak tidak pernah sampai ke sana, padahal
+ * justru penolakan itulah yang perlu dilihat saat menyelidiki penyalahgunaan.
+ */
+function PanelPercobaan() {
+  const ambil = useServerFn(adminListResendAttempts);
+  const [cari, setCari] = useState("");
+  const [hasilFilter, setHasilFilter] = useState("semua");
+  const [jenis, setJenis] = useState("semua");
+  const [halaman, setHalaman] = useState(1);
+
+  const query = useQuery({
+    queryKey: ["admin", "resend-attempts", { cari, hasilFilter, jenis, halaman }],
+    queryFn: () => ambil({ data: { cari, hasil: hasilFilter, jenis, halaman } }),
+    placeholderData: (sebelumnya) => sebelumnya,
+  });
+
+  const hasil = query.data;
+  const baris = hasil?.baris ?? [];
+  const totalHalaman = hasil ? Math.max(1, Math.ceil(hasil.total / hasil.perHalaman)) : 1;
+
+  const ubah = (fn: () => void) => {
+    fn();
+    setHalaman(1);
+  };
+
+  return (
+    <div className="space-y-4">
+      {hasil && hasil.total > 0 && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Diizinkan", nilai: hasil.ringkasan.diizinkan, ikon: CheckCircle2 },
+            { label: "Ditolak pembatas", nilai: hasil.ringkasan.ditolak, ikon: ShieldAlert },
+            { label: "Email sungguhan terkirim", nilai: hasil.ringkasan.terkirim, ikon: Mail },
+          ].map((k) => (
+            <div key={k.label} className="rounded-lg border bg-card p-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <k.ikon className="h-3.5 w-3.5" />
+                {k.label}
+              </div>
+              <div className="mt-1 text-2xl font-semibold tabular-nums">
+                {k.nilai.toLocaleString("id-ID")}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-4">
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={cari}
+            onChange={(e) => ubah(() => setCari(e.target.value))}
+            placeholder="Cari email atau alamat IP…"
+            className="pl-9"
+          />
+        </div>
+        <Select value={hasilFilter} onValueChange={(v) => ubah(() => setHasilFilter(v))}>
+          <SelectTrigger className="w-[190px]">
+            <SelectValue placeholder="Hasil" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua Hasil</SelectItem>
+            <SelectItem value="diizinkan">Diizinkan</SelectItem>
+            <SelectItem value="ditolak_cooldown">Ditolak — jeda</SelectItem>
+            <SelectItem value="ditolak_kuota">Ditolak — kuota habis</SelectItem>
+            <SelectItem value="ditolak_ip">Ditolak — batas IP</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={jenis} onValueChange={(v) => ubah(() => setJenis(v))}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Jenis" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua Jenis</SelectItem>
+            <SelectItem value="verifikasi">Verifikasi</SelectItem>
+            <SelectItem value="reset">Reset password</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 font-medium">Waktu</th>
+                <th className="px-4 py-3 font-medium">Email</th>
+                <th className="px-4 py-3 font-medium">Jenis</th>
+                <th className="px-4 py-3 font-medium">Hasil</th>
+                <th className="px-4 py-3 font-medium">Email dikirim</th>
+                <th className="px-4 py-3 font-medium">IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {query.isPending ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-16 text-center text-muted-foreground">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                  </td>
+                </tr>
+              ) : query.isError ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-16 text-center text-destructive">
+                    Gagal memuat riwayat percobaan.
+                  </td>
+                </tr>
+              ) : !baris.length ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-16 text-center text-muted-foreground">
+                    Belum ada percobaan yang tercatat.
+                  </td>
+                </tr>
+              ) : (
+                baris.map((b) => {
+                  const label = LABEL_HASIL[b.outcome] ?? {
+                    teks: b.outcome,
+                    gaya: "bg-muted text-muted-foreground",
+                  };
+                  return (
+                    <tr key={b.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
+                        {waktu(b.created_at)}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{b.email}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{b.kind}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className={label.gaya}>
+                          {label.teks}
+                        </Badge>
+                        {b.outcome !== "diizinkan" && b.sisa_detik > 0 && (
+                          <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                            <Timer className="h-3 w-3" />
+                            {b.sisa_detik}s
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {b.email_dikirim ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">Ya</span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Tidak
+                            {b.outcome === "diizinkan" && (
+                              // Membedakan dua sebab yang mudah tertukar: pembatas
+                              // meloloskan, tapi memang tidak ada yang layak dikirimi.
+                              <span className="ml-1 text-xs">
+                                (akun tidak ada / sudah terverifikasi)
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                        {b.ip || "—"}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {hasil && hasil.total > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {hasil.total.toLocaleString("id-ID")} percobaan · halaman {hasil.halaman} dari{" "}
+            {totalHalaman}
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={halaman <= 1}
+              onClick={() => setHalaman((h) => h - 1)}
+              aria-label="Halaman sebelumnya"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={halaman >= totalHalaman}
+              onClick={() => setHalaman((h) => h + 1)}
+              aria-label="Halaman berikutnya"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminEmailLogsPage() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Log Email</h1>
+        <p className="text-sm text-muted-foreground">
+          Riwayat pengiriman email dan setiap percobaan kirim ulang.
+        </p>
+      </div>
+
+      <Tabs defaultValue="terkirim">
+        <TabsList>
+          <TabsTrigger value="terkirim">Email terkirim</TabsTrigger>
+          <TabsTrigger value="percobaan">Percobaan kirim ulang</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="terkirim" className="mt-4">
+          <p className="mb-4 text-sm text-muted-foreground">
+            Email yang benar-benar diserahkan ke Resend.{" "}
+            <span className="font-medium">Terkirim</span> berarti Resend menerimanya — bukan jaminan
+            sampai di kotak masuk.
+          </p>
+          <PanelTerkirim />
+        </TabsContent>
+
+        <TabsContent value="percobaan" className="mt-4">
+          <p className="mb-4 text-sm text-muted-foreground">
+            Setiap penekanan tombol kirim ulang,{" "}
+            <span className="font-medium">termasuk yang ditolak pembatas</span> dan karena itu tidak
+            muncul di tab sebelah. Disimpan 30 hari.
+          </p>
+          <PanelPercobaan />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function PanelTerkirim() {
   const ambil = useServerFn(adminListEmailLogs);
   const [cari, setCari] = useState("");
   const [status, setStatus] = useState<"semua" | "terkirim" | "gagal">("semua");
@@ -59,15 +320,6 @@ function AdminEmailLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Log Email</h1>
-        <p className="text-sm text-muted-foreground">
-          Setiap email yang dikirim aplikasi ini beserta hasilnya.{" "}
-          <span className="font-medium">Terkirim</span> berarti diterima Resend — bukan jaminan
-          sampai di kotak masuk.
-        </p>
-      </div>
-
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-4">
         <div className="relative min-w-[240px] flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

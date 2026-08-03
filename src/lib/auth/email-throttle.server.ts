@@ -75,6 +75,58 @@ export async function catatKirim(jenis: JenisKirim, email: string): Promise<Hasi
   return { diizinkan: r.diizinkan, sisaDetik: r.sisa_detik, terpakai: r.terpakai, maks: r.maks };
 }
 
+export type HasilPercobaan = "diizinkan" | "ditolak_cooldown" | "ditolak_kuota" | "ditolak_ip";
+
+/**
+ * Menurunkan sebab penolakan dari angka yang dikembalikan pembatas.
+ *
+ * Dibedakan karena keduanya menuntut tindakan berbeda saat ditinjau: cooldown
+ * berarti orangnya menekan tombol terlalu cepat, kuota habis berarti alamat itu
+ * sudah lima kali diminta dalam sejam — pola yang pantas dicurigai.
+ */
+export function sebabPenolakan(hasil: HasilKirim): HasilPercobaan {
+  if (hasil.diizinkan) return "diizinkan";
+  return hasil.terpakai >= hasil.maks ? "ditolak_kuota" : "ditolak_cooldown";
+}
+
+/**
+ * Mencatat satu percobaan ke riwayat yang bisa ditinjau admin.
+ *
+ * Terpisah dari catatKirim yang menghitung kuota: yang satu menegakkan batas,
+ * yang ini menyimpan jejaknya. Menggabungkannya akan membuat fungsi kuota
+ * menulis dua tabel dan gagal di salah satunya menjadi ambigu.
+ *
+ * Tidak pernah melempar — sama seperti perekam audit lain. Kegagalan mencatat
+ * tidak boleh menggagalkan permintaan yang dicatatnya.
+ */
+export async function catatPercobaan(catatan: {
+  jenis: JenisKirim;
+  email: string;
+  hasil: HasilPercobaan;
+  emailDikirim: boolean;
+  sisaDetik: number;
+  terpakai: number;
+  ip: string | null;
+}): Promise<void> {
+  try {
+    await run(
+      "SELECT public.catat_percobaan_kirim($1, $2, $3, $4, $5, $6, $7)",
+      [
+        catatan.jenis,
+        normalkan(catatan.email),
+        catatan.hasil,
+        catatan.emailDikirim,
+        catatan.sisaDetik,
+        catatan.terpakai,
+        catatan.ip,
+      ],
+      OWNER,
+    );
+  } catch (error) {
+    console.error("percobaan kirim gagal dicatat", error);
+  }
+}
+
 /** Membaca status untuk ditampilkan, tanpa mencatat percobaan. */
 export async function statusKirim(jenis: JenisKirim, email: string): Promise<StatusKirim> {
   const rows = await run<{ sisa_detik: number; terpakai: number; maks: number }>(

@@ -13,6 +13,7 @@ import { kirimEmailReset, kirimEmailVerifikasi } from "./mailer.server";
 import { batasi, reset as resetBatas } from "./rate-limit.server";
 import { requireAuth } from "./middleware.server";
 import { createSession, destroySession, getSessionUser, type SessionUser } from "./session.server";
+import { prosesKirimUlang, type HasilKirimUlang } from "./kirim-ulang.server";
 
 // Permukaan autentikasi milik sendiri. BELUM dipakai UI — pemasangannya
 // menyusul setelah 28 pemanggilan supabase.auth.* diganti.
@@ -30,11 +31,23 @@ const passwordSchema = z.string().min(8, "Password minimal 8 karakter").max(200)
 
 const tokenSchema = z.string().trim().min(20).max(200);
 
+/**
+ * IP pemanggil menurut proxy di depan.
+ *
+ * null kalau header-nya tidak ada. Dibiarkan kosong alih-alih diisi tebakan:
+ * riwayat penyalahgunaan yang memuat IP karangan lebih buruk daripada yang
+ * mengaku tidak tahu.
+ */
+function alamatIp(): string | null {
+  return getRequest()?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+}
+
 /** Kunci pembatas laju digabung dengan IP supaya satu penyerang tidak mengunci akun orang lain. */
 function kunciLaju(prefix: string, nilai: string): string {
-  const ip = getRequest()?.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "tanpa-ip";
-  return `${prefix}:${ip}:${nilai}`;
+  return `${prefix}:${alamatIp() ?? "tanpa-ip"}:${nilai}`;
 }
+
+export type { HasilKirimUlang };
 
 export type HasilAuth = { ok: true } | { ok: false; pesan: string };
 
@@ -119,35 +132,14 @@ export const me = createServerFn({ method: "GET" }).handler(async (): Promise<Se
  */
 export const requestPasswordReset = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ email: emailSchema }).parse(input))
-  .handler(async ({ data }): Promise<HasilKirimUlang> => {
-    const { catatKirim, statusKirim } = await import("./email-throttle.server");
-
-    const perIp = batasi(kunciLaju("reset-ip", ""), 20, 60 * 60);
-    if (!perIp.diizinkan) {
-      const status = await statusKirim("reset", data.email);
-      return {
-        ok: true,
-        diizinkan: false,
-        sisaDetik: Math.max(perIp.sisaDetik, status.sisaDetik),
-        terpakai: status.terpakai,
-        maks: status.maks,
-      };
-    }
-
-    const hasil = await catatKirim("reset", data.email);
-    if (hasil.diizinkan) {
+  .handler(async ({ data }): Promise<HasilKirimUlang> =>
+    prosesKirimUlang("reset", data.email, alamatIp(), async () => {
       const siap = await siapkanReset(data.email);
-      if (siap) await kirimEmailReset(data.email, siap.token);
-    }
-
-    return {
-      ok: true,
-      diizinkan: hasil.diizinkan,
-      sisaDetik: hasil.sisaDetik,
-      terpakai: hasil.terpakai,
-      maks: hasil.maks,
-    };
-  });
+      if (!siap) return false;
+      await kirimEmailReset(data.email, siap.token);
+      return true;
+    }),
+  );
 
 /** Status cooldown reset password. Alasan POST sama seperti verificationCooldown. */
 export const passwordResetCooldown = createServerFn({ method: "POST" })
@@ -179,27 +171,6 @@ export const verifyEmail = createServerFn({ method: "POST" })
   });
 
 /**
- * Hasil permintaan kiriman email — dipakai kirim-ulang verifikasi maupun reset
- * password, karena keduanya menghadapi persoalan yang sama.
- *
- * ok SELALU true. Yang membedakan hanya angka cooldown, dan angka itu berasal
- * dari alamat email sebagai teks — bukan dari ada-tidaknya akun. Jawaban yang
- * membedakan keduanya akan mengubah tombol ini menjadi alat pemeriksa akun.
- */
-export interface HasilKirimUlang {
-  ok: true;
-  /**
-   * Apakah PEMBATAS mengizinkan percobaan ini — bukan apakah email benar-benar
-   * terkirim. Kiriman nyata bergantung pada ada-tidaknya akun yang belum
-   * terverifikasi, dan itu tidak pernah dilaporkan ke klien.
-   */
-  diizinkan: boolean;
-  sisaDetik: number;
-  terpakai: number;
-  maks: number;
-}
-
-/**
  * DUA LAPIS PEMBATAS, dengan tugas berbeda.
  *
  * Lapis email (di database) adalah yang menjaga KOTAK MASUK korban. Ia sengaja
@@ -219,39 +190,14 @@ export interface HasilKirimUlang {
  */
 export const resendVerification = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ email: emailSchema }).parse(input))
-  .handler(async ({ data }): Promise<HasilKirimUlang> => {
-    const { catatKirim, statusKirim } = await import("./email-throttle.server");
-
-    const perIp = batasi(kunciLaju("verifikasi-ulang-ip", ""), 20, 60 * 60);
-    if (!perIp.diizinkan) {
-      // Tidak dicatat sebagai percobaan pada alamat itu — tidak ada email yang
-      // dikirim, jadi kuota alamatnya tidak pantas berkurang. Yang dilaporkan
-      // adalah tunggu terlama di antara kedua lapis, supaya hitungan mundur di
-      // layar tidak berakhir sebelum tombolnya benar-benar bisa dipakai.
-      const status = await statusKirim("verifikasi", data.email);
-      return {
-        ok: true,
-        diizinkan: false,
-        sisaDetik: Math.max(perIp.sisaDetik, status.sisaDetik),
-        terpakai: status.terpakai,
-        maks: status.maks,
-      };
-    }
-
-    const hasil = await catatKirim("verifikasi", data.email);
-    if (hasil.diizinkan) {
+  .handler(async ({ data }): Promise<HasilKirimUlang> =>
+    prosesKirimUlang("verifikasi", data.email, alamatIp(), async () => {
       const token = await tokenVerifikasiUlang(data.email);
-      if (token) await kirimEmailVerifikasi(data.email, token);
-    }
-
-    return {
-      ok: true,
-      diizinkan: hasil.diizinkan,
-      sisaDetik: hasil.sisaDetik,
-      terpakai: hasil.terpakai,
-      maks: hasil.maks,
-    };
-  });
+      if (!token) return false;
+      await kirimEmailVerifikasi(data.email, token);
+      return true;
+    }),
+  );
 
 /**
  * Status cooldown untuk ditampilkan saat halaman dibuka, tanpa mencatat apa pun.

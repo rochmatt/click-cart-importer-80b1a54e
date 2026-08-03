@@ -146,6 +146,100 @@ export interface HasilEmail {
   perHalaman: number;
 }
 
+// ------------------------------------------- percobaan kirim ulang email
+
+const filterPercobaanSchema = z.object({
+  cari: z.string().trim().max(200).default(""),
+  hasil: z
+    .enum(["semua", "diizinkan", "ditolak_cooldown", "ditolak_kuota", "ditolak_ip"])
+    .default("semua"),
+  jenis: z.enum(["semua", "verifikasi", "reset"]).default("semua"),
+  halaman: z.number().int().min(1).max(10_000).default(1),
+});
+
+export interface BarisPercobaan {
+  id: string;
+  created_at: string;
+  kind: string;
+  email: string;
+  outcome: string;
+  email_dikirim: boolean;
+  sisa_detik: number;
+  terpakai: number;
+  ip: string | null;
+}
+
+export interface HasilPercobaan {
+  baris: BarisPercobaan[];
+  total: number;
+  halaman: number;
+  perHalaman: number;
+  /** Ringkasan pada rentang yang tersaring, untuk kepala halaman. */
+  ringkasan: { diizinkan: number; ditolak: number; terkirim: number };
+}
+
+export const adminListResendAttempts = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => filterPercobaanSchema.parse(input ?? {}))
+  .handler(async ({ data, context }): Promise<HasilPercobaan> => {
+    await assertAdmin(context.db, context.userId);
+    const { run } = await import("@/lib/db/pool.server");
+
+    const syarat: string[] = [];
+    const params: unknown[] = [];
+    if (data.cari) {
+      params.push(`%${data.cari}%`);
+      const i = params.length;
+      syarat.push(`(email ILIKE $${i} OR ip ILIKE $${i})`);
+    }
+    if (data.hasil !== "semua") {
+      params.push(data.hasil);
+      syarat.push(`outcome = $${params.length}`);
+    }
+    if (data.jenis !== "semua") {
+      params.push(data.jenis);
+      syarat.push(`kind = $${params.length}`);
+    }
+    const where = syarat.length ? `WHERE ${syarat.join(" AND ")}` : "";
+
+    // Hitungan dan ringkasan diambil sekali jalan: halaman menampilkan keduanya
+    // bersamaan, dan dua perjalanan terpisah untuk angka yang berasal dari
+    // baris yang sama hanya menambah peluang keduanya tidak cocok.
+    const ringkas = await run<{
+      total: number;
+      diizinkan: number;
+      ditolak: number;
+      terkirim: number;
+    }>(
+      `SELECT count(*)::int AS total,
+              count(*) FILTER (WHERE outcome = 'diizinkan')::int AS diizinkan,
+              count(*) FILTER (WHERE outcome <> 'diizinkan')::int AS ditolak,
+              count(*) FILTER (WHERE email_dikirim)::int AS terkirim
+         FROM public.resend_attempts ${where}`,
+      params,
+      { rls: false },
+    );
+    const r = ringkas[0] ?? { total: 0, diizinkan: 0, ditolak: 0, terkirim: 0 };
+
+    const offset = (data.halaman - 1) * PER_HALAMAN;
+    const baris = await run<BarisPercobaan>(
+      `SELECT id, created_at, kind, email, outcome, email_dikirim, sisa_detik, terpakai, ip
+         FROM public.resend_attempts ${where}
+        ORDER BY created_at DESC
+        LIMIT ${PER_HALAMAN} OFFSET ${offset}`,
+      params,
+      { rls: false },
+    );
+
+    return {
+      baris,
+      total: r.total,
+      halaman: data.halaman,
+      perHalaman: PER_HALAMAN,
+      ringkasan: { diizinkan: r.diizinkan, ditolak: r.ditolak, terkirim: r.terkirim },
+    };
+  });
+
 export const adminListEmailLogs = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => filterEmailSchema.parse(input ?? {}))
