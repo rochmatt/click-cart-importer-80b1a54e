@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth/middleware.server";
 
 // Keranjang, wishlist, dan pemeriksaan peran admin — dipindahkan dari browser.
 //
@@ -43,7 +43,7 @@ export interface CartRow extends WishlistRow {
 }
 
 export const getMyCart = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<CartRow[]> => {
     const { data, error } = await context.supabase
       .from("cart_items")
@@ -59,7 +59,7 @@ export const getMyCart = createServerFn({ method: "GET" })
  * kebenaran lebih penting daripada jumlah query.
  */
 export const replaceMyCart = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => itemsSchema.parse(input))
   .handler(async ({ data: items, context }) => {
     await context.supabase.from("cart_items").delete().eq("user_id", context.userId);
@@ -80,7 +80,7 @@ export const replaceMyCart = createServerFn({ method: "POST" })
   });
 
 export const getMyWishlist = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<WishlistRow[]> => {
     const { data, error } = await context.supabase
       .from("wishlist_items")
@@ -91,7 +91,7 @@ export const getMyWishlist = createServerFn({ method: "GET" })
   });
 
 export const replaceMyWishlist = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => itemsSchema.parse(input))
   .handler(async ({ data: items, context }) => {
     await context.supabase.from("wishlist_items").delete().eq("user_id", context.userId);
@@ -116,7 +116,7 @@ export const replaceMyWishlist = createServerFn({ method: "POST" })
  * lagi bisa disimpulkan dari data yang dipegang klien.
  */
 export const amIAdmin = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<boolean> => {
     const { data, error } = await context.supabase
       .from("user_roles")

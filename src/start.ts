@@ -1,7 +1,6 @@
 import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   // Internal /lovable/* routes authenticate themselves — never wrap or redirect them.
@@ -30,7 +29,14 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 
+// attachSupabaseAuth DIHAPUS. Ia melampirkan header Authorization berisi JWT
+// Supabase pada setiap pemanggilan server function. Setelah cutover, identitas
+// dibawa cookie sesi httpOnly yang dikirim browser sendiri — tidak ada lagi
+// yang perlu dilampirkan.
+//
+// Itu membuat csrfMiddleware di bawah menjadi WAJIB, bukan sekadar praktik
+// baik: header harus disertakan secara sengaja oleh kode halaman, sedangkan
+// cookie ikut terkirim pada permintaan lintas situs mana pun.
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth],
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));

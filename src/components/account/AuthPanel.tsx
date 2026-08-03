@@ -24,7 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { requestPasswordReset, signIn, signUp } from "@/lib/auth/auth.functions";
+import { setAuthUser } from "@/lib/auth";
 import { lovable } from "@/integrations/lovable";
 
 type Mode = "signin" | "register";
@@ -145,33 +146,26 @@ export function AuthPanel({
         }
       }
       if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: parsed.data.email,
-          password: parsed.data.password,
+        const hasil = await signIn({
+          data: { email: parsed.data.email, password: parsed.data.password },
         });
-        if (error) throw error;
+        if (!hasil.ok) throw new Error(hasil.pesan);
+        // Store auth diberi tahu langsung supaya header dan menu akun ikut
+        // berubah tanpa menunggu pemuatan ulang halaman.
+        setAuthUser(hasil.user);
         toast.success("Berhasil masuk. Selamat datang kembali!");
         if (nextPath) window.location.href = nextPath;
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: parsed.data.email,
-          password: parsed.data.password,
-          options: {
-            emailRedirectTo:
-              window.location.origin +
-              (nextPath ? `/verify-email?next=${encodeURIComponent(nextPath)}` : "/verify-email"),
-            data: { display_name: parsed.data.name ?? "" },
-          },
+        const hasil = await signUp({
+          data: { email: parsed.data.email, password: parsed.data.password },
         });
-        if (error) throw error;
-        if (!data.session) {
-          setSentConfirmation(true);
-          toast.success("Cek inbox kamu untuk konfirmasi email");
-          navigate({ to: "/verify-email", search: { email: parsed.data.email } });
-        } else {
-          toast.success("Akun berhasil dibuat. Selamat berbelanja!");
-          if (nextPath) window.location.href = nextPath;
-        }
+        if (!hasil.ok) throw new Error(hasil.pesan);
+        // Selalu diarahkan ke halaman verifikasi: server sengaja tidak
+        // membedakan email baru dari email yang sudah terdaftar, sehingga
+        // formulir ini tidak bisa dipakai memeriksa keberadaan akun.
+        setSentConfirmation(true);
+        toast.success("Cek inbox kamu untuk konfirmasi email");
+        navigate({ to: "/verify-email", search: { email: parsed.data.email } });
       }
     } catch (error) {
       const raw = error instanceof Error ? error.message : "";
@@ -186,21 +180,18 @@ export function AuthPanel({
     }
   }
 
+  // LOGIN GOOGLE DINONAKTIFKAN OLEH CUTOVER AUTENTIKASI.
+  //
+  // lovable.auth.signInWithOAuth menyetel sesi SUPABASE, yang setelah cutover
+  // tidak lagi dibaca aplikasi — pengguna akan kembali dari Google dan tetap
+  // tampak belum masuk. Tombol yang diam tanpa penjelasan lebih buruk daripada
+  // tombol yang jujur mengatakan fiturnya sedang tidak tersedia.
+  //
+  // Untuk menghidupkannya kembali diperlukan OAuth Google langsung ke aplikasi
+  // ini: registrasi client di Google Cloud, endpoint callback, lalu pembuatan
+  // sesi lokal — bukan sekadar menyambung ulang tombolnya.
   async function onGoogle() {
-    setGoogleBusy(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + (nextPath ?? "/account"),
-      });
-      if (result.error) {
-        toast.error("Masuk dengan Google gagal. Coba lagi.");
-        return;
-      }
-    } catch {
-      toast.error("Masuk dengan Google gagal. Coba lagi.");
-    } finally {
-      setGoogleBusy(false);
-    }
+    toast.info("Masuk dengan Google sedang tidak tersedia. Gunakan email dan password.");
   }
 
   async function onForgotPassword() {
@@ -211,10 +202,8 @@ export function AuthPanel({
     }
     setResetBusy(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-        redirectTo: window.location.origin + "/reset-password",
-      });
-      if (error) throw error;
+      // Server selalu menjawab ok, termasuk untuk email tak dikenal.
+      await requestPasswordReset({ data: { email: parsed.data } });
       setResetSent(true);
       toast.success("Link reset password terkirim");
     } catch (error) {

@@ -16,7 +16,8 @@ import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import { ResendVerification } from "@/components/account/ResendVerification";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { me as meFn, verifyEmail as verifyEmailFn } from "@/lib/auth/auth.functions";
+import { refreshAuth } from "@/lib/auth";
 
 const title = "Verifikasi Email Akun — PasarPilih";
 const description =
@@ -77,19 +78,18 @@ function VerifyEmailPage() {
         return;
       }
 
+      const token = url.searchParams.get("token") ?? hash.get("token");
       const code = url.searchParams.get("code");
       const tokenHash = url.searchParams.get("token_hash") ?? hash.get("token_hash");
 
       try {
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        } else if (tokenHash) {
-          const { error } = await supabase.auth.verifyOtp({
-            type: "signup",
-            token_hash: tokenHash,
-          });
-          if (error) throw error;
+        // Tautan versi Supabase memakai code / token_hash; tautan sendiri
+        // memakai ?token=. Ketiganya dibaca supaya tautan lama yang sudah
+        // terkirim ke kotak masuk tidak langsung mati.
+        const t = token ?? code ?? tokenHash;
+        if (t) {
+          const hasil = await verifyEmailFn({ data: { token: t } });
+          if (!hasil.ok) throw new Error(hasil.pesan);
         }
       } catch (err) {
         if (!cancelled) {
@@ -104,18 +104,19 @@ function VerifyEmailPage() {
         return;
       }
 
-      const { data } = await supabase.auth.getUser();
+      await refreshAuth();
+      const pengguna = await meFn();
       if (cancelled) return;
 
-      if (data.user?.email_confirmed_at) {
-        setStatus({ kind: "verified", email: data.user.email ?? null });
+      if (pengguna?.emailConfirmed) {
+        setStatus({ kind: "verified", email: pengguna.email ?? null });
         setTimeout(() => {
           if (!cancelled) navigate({ to: "/account", replace: true });
         }, 3000);
         return;
       }
 
-      if (data.user?.email) setEmail((prev: string) => prev || data.user!.email!);
+      if (pengguna?.email) setEmail((prev: string) => prev || pengguna.email);
       setStatus({ kind: "pending" });
     }
 

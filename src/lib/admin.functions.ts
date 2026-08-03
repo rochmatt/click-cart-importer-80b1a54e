@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth/middleware.server";
 import { assertAdmin } from "@/lib/admin-access.server";
 
 export interface AdminOrder {
@@ -57,7 +57,7 @@ export interface StaffMember {
 }
 
 export const listAdminOrders = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<AdminOrder[]> => {
     await assertAdmin(context.supabase, context.userId);
     const { data, error } = await context.supabase
@@ -81,7 +81,7 @@ const orderUpdateSchema = z.object({
 });
 
 export const updateAdminOrder = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => orderUpdateSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
@@ -101,28 +101,33 @@ export const updateAdminOrder = createServerFn({ method: "POST" })
   });
 
 export const listAdminCustomers = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<AdminCustomer[]> => {
     await assertAdmin(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Email dibaca dari auth.users lokal, bukan API admin Supabase — setelah
+    // cutover API itu mengembalikan kosong dan seluruh email menghilang tanpa
+    // error apa pun.
+    const { listUsers } = await import("@/lib/auth/directory.server");
 
-    const [{ data: profiles, error }, { data: users }, { data: orders }, { data: roles }] =
-      await Promise.all([
+    const [{ data: profiles, error }, users, { data: orders }, { data: roles }] = await Promise.all(
+      [
         context.supabase
           .from("profiles")
           .select("id, display_name, phone, created_at")
           .order("created_at", { ascending: false })
           .limit(200),
-        supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
+        listUsers(200),
         context.supabase.from("orders").select("customer_email, total, created_at").limit(1000),
         context.supabase.from("user_roles").select("user_id, role"),
-      ]);
+      ],
+    );
     if (error) throw error;
 
-    const emailById = new Map<string, string>();
-    for (const u of users?.users ?? []) emailById.set(u.id, u.email ?? "");
+    const emailById = new Map<string, string>(users.map((u) => [u.id, u.email]));
     const adminIds = new Set(
-      (roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id),
+      (roles ?? [])
+        .filter((r: { role: string }) => r.role === "admin")
+        .map((r: { user_id: string }) => r.user_id),
     );
 
     const stats = new Map<string, { count: number; value: number; last: string | null }>();
@@ -137,7 +142,7 @@ export const listAdminCustomers = createServerFn({ method: "GET" })
       });
     }
 
-    return (profiles ?? []).map((p) => {
+    return (profiles ?? []).map((p: Record<string, string>) => {
       const email = emailById.get(p.id) ?? "";
       const s = stats.get(email.trim().toLowerCase());
       return {
@@ -195,7 +200,7 @@ const settingsSchema = z.object({
 });
 
 export const updateStoreSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => settingsSchema.parse(input))
   .handler(async ({ data, context }) => {
     // Otorisasi tetap diperiksa lewat Supabase karena auth belum dipindahkan
@@ -218,30 +223,24 @@ export const updateStoreSettings = createServerFn({ method: "POST" })
   });
 
 export const listStaff = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<StaffMember[]> => {
     await assertAdmin(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: roles, error }, { data: users }] = await Promise.all([
+    // Nama tampilan datang dari profiles, bukan dari metadata pengguna: sistem
+    // auth ini tidak menyimpan metadata bebas seperti Supabase.
+    const { listUsers } = await import("@/lib/auth/directory.server");
+    const [{ data: roles, error }, users] = await Promise.all([
       context.supabase.from("user_roles").select("user_id, role"),
-      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
+      listUsers(200),
     ]);
     if (error) throw error;
-    const emailById = new Map<string, string>();
-    const nameById = new Map<string, string>();
-    for (const u of users?.users ?? []) {
-      emailById.set(u.id, u.email ?? "");
-      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
-      nameById.set(
-        u.id,
-        (typeof meta.display_name === "string" && meta.display_name) ||
-          (typeof meta.full_name === "string" && meta.full_name) ||
-          "",
-      );
-    }
-    return (roles ?? []).map((r) => ({
+
+    const emailById = new Map<string, string>(users.map((u) => [u.id, u.email]));
+    const nameById = new Map<string, string>(users.map((u) => [u.id, u.displayName]));
+
+    return (roles ?? []).map((r: { user_id: string; role: string }) => ({
       user_id: r.user_id,
-      role: r.role as string,
+      role: r.role,
       email: emailById.get(r.user_id) ?? "",
       display_name: nameById.get(r.user_id) ?? "",
     }));
@@ -253,15 +252,14 @@ const grantSchema = z.object({
 });
 
 export const grantRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => grantSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ ok: boolean; message: string }> => {
     await assertAdmin(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const target = (users?.users ?? []).find(
-      (u) => (u.email ?? "").trim().toLowerCase() === data.email.toLowerCase(),
-    );
+    // Pencarian langsung ke auth.users lokal, bukan mengunduh 1000 pengguna
+    // lalu menyaringnya di memori seperti versi Supabase sebelumnya.
+    const { findUserByEmail } = await import("@/lib/auth/directory.server");
+    const target = await findUserByEmail(data.email);
     if (!target) {
       return { ok: false, message: "No account found with that email address." };
     }
@@ -273,7 +271,7 @@ export const grantRole = createServerFn({ method: "POST" })
   });
 
 export const revokeRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z
       .object({ user_id: z.string().uuid(), role: z.enum(["admin", "moderator", "user"]) })

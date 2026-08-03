@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, LogOut, Package, ShoppingBag, SlidersHorizontal, UserRound } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth/auth.functions";
+import { setAuthUser } from "@/lib/auth";
 import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
 
 const TABS = [
@@ -25,7 +26,8 @@ export function AccountHeader() {
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    await signOut();
+    setAuthUser(null);
     toast.success("Kamu sudah keluar");
     navigate({ to: "/", replace: true });
   }

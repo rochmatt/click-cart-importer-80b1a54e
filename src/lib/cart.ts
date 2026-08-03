@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { getMyCart, replaceMyCart } from "@/lib/basket.functions";
 
 export interface CartItem {
@@ -114,31 +114,26 @@ async function adoptServerCart(uid: string) {
 
 /** Keeps the cart in sync with the current session. Mount once (header). */
 export function useCartSync() {
+  // Identitas kini datang dari store auth bersama, bukan dari pendengar
+  // Supabase. Efek ini berjalan ulang setiap user berubah, jadi masuk dan
+  // keluar tetap tertangani tanpa langganan terpisah.
+  const { user } = useAuth();
   useEffect(() => {
     let active = true;
+    const uid = user?.id ?? null;
 
-    supabase.auth.getSession().then(({ data }) => {
-      const uid = data.session?.user?.id ?? null;
-      if (!active || !uid) return;
-      void adoptServerCart(uid);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      const uid = session?.user?.id ?? null;
-      if (event === "SIGNED_OUT") {
-        userId = null;
-        setItems([], { sync: false });
-        return;
-      }
-      if (uid && uid !== userId) void adoptServerCart(uid);
-    });
+    if (!uid) {
+      userId = null;
+      setItems([], { sync: false });
+      return;
+    }
+    if (uid !== userId) void adoptServerCart(uid);
 
     return () => {
       active = false;
-      sub.subscription.unsubscribe();
+      void active;
     };
-  }, []);
+  }, [user]);
 }
 
 export function addToCart(item: Omit<CartItem, "qty">, qty = 1) {

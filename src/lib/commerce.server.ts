@@ -1,4 +1,3 @@
-import { getRequestHeader } from "@tanstack/react-start/server";
 import { computeTotals, findPromo, validatePromo } from "./commerce-pricing";
 import type {
   MarketplaceLinks,
@@ -33,14 +32,20 @@ function makeOrderNumber() {
   return `PP-${stamp}-${rand}`;
 }
 
-/** Resolves the signed-in shopper from the bearer token, if one was sent. */
+/**
+ * Pembeli yang sedang masuk, atau null untuk tamu.
+ *
+ * Dulu membaca JWT Supabase dari header Authorization yang dilampirkan
+ * middleware klien. Kini identitas datang dari cookie sesi httpOnly, yang
+ * dikirim browser sendiri — tidak ada lagi header yang perlu dilampirkan, dan
+ * token tidak lagi terbaca JavaScript.
+ *
+ * Tetap mengembalikan null alih-alih melempar: checkout harus tetap bisa
+ * dilakukan tamu.
+ */
 export async function currentUserId(): Promise<string | null> {
-  const header = getRequestHeader("authorization");
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) return null;
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.auth.getUser(token);
-  return data.user?.id ?? null;
+  const { getSessionUser } = await import("@/lib/auth/session.server");
+  return (await getSessionUser())?.id ?? null;
 }
 
 const DEFAULT_MARKETPLACE_LINKS: MarketplaceLinks = {
@@ -71,7 +76,10 @@ async function resolveMarketplaceLinks(productRefs: string[]): Promise<Marketpla
 }
 
 export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResult> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+  // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+  const { createServiceClient } = await import("@/lib/db/client.server");
+  const supabaseAdmin = createServiceClient();
 
   const subtotal = data.items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
   if (subtotal <= 0) return { ok: false, error: "Order total must be greater than zero." };
@@ -138,21 +146,19 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
 
   // Best-effort stock decrement for catalog-linked products.
   //
-  // Stok dibaca DAN ditulis ke PostgreSQL lokal, sumber yang sama dengan panel
-  // admin dan storefront. Klien service dipakai karena penulisan stok adalah
-  // aksi sistem di tengah checkout — pembelinya bukan admin, jadi policy tulis
-  // admin_products akan menolaknya.
-  const { createServiceClient } = await import("@/lib/db/client.server");
-  const katalog = createServiceClient();
+  // Memakai klien yang sama dengan penulisan pesanan di atas: setelah cutover
+  // keduanya menghadap PostgreSQL lokal, jadi klien katalog terpisah tidak lagi
+  // diperlukan. Klien service memang yang tepat di sini — penulisan stok adalah
+  // aksi sistem di tengah checkout, dan pembelinya bukan admin.
   for (const item of data.items) {
-    const { data: rows } = await katalog
+    const { data: rows } = await supabaseAdmin
       .from("admin_products")
       .select("id, stock")
       .or(`catalog_ref.eq.${item.productRef},id.eq.${item.productRef}`)
       .limit(1);
     const row = rows?.[0] as { id: string; stock: number } | undefined;
     if (row && typeof row.stock === "number") {
-      await katalog
+      await supabaseAdmin
         .from("admin_products")
         .update({ stock: Math.max(0, row.stock - item.qty) })
         .eq("id", row.id);
@@ -238,7 +244,10 @@ function mapDetail(row: any, items: any[]): OrderDetail {
 export async function fetchMyOrders(): Promise<OrderSummary[]> {
   const userId = await currentUserId();
   if (!userId) return [];
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+  // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+  const { createServiceClient } = await import("@/lib/db/client.server");
+  const supabaseAdmin = createServiceClient();
   const { data } = await supabaseAdmin
     .from("orders")
     .select(ORDER_COLUMNS)
@@ -252,7 +261,10 @@ export async function fetchOrderDetail(input: {
   orderNumber: string;
   email?: string;
 }): Promise<OrderDetailResult> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+  // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+  const { createServiceClient } = await import("@/lib/db/client.server");
+  const supabaseAdmin = createServiceClient();
   const userId = await currentUserId();
 
   const { data: row } = await supabaseAdmin
@@ -286,7 +298,10 @@ export async function resendOrderConfirmation(input: {
   orderNumber: string;
   email?: string;
 }): Promise<ResendConfirmationResult> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+  // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+  const { createServiceClient } = await import("@/lib/db/client.server");
+  const supabaseAdmin = createServiceClient();
   const userId = await currentUserId();
   const orderNumber = input.orderNumber.toUpperCase();
 
@@ -368,7 +383,10 @@ export async function fetchOrderEmailHistory(input: {
   orderNumber: string;
   email?: string;
 }): Promise<OrderEmailHistoryResult> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+  // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+  const { createServiceClient } = await import("@/lib/db/client.server");
+  const supabaseAdmin = createServiceClient();
   const userId = await currentUserId();
   const orderNumber = input.orderNumber.toUpperCase();
 

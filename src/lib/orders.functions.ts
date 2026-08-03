@@ -43,7 +43,10 @@ export type OrderLookupResult =
 export const lookupOrder = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => lookupSchema.parse(input))
   .handler(async ({ data }): Promise<OrderLookupResult> => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const supabaseAdmin = createServiceClient();
 
     const columns =
       "order_number, product_name, quantity, status, courier, tracking_number, destination_city, eta_date, last_update, notify_status_updates, notify_level, customer_email";
@@ -101,7 +104,10 @@ export type NotifyPreferenceResult =
 export const setOrderNotifyPreference = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => preferenceSchema.parse(input))
   .handler(async ({ data }): Promise<NotifyPreferenceResult> => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const supabaseAdmin = createServiceClient();
 
     const { data: row } = await supabaseAdmin
       .from("orders")
@@ -145,7 +151,10 @@ export type NotifyLevelResult =
 export const setOrderNotifyLevel = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => levelSchema.parse(input))
   .handler(async ({ data }): Promise<NotifyLevelResult> => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const supabaseAdmin = createServiceClient();
 
     const { data: row } = await supabaseAdmin
       .from("orders")

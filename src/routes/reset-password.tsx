@@ -15,7 +15,7 @@ import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { resetPassword as resetPasswordFn } from "@/lib/auth/auth.functions";
 
 const title = "Atur Ulang Kata Sandi — PasarPilih";
 const description =
@@ -71,6 +71,7 @@ function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const { checks, score } = useMemo(() => scorePassword(password), [password]);
@@ -96,56 +97,32 @@ function ResetPasswordPage() {
         return;
       }
 
-      const code = url.searchParams.get("code");
-      const tokenHash = url.searchParams.get("token_hash") ?? hash.get("token_hash");
-
-      try {
-        if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          if (exchangeError) throw exchangeError;
-        } else if (tokenHash) {
-          const { error: otpError } = await supabase.auth.verifyOtp({
-            type: "recovery",
-            token_hash: tokenHash,
-          });
-          if (otpError) throw otpError;
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setToken({
-            status: "invalid",
-            reason:
-              err instanceof Error
-                ? err.message
-                : "Token pemulihan tidak valid atau sudah dipakai.",
-          });
-        }
-        return;
-      }
-
-      const { data } = await supabase.auth.getSession();
+      // Alur Supabase menukar token menjadi sesi lebih dulu, lalu mengganti
+      // password. Di sini token ITU SENDIRI yang menjadi otorisasi dan dikirim
+      // bersama password baru dalam satu panggilan — token tidak terpakai
+      // sampai passwordnya benar-benar diganti, sehingga membuka halaman ini
+      // dua kali tidak menghanguskan tautannya.
+      //
+      // Konsekuensinya keabsahan tidak bisa diperiksa di muka tanpa
+      // menghanguskan token, jadi adanya token dianggap cukup dan kegagalan
+      // dilaporkan saat submit.
+      const t = url.searchParams.get("token") ?? hash.get("token");
       if (cancelled) return;
-      if (data.session) {
-        setToken({ status: "valid", email: data.session.user.email ?? null });
+      if (t) {
+        setResetToken(t);
+        setToken({ status: "valid", email: null });
       } else {
         setToken({
           status: "invalid",
           reason:
-            "Kami tidak menemukan token pemulihan yang aktif. Buka tautan dari email di perangkat ini.",
+            "Kami tidak menemukan token pemulihan. Buka tautan dari email yang kami kirim.",
         });
       }
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if ((event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") && session) {
-        setToken({ status: "valid", email: session.user.email ?? null });
-      }
-    });
-
     verify();
     return () => {
       cancelled = true;
-      sub.subscription.unsubscribe();
     };
   }, []);
 
@@ -166,8 +143,9 @@ function ResetPasswordPage() {
     setError("");
     setBusy(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
+      if (!resetToken) throw new Error("Token pemulihan tidak ditemukan.");
+      const hasil = await resetPasswordFn({ data: { token: resetToken, password } });
+      if (!hasil.ok) throw new Error(hasil.pesan);
       setDone(true);
       toast.success("Kata sandi berhasil diperbarui.");
       setTimeout(() => navigate({ to: "/account", replace: true }), 2500);

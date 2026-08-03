@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth/middleware.server";
 import {
   type AccountPreferences,
   parsePreferences,
@@ -27,7 +27,7 @@ export interface AccountOrder {
 }
 
 export const getMyProfile = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<AccountProfile> => {
     const email = (context.claims.email as string | undefined) ?? "";
     const { data, error } = await context.supabase
@@ -55,7 +55,7 @@ const profileSchema = z.object({
 });
 
 export const updateMyProfile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => profileSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("profiles").upsert(
@@ -71,7 +71,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   });
 
 export const updateMyPreferences = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => preferencesSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -82,12 +82,15 @@ export const updateMyPreferences = createServerFn({ method: "POST" })
   });
 
 export const listMyOrders = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<AccountOrder[]> => {
     const email = (context.claims.email as string | undefined)?.trim().toLowerCase();
     if (!email) return [];
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const supabaseAdmin = createServiceClient();
     const { data, error } = await supabaseAdmin
       .from("orders")
       .select(
@@ -133,13 +136,16 @@ const orderNumberSchema = z.object({
 });
 
 export const getMyOrder = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => orderNumberSchema.parse(input))
   .handler(async ({ data, context }): Promise<OrderDetail | null> => {
     const email = (context.claims.email as string | undefined)?.trim().toLowerCase();
     if (!email) return null;
 
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const supabaseAdmin = createServiceClient();
     const { data: row, error } = await supabaseAdmin
       .from("orders")
       .select(

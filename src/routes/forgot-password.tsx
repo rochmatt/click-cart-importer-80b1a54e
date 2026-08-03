@@ -19,7 +19,7 @@ import { Footer } from "@/components/store/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { requestPasswordReset } from "@/lib/auth/auth.functions";
 
 const title = "Lupa Kata Sandi — PasarPilih";
 const description =
@@ -90,10 +90,9 @@ function ForgotPasswordPage() {
     setFailed(null);
     setBusy(true);
     try {
-      const { error: sendError } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (sendError) throw sendError;
+      // Server selalu menjawab ok, termasuk untuk email tak dikenal — halaman
+      // ini tidak boleh bisa dipakai memeriksa keberadaan akun.
+      await requestPasswordReset({ data: { email: parsed.data } });
       setSent(true);
       setCooldown(COOLDOWN_SECONDS);
       toast.success("Tautan pemulihan terkirim");

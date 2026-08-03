@@ -20,7 +20,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth/auth.functions";
+import { setAuthUser } from "@/lib/auth";
 import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
 
 export function AccountMenu() {
@@ -32,7 +33,8 @@ export function AccountMenu() {
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    await signOut();
+    setAuthUser(null);
     toast.success("Signed out");
     navigate({ to: "/", replace: true });
   }

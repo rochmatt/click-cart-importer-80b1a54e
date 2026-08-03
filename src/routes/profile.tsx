@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "@/integrations/supabase/client";
+import { changePassword } from "@/lib/auth/auth.functions";
 import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
 import {
   type AccountPreferences,
@@ -283,18 +283,12 @@ function PasswordCard() {
 
     setPending(true);
     try {
-      const { error: reauthError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: current,
-      });
-      if (reauthError) {
-        setErrors({ current_password: "Password saat ini salah" });
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({ password: next });
-      if (error) {
-        toast.error(error.message || "Gagal mengubah password.");
+      // Satu pemanggilan: server yang memverifikasi password lama sekaligus
+      // menetapkan yang baru, sehingga tidak ada jendela di mana password lama
+      // sudah terbukti benar tapi penggantiannya gagal.
+      const hasil = await changePassword({ data: { current, next } });
+      if (!hasil.ok) {
+        setErrors({ current_password: hasil.pesan });
         return;
       }
 

@@ -188,3 +188,42 @@ export async function tokenVerifikasiUlang(email: string): Promise<string | null
   if (!user || user.email_confirmed_at) return null;
   return createToken(user.id, "signup");
 }
+
+export type HasilGantiPassword =
+  { ok: true } | { ok: false; alasan: "password_lama_salah" | "akun_tidak_ada" };
+
+/**
+ * Mengganti password pengguna yang sedang masuk.
+ *
+ * Password lama tetap diminta meski sesinya sudah sah: tanpa itu, perangkat
+ * yang ditinggalkan tidak terkunci bisa dipakai mengambil alih akun secara
+ * permanen hanya dengan mengganti passwordnya.
+ *
+ * Sesi lain dicabut, sesi saat ini TIDAK — pemiliknya baru saja membuktikan
+ * dirinya, dan mengeluarkannya dari perangkat sendiri hanya menyulitkan.
+ */
+export async function gantiPassword(
+  userId: string,
+  passwordLama: string,
+  passwordBaru: string,
+): Promise<HasilGantiPassword> {
+  const rows = await run<BarisUser>(
+    "SELECT id, email, encrypted_password, email_confirmed_at FROM auth.users WHERE id = $1",
+    [userId],
+    OWNER,
+  );
+  const user = rows[0];
+  if (!user) return { ok: false, alasan: "akun_tidak_ada" };
+
+  if (!(await verifyPassword(passwordLama, user.encrypted_password))) {
+    return { ok: false, alasan: "password_lama_salah" };
+  }
+
+  await run(
+    "UPDATE auth.users SET encrypted_password = $2, updated_at = now() WHERE id = $1",
+    [userId, await hashPassword(passwordBaru)],
+    OWNER,
+  );
+
+  return { ok: true };
+}

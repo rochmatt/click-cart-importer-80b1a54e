@@ -17,9 +17,9 @@ import { ResendVerification } from "@/components/account/ResendVerification";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { signOut } from "@/lib/auth/auth.functions";
 import { lovable } from "@/integrations/lovable";
-import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
+import { displayNameFor, initialsFor, setAuthUser, useAuth } from "@/lib/auth";
 
 import {
   getMyProfile,
@@ -180,10 +180,13 @@ function SignedInView() {
     onError: () => toast.error("Could not save your profile. Please try again."),
   });
 
-  async function signOut() {
+  async function keluar() {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    // Nama fungsi ini sengaja BUKAN signOut: nama yang sama akan membayangi
+    // import di atas dan memanggil dirinya sendiri tanpa henti.
+    await signOut();
+    setAuthUser(null);
     toast.success("Signed out");
     navigate({ to: "/", replace: true });
   }
@@ -257,7 +260,7 @@ function SignedInView() {
           </Link>
           <button
             type="button"
-            onClick={signOut}
+            onClick={keluar}
             className="mt-3 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-destructive"
           >
             <LogOut className="h-4 w-4" />
@@ -267,9 +270,7 @@ function SignedInView() {
       </div>
 
       <div className="space-y-6">
-        {user && !user.email_confirmed_at && user.email && (
-          <ResendVerification email={user.email} />
-        )}
+        {user && !user.emailConfirmed && user.email && <ResendVerification email={user.email} />}
 
 
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">

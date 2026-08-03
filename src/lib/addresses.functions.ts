@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth/middleware.server";
 
 export interface Address {
   id: string;
@@ -43,7 +43,7 @@ const addressSchema = z.object({
 export type AddressInput = z.infer<typeof addressSchema>;
 
 export const listMyAddresses = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }): Promise<Address[]> => {
     const { data, error } = await context.supabase
       .from("user_addresses")
@@ -56,7 +56,7 @@ export const listMyAddresses = createServerFn({ method: "GET" })
   });
 
 export const saveMyAddress = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => addressSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { id, ...fields } = data;
@@ -93,7 +93,7 @@ export const saveMyAddress = createServerFn({ method: "POST" })
   });
 
 export const deleteMyAddress = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
@@ -106,7 +106,7 @@ export const deleteMyAddress = createServerFn({ method: "POST" })
   });
 
 export const setDefaultAddress = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const clear = await context.supabase

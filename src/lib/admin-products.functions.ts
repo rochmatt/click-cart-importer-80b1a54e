@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAuth } from "@/lib/auth/middleware.server";
 import { assertAdmin } from "@/lib/admin-access.server";
 
 // Operasi panel admin untuk admin_products, dipindahkan dari browser.
@@ -65,7 +65,7 @@ function lempar(error: { message: string } | null): void {
 }
 
 export const adminListProducts = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { data, error } = await (
@@ -79,7 +79,7 @@ export const adminListProducts = createServerFn({ method: "GET" })
   });
 
 export const adminGetProduct = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => uuid.parse(input))
   .handler(async ({ data: id, context }) => {
     await assertAdmin(context.supabase, context.userId);
@@ -95,7 +95,7 @@ export const adminGetProduct = createServerFn({ method: "GET" })
   });
 
 export const adminSaveProduct = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ id: uuid.nullable(), payload: rowSchema }).parse(input),
   )
@@ -124,7 +124,7 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
   });
 
 export const adminDeleteProducts = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) => z.array(uuid).min(1).parse(input))
   .handler(async ({ data: ids, context }) => {
     await assertAdmin(context.supabase, context.userId);
@@ -134,7 +134,7 @@ export const adminDeleteProducts = createServerFn({ method: "POST" })
 
 /** Menyisipkan ulang produk yang baru dihapus, dengan id aslinya, untuk fitur undo. */
 export const adminRestoreProducts = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z
       .array(rowSchema.extend({ id: uuid }))
@@ -148,7 +148,7 @@ export const adminRestoreProducts = createServerFn({ method: "POST" })
   });
 
 export const adminSetStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z.object({ ids: z.array(uuid).min(1), status: STATUS }).parse(input),
   )
@@ -165,7 +165,7 @@ export const adminSetStatus = createServerFn({ method: "POST" })
 
 /** Mengganti nama kategori di seluruh katalog, opsional sekaligus mengubah status. */
 export const adminUpdateCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAuth])
   .inputValidator((input: unknown) =>
     z
       .object({

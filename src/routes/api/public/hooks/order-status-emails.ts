@@ -30,7 +30,10 @@ export const Route = createFileRoute("/api/public/hooks/order-status-emails")({
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
+        // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+        const { createServiceClient } = await import("@/lib/db/client.server");
+        const supabaseAdmin = createServiceClient();
         const { data: rows, error } = await supabaseAdmin
           .from("orders")
           .select(

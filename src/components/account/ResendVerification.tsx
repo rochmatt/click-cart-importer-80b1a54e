@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, ShieldAlert } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { resendVerification } from "@/lib/auth/auth.functions";
 
 /** Cooldown per attempt (seconds): 60s, 2m, 5m, 15m, then 30m. */
 const COOLDOWN_STEPS = [60, 120, 300, 900, 1800];
@@ -99,11 +99,11 @@ export function ResendVerification({ email }: { email: string }) {
     inFlight.current = true;
     setBusy(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-        options: { emailRedirectTo: window.location.origin + "/account" },
-      });
+      // Server sengaja selalu menjawab ok — termasuk saat akun tidak ada,
+      // sudah terverifikasi, atau pembatas laju menolak — supaya tombol ini
+      // tidak bisa dipakai memeriksa keberadaan akun. Pembatas di sisi klien
+      // di bawah tetap ada demi kenyamanan, bukan sebagai penegakan.
+      await resendVerification({ data: { email } });
 
       const step = COOLDOWN_STEPS[Math.min(attemptsInWindow.length, COOLDOWN_STEPS.length - 1)]!;
       const next: ThrottleState = {
@@ -113,19 +113,9 @@ export function ResendVerification({ email }: { email: string }) {
       setState(next);
       writeState(email, next);
 
-      if (error) {
-        const rateLimited =
-          error.status === 429 || /rate limit|too many/i.test(error.message ?? "");
-        toast.error(
-          rateLimited
-            ? "Email limit reached for now. Please try again later."
-            : error.message,
-        );
-      } else {
-        toast.success(
-          `Verification email sent. You can request another in ${formatRemaining(step)}.`,
-        );
-      }
+      toast.success(
+        `Verification email sent. You can request another in ${formatRemaining(step)}.`,
+      );
     } finally {
       inFlight.current = false;
       setBusy(false);

@@ -11,6 +11,7 @@ import {
 } from "./accounts.server";
 import { kirimEmailReset, kirimEmailVerifikasi } from "./mailer.server";
 import { batasi, reset as resetBatas } from "./rate-limit.server";
+import { requireAuth } from "./middleware.server";
 import { createSession, destroySession, getSessionUser, type SessionUser } from "./session.server";
 
 // Permukaan autentikasi milik sendiri. BELUM dipakai UI — pemasangannya
@@ -151,5 +152,26 @@ export const resendVerification = createServerFn({ method: "POST" })
       if (token) await kirimEmailVerifikasi(data.email, token);
     }
     // Sama seperti reset: jawaban seragam apa pun keadaannya.
+    return { ok: true };
+  });
+
+export const changePassword = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ current: z.string().min(1).max(200), next: passwordSchema }).parse(input),
+  )
+  .handler(async ({ data, context }): Promise<HasilAuth> => {
+    const { gantiPassword } = await import("./accounts.server");
+    const hasil = await gantiPassword(context.userId, data.current, data.next);
+    if (!hasil.ok) {
+      return { ok: false, pesan: "Password saat ini salah." };
+    }
+
+    // Perangkat lain dikeluarkan, perangkat ini tidak: pemiliknya baru saja
+    // membuktikan diri dengan password lama.
+    const { destroyAllSessions, createSession } = await import("./session.server");
+    await destroyAllSessions(context.userId);
+    await createSession(context.userId);
+
     return { ok: true };
   });
