@@ -35,6 +35,37 @@ test.describe("mobile bottom navigation", () => {
   });
 });
 
+test.describe("nav bawah bertahan di halaman tujuannya sendiri", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // Setiap tautan di nav bawah harus mendarat di halaman yang MASIH menampilkan
+  // nav itu. Sebelumnya /account tidak merendernya sama sekali: menekan
+  // "Account" membuat navigasi lenyap tepat setelah dipakai — satu-satunya
+  // tujuan nav yang menghilangkan nav-nya sendiri.
+  for (const [label, path] of [
+    ["Home", "/"],
+    ["Kategori", "/categories"],
+    ["Search", "/search"],
+    ["Account", "/account"],
+  ] as const) {
+    test(`nav tetap ada setelah membuka ${label}`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+    });
+  }
+
+  test("checkout SENGAJA tanpa nav bawah", async ({ page }) => {
+    // Bukan kelalaian: checkout adalah corong terfokus, dan menghilangkan
+    // navigasi saat pembayaran adalah pola yang disengaja. Yang menggantikannya
+    // adalah header sticky "Continue shopping" yang selalu terlihat, sehingga
+    // pengguna tetap punya jalan keluar. Dikunci di sini supaya kalau kelak
+    // seseorang menambahkan nav ke checkout, itu jadi keputusan sadar.
+    await page.goto("/checkout");
+    await expect(page.getByRole("navigation", { name: "Primary" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /continue shopping/i })).toBeVisible();
+  });
+});
+
 test.describe("desktop", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 

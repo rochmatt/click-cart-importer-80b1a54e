@@ -11,6 +11,7 @@ import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
 import { AccountHeader } from "@/components/account/AccountHeader";
 import { AccountFooter } from "@/components/account/AccountFooter";
+import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import { AddressBook } from "@/components/account/AddressBook";
 import { AuthPanel } from "@/components/account/AuthPanel";
 import { ResendVerification } from "@/components/account/ResendVerification";
@@ -90,6 +91,13 @@ function AccountPage() {
         <div className="hidden md:block">
           <Footer />
         </div>
+
+        {/* Nav bawah ikut dirender di sini karena nav itu SENDIRI menautkan ke
+            /account. Tanpa ini, menekan "Account" di ponsel membuat navigasinya
+            lenyap begitu sampai — satu-satunya halaman tujuan nav yang
+            menghilangkan nav-nya. Komponennya md:hidden, jadi tidak muncul di
+            desktop yang sudah punya Header dan Footer. */}
+        <MobileBottomNav />
       </div>
     );
   }
@@ -119,6 +127,7 @@ function AccountPage() {
       </main>
 
       <AccountFooter />
+      <MobileBottomNav />
     </div>
   );
 }
