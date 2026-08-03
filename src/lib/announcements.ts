@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgePercent, Info, AlertTriangle, Wrench } from "lucide-react";
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchAnnouncements } from "@/lib/content.functions";
 
 export type AnnouncementKind = "promo" | "info" | "warning" | "maintenance";
 
@@ -60,53 +59,29 @@ const SELECT =
 
 /** Active, in-window announcements. RLS already filters schedule + active flag. */
 export async function fetchLiveAnnouncements(): Promise<Announcement[]> {
-  const { data, error } = await supabase
-    .from("announcements")
-    .select(SELECT)
-    .order("priority", { ascending: false })
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Announcement[];
+  return (await fetchAnnouncements()) as unknown as Announcement[];
 }
 
 export const ANNOUNCEMENTS_KEY = ["announcements", "live"] as const;
 
-/* ---------- realtime: one shared channel for all subscribers ---------- */
+/* ---------- penyegaran berkala ---------- */
 
-let channel: RealtimeChannel | null = null;
-let subscribers = 0;
-
+/**
+ * PostgreSQL polos tidak punya padanan Realtime Supabase, jadi langganan
+ * postgres_changes diganti penyegaran berkala.
+ *
+ * Konsekuensinya jujur: pengumuman baru muncul paling lama satu menit setelah
+ * disimpan, bukan seketika. Untuk banner toko itu memadai, dan menambah
+ * WebSocket sendiri demi selisih itu tidak sepadan.
+ */
 function useAnnouncementsRealtime() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const invalidate = () => {
+    const id = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_KEY });
-    };
-
-    subscribers += 1;
-    if (!channel) {
-      channel = supabase
-        .channel("announcements-live")
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "announcements" },
-          invalidate,
-        )
-        .subscribe();
-    } else {
-      // A later mount joins the existing channel; refresh once to catch up.
-      invalidate();
-    }
-
-    return () => {
-      subscribers -= 1;
-      if (subscribers <= 0 && channel) {
-        supabase.removeChannel(channel);
-        channel = null;
-        subscribers = 0;
-      }
-    };
+    }, 60_000);
+    return () => clearInterval(id);
   }, [queryClient]);
 }
 
@@ -121,7 +96,6 @@ export function useAnnouncements() {
     refetchOnWindowFocus: true,
   });
 }
-
 
 /* ---------- local read / dismiss state ---------- */
 

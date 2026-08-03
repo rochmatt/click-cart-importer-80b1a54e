@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { fetchSalesEvents } from "@/lib/content.functions";
 import { products as catalog } from "@/data/products";
 
 export type SalesRow = {
@@ -48,15 +48,8 @@ export function percent(part: number, whole: number) {
 }
 
 async function fetchSales(days: RangeDays): Promise<SalesRow[]> {
-  const since = new Date();
-  since.setDate(since.getDate() - (days - 1));
-  const { data, error } = await supabase
-    .from("sales_events")
-    .select("event_date, marketplace, product_ref, views, clicks, orders, revenue")
-    .gte("event_date", since.toISOString().slice(0, 10))
-    .order("event_date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as SalesRow[];
+  // Perhitungan tanggal pindah ke server bersama query-nya.
+  return (await fetchSalesEvents({ data: days })) as unknown as SalesRow[];
 }
 
 export function useSalesAnalytics(days: RangeDays) {
@@ -186,9 +179,7 @@ export function drillDown(rows: SalesRow[], sel: DrillSelection) {
       conversion: percent(t.orders, t.clicks),
       share: percent(t.revenue, totals.revenue),
     }))
-    .sort((a, b) =>
-      sel.type === "date" ? b.revenue - a.revenue : a.key.localeCompare(b.key),
-    );
+    .sort((a, b) => (sel.type === "date" ? b.revenue - a.revenue : a.key.localeCompare(b.key)));
 
   const items = [...byProduct.entries()]
     .map(([ref, t]) => ({

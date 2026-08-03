@@ -3,7 +3,11 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, Megaphone, Plus, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  adminDeleteAnnouncement,
+  adminListAnnouncements,
+  adminSaveAnnouncement,
+} from "@/lib/content.functions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +16,8 @@ import { Switch } from "@/components/ui/switch";
 import { type Announcement, KIND_META, kindMeta } from "@/lib/announcements";
 
 const title = "Announcements — PasarPilih Admin";
-const description = "Create promo, info, warning and maintenance notices for the PasarPilih storefront.";
+const description =
+  "Create promo, info, warning and maintenance notices for the PasarPilih storefront.";
 
 export const Route = createFileRoute("/admin/announcements")({
   head: () => ({
@@ -57,15 +62,7 @@ function AdminAnnouncementsPage() {
 
   const listQuery = useQuery({
     queryKey: ["admin", "announcements"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("announcements")
-        .select("*")
-        .order("priority", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Announcement[];
-    },
+    queryFn: async () => (await adminListAnnouncements()) as unknown as Announcement[],
   });
 
   const invalidate = () => {
@@ -75,17 +72,25 @@ function AdminAnnouncementsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (input: Draft) => {
-      const { error } = await supabase.from("announcements").insert({
-        title: input.title.trim(),
-        message: input.message.trim(),
-        kind: input.kind,
-        link_url: input.link_url.trim(),
-        link_label: input.link_label.trim(),
-        show_as_banner: input.show_as_banner,
-        priority: Number.isFinite(input.priority) ? input.priority : 0,
-        ends_at: input.ends_at ? new Date(input.ends_at).toISOString() : null,
+      // Server memvalidasi payload dengan skema ketat, jadi kolom yang tidak
+      // dikenal ditolak alih-alih diam-diam tertulis.
+      await adminSaveAnnouncement({
+        data: {
+          id: null,
+          payload: {
+            title: input.title.trim(),
+            message: input.message.trim(),
+            kind: input.kind,
+            link_url: input.link_url.trim(),
+            link_label: input.link_label.trim(),
+            show_as_banner: input.show_as_banner,
+            priority: Number.isFinite(input.priority) ? input.priority : 0,
+            is_active: true,
+            starts_at: new Date().toISOString(),
+            ends_at: input.ends_at ? new Date(input.ends_at).toISOString() : null,
+          },
+        },
       });
-      if (error) throw error;
     },
     onSuccess: () => {
       setDraft(emptyDraft);
@@ -98,8 +103,27 @@ function AdminAnnouncementsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Announcement> }) => {
-      const { error } = await supabase.from("announcements").update(patch).eq("id", id);
-      if (error) throw error;
+      const kini = (listQuery.data ?? []).find((a) => a.id === id);
+      if (!kini) throw new Error("Pemberitahuan tidak ditemukan");
+      // Skema server bersifat strict dan menuntut seluruh kolom, jadi patch
+      // digabung ke nilai yang sedang tampil.
+      await adminSaveAnnouncement({
+        data: {
+          id,
+          payload: {
+            title: patch.title ?? kini.title,
+            message: patch.message ?? kini.message,
+            kind: patch.kind ?? kini.kind,
+            link_url: patch.link_url ?? kini.link_url,
+            link_label: patch.link_label ?? kini.link_label,
+            show_as_banner: patch.show_as_banner ?? kini.show_as_banner,
+            priority: patch.priority ?? kini.priority,
+            is_active: patch.is_active ?? kini.is_active,
+            starts_at: patch.starts_at ?? kini.starts_at,
+            ends_at: patch.ends_at ?? kini.ends_at ?? null,
+          },
+        },
+      });
     },
     onSuccess: () => invalidate(),
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal memperbarui"),
@@ -107,8 +131,7 @@ function AdminAnnouncementsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("announcements").delete().eq("id", id);
-      if (error) throw error;
+      await adminDeleteAnnouncement({ data: id });
     },
     onSuccess: () => {
       invalidate();
@@ -270,7 +293,9 @@ function AdminAnnouncementsPage() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {meta.label} · prioritas {a.priority}
                       {a.show_as_banner ? " · banner" : ""}
-                      {a.ends_at ? ` · berakhir ${new Date(a.ends_at).toLocaleString("id-ID")}` : ""}
+                      {a.ends_at
+                        ? ` · berakhir ${new Date(a.ends_at).toLocaleString("id-ID")}`
+                        : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
