@@ -5,12 +5,11 @@ import { assertAdmin } from "@/lib/admin-access.server";
 
 // Operasi panel admin untuk admin_products, dipindahkan dari browser.
 //
-// POLA OTORISASI — sama dengan updateStoreSettings di admin.functions.ts:
-// identitas dan peran masih diperiksa lewat Supabase (auth belum dipindahkan,
-// itu Fase 3), sedangkan datanya ditulis ke PostgreSQL lokal memakai klien
-// service. Klien service diperlukan karena policy tulis lokal bergantung pada
-// has_role(auth.uid(), 'admin') sementara user_roles lokal masih kosong —
-// tanpa itu setiap penulisan ditolak diam-diam dengan nol baris terubah.
+// POLA OTORISASI — peran diperiksa lewat assertAdmin, penulisan memakai klien
+// service yang melewati RLS. Klien service diperlukan karena policy tulis
+// bergantung pada has_role(auth.uid(), 'admin') sedangkan klien service tidak
+// menyetel identitas RLS; tanpa itu penulisan ditolak diam-diam dengan nol
+// baris terubah.
 //
 // assertAdmin() melempar 403 sebelum satu baris pun tersentuh, jadi gerbangnya
 // tetap ada. Yang berpindah adalah TEMPAT penegakan, bukan ada-tidaknya.
@@ -67,7 +66,7 @@ function lempar(error: { message: string } | null): void {
 export const adminListProducts = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { data, error } = await (
       await db()
     )
@@ -82,7 +81,7 @@ export const adminGetProduct = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => uuid.parse(input))
   .handler(async ({ data: id, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { data, error } = await (
       await db()
     )
@@ -100,7 +99,7 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
     z.object({ id: uuid.nullable(), payload: rowSchema }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const client = await db();
 
     if (data.id) {
@@ -127,7 +126,7 @@ export const adminDeleteProducts = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.array(uuid).min(1).parse(input))
   .handler(async ({ data: ids, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { error } = await (await db()).from("admin_products").delete().in("id", ids);
     lempar(error);
   });
@@ -142,7 +141,7 @@ export const adminRestoreProducts = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data: rows, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { error } = await (await db()).from("admin_products").insert(rows);
     lempar(error);
   });
@@ -153,7 +152,7 @@ export const adminSetStatus = createServerFn({ method: "POST" })
     z.object({ ids: z.array(uuid).min(1), status: STATUS }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { error } = await (
       await db()
     )
@@ -178,7 +177,7 @@ export const adminUpdateCategory = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     // ilike supaya baris lama dengan kapitalisasi berbeda ikut tergabung.
     const { error } = await (
       await db()

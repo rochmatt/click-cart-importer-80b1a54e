@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  sendTemplateEmail,
-} from "@/lib/email-templates/send-email";
+import { sendTemplateEmail } from "@/lib/email-templates/send-email";
 import {
   isCancellationStatus,
   isRefundStatus,
@@ -30,11 +28,10 @@ export const Route = createFileRoute("/api/public/hooks/order-status-emails")({
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
-        // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+        // Klien PostgreSQL lokal yang melewati RLS, setara service_role dulu.
         const { createServiceClient } = await import("@/lib/db/client.server");
-        const supabaseAdmin = createServiceClient();
-        const { data: rows, error } = await supabaseAdmin
+        const db = createServiceClient();
+        const { data: rows, error } = await db
           .from("orders")
           .select(
             "id, order_number, status, notified_status, customer_email, shipping_name, courier, tracking_number, eta_date, destination_city, notify_status_updates, notify_level, total, payment_method, updated_at, last_update",
@@ -56,10 +53,7 @@ export const Route = createFileRoute("/api/public/hooks/order-status-emails")({
           if (!row.customer_email) continue;
 
           if (!shouldNotify(row.notify_level, row.notify_status_updates, row.status)) {
-            await supabaseAdmin
-              .from("orders")
-              .update({ notified_status: row.status })
-              .eq("id", row.id);
+            await db.from("orders").update({ notified_status: row.status }).eq("id", row.id);
             skipped += 1;
             continue;
           }
@@ -125,10 +119,7 @@ export const Route = createFileRoute("/api/public/hooks/order-status-emails")({
             continue; // leave notified_status untouched so the next run retries
           }
 
-          await supabaseAdmin
-            .from("orders")
-            .update({ notified_status: row.status })
-            .eq("id", row.id);
+          await db.from("orders").update({ notified_status: row.status }).eq("id", row.id);
         }
 
         return Response.json({ ok: true, sent, skipped });

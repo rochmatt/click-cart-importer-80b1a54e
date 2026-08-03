@@ -18,19 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { signOut } from "@/lib/auth/auth.functions";
-import { lovable } from "@/integrations/lovable";
 import { displayNameFor, initialsFor, setAuthUser, useAuth } from "@/lib/auth";
 
-import {
-  getMyProfile,
-  listMyOrders,
-  updateMyProfile,
-} from "@/lib/account.functions";
+import { getMyProfile, listMyOrders, updateMyProfile } from "@/lib/account.functions";
 
 const title = "Masuk atau Daftar Akun — PasarPilih";
 const description =
   "Masuk atau buat akun PasarPilih untuk checkout lebih cepat, menyimpan alamat & wishlist, serta melacak status pesanan secara otomatis.";
-
 
 const searchSchema = z.object({
   mode: z.enum(["signin", "register"]).optional(),
@@ -41,7 +35,6 @@ const searchSchema = z.object({
     .optional()
     .catch(undefined),
 });
-
 
 export const Route = createFileRoute("/account")({
   validateSearch: searchSchema,
@@ -130,10 +123,6 @@ function AccountPage() {
   );
 }
 
-
-
-
-
 const statusTone: Record<string, string> = {
   delivered: "bg-chart-2/15 text-chart-2",
   shipped: "bg-primary/10 text-primary",
@@ -170,8 +159,7 @@ function SignedInView() {
   }, [profileQuery.data, touched, user]);
 
   const save = useMutation({
-    mutationFn: (input: { display_name: string; phone: string }) =>
-      saveProfile({ data: input }),
+    mutationFn: (input: { display_name: string; phone: string }) => saveProfile({ data: input }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["account", "profile"] });
       setTouched(false);
@@ -272,86 +260,79 @@ function SignedInView() {
       <div className="space-y-6">
         {user && !user.emailConfirmed && user.email && <ResendVerification email={user.email} />}
 
-
         <div className="rounded-2xl border border-border bg-card p-5 sm:p-6" id="orders">
-
-        <div className="flex items-center gap-2">
-          <Package className="h-5 w-5 text-primary" />
-          <h2 className="text-base font-bold text-foreground">My orders</h2>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Orders placed with {user?.email}.
-        </p>
-
-        {ordersQuery.isLoading ? (
-          <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading orders…
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-bold text-foreground">My orders</h2>
           </div>
-        ) : ordersQuery.isError ? (
-          <p className="mt-6 text-sm text-destructive">
-            We couldn't load your orders right now. Please refresh and try again.
-          </p>
-        ) : (ordersQuery.data?.length ?? 0) === 0 ? (
-          <div className="mt-6 rounded-xl border border-dashed border-border p-6 text-center">
-            <p className="text-sm font-medium text-foreground">No orders yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Orders made with this email will appear here automatically.
+          <p className="mt-1 text-xs text-muted-foreground">Orders placed with {user?.email}.</p>
+
+          {ordersQuery.isLoading ? (
+            <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading orders…
+            </div>
+          ) : ordersQuery.isError ? (
+            <p className="mt-6 text-sm text-destructive">
+              We couldn't load your orders right now. Please refresh and try again.
             </p>
-            <Link
-              to="/"
-              className="mt-3 inline-block text-xs font-semibold text-primary hover:underline"
-            >
-              Start shopping
-            </Link>
-          </div>
-        ) : (
-          <ul className="mt-4 divide-y divide-border">
-            {ordersQuery.data!.map((order) => (
-              <li key={order.order_number} className="flex flex-wrap gap-3 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {order.product_name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {order.order_number} · Qty {order.quantity}
-                    {order.courier ? ` · ${order.courier}` : ""}
-                    {order.eta_date ? ` · ETA ${order.eta_date}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge
-                    className={`border-0 capitalize ${
-                      statusTone[order.status.toLowerCase()] ?? "bg-secondary text-foreground"
-                    }`}
-                  >
-                    {order.status}
-                  </Badge>
-                  <Link
-                    to="/orders/$orderNumber"
-                    params={{ orderNumber: order.order_number }}
-                    search={{ email: undefined }}
-                    className="text-xs font-semibold text-primary hover:underline"
-                  >
-                    Details
-                  </Link>
-                  <Link
-                    to="/track"
-                    search={{ order: order.order_number }}
-                    className="text-xs font-semibold text-primary hover:underline"
-                  >
-                    Track
-                  </Link>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+          ) : (ordersQuery.data?.length ?? 0) === 0 ? (
+            <div className="mt-6 rounded-xl border border-dashed border-border p-6 text-center">
+              <p className="text-sm font-medium text-foreground">No orders yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Orders made with this email will appear here automatically.
+              </p>
+              <Link
+                to="/"
+                className="mt-3 inline-block text-xs font-semibold text-primary hover:underline"
+              >
+                Start shopping
+              </Link>
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-border">
+              {ordersQuery.data!.map((order) => (
+                <li key={order.order_number} className="flex flex-wrap gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">{order.product_name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {order.order_number} · Qty {order.quantity}
+                      {order.courier ? ` · ${order.courier}` : ""}
+                      {order.eta_date ? ` · ETA ${order.eta_date}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge
+                      className={`border-0 capitalize ${
+                        statusTone[order.status.toLowerCase()] ?? "bg-secondary text-foreground"
+                      }`}
+                    >
+                      {order.status}
+                    </Badge>
+                    <Link
+                      to="/orders/$orderNumber"
+                      params={{ orderNumber: order.order_number }}
+                      search={{ email: undefined }}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Details
+                    </Link>
+                    <Link
+                      to="/track"
+                      search={{ order: order.order_number }}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Track
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <AddressBook />
       </div>
-
     </div>
   );
 }

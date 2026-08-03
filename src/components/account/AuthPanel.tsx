@@ -26,7 +26,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { requestPasswordReset, signIn, signUp } from "@/lib/auth/auth.functions";
 import { setAuthUser } from "@/lib/auth";
-import { lovable } from "@/integrations/lovable";
 
 type Mode = "signin" | "register";
 
@@ -35,10 +34,7 @@ const emailSchema = z.string().trim().email("Masukkan alamat email yang valid").
 const credentialsSchema = z
   .object({
     email: emailSchema,
-    password: z
-      .string()
-      .min(8, "Password minimal 8 karakter")
-      .max(72, "Password terlalu panjang"),
+    password: z.string().min(8, "Password minimal 8 karakter").max(72, "Password terlalu panjang"),
     name: z.string().trim().max(80, "Nama terlalu panjang").optional(),
     confirm: z.string().optional(),
     terms: z.boolean().optional(),
@@ -50,7 +46,11 @@ const credentialsSchema = z
       ctx.addIssue({ code: "custom", path: ["name"], message: "Nama minimal 2 karakter" });
     }
     if (value.confirm !== value.password) {
-      ctx.addIssue({ code: "custom", path: ["confirm"], message: "Konfirmasi password tidak sama" });
+      ctx.addIssue({
+        code: "custom",
+        path: ["confirm"],
+        message: "Konfirmasi password tidak sama",
+      });
     }
     if (!value.terms) {
       ctx.addIssue({
@@ -82,13 +82,7 @@ function scorePassword(password: string) {
   return { checks, score, ...meta };
 }
 
-export function AuthPanel({
-  initialMode,
-  nextPath,
-}: {
-  initialMode: Mode;
-  nextPath?: string;
-}) {
+export function AuthPanel({ initialMode, nextPath }: { initialMode: Mode; nextPath?: string }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
@@ -255,9 +249,8 @@ export function AuthPanel({
           {sentConfirmation ? (
             <div className="rounded-xl border border-border bg-secondary/60 p-4 text-sm text-muted-foreground">
               <Mail className="mb-2 h-5 w-5 text-primary" aria-hidden="true" />
-              Kami mengirim link konfirmasi ke{" "}
-              <strong className="text-foreground">{email}</strong>. Buka link tersebut untuk
-              mengaktifkan akun, lalu masuk di sini.
+              Kami mengirim link konfirmasi ke <strong className="text-foreground">{email}</strong>.
+              Buka link tersebut untuk mengaktifkan akun, lalu masuk di sini.
               <button
                 type="button"
                 onClick={() => switchMode("signin")}
@@ -324,7 +317,6 @@ export function AuthPanel({
                       Lupa password?
                     </Link>
                   )}
-
                 </div>
                 <div className="relative">
                   <Input
@@ -466,7 +458,6 @@ export function AuthPanel({
                 </div>
               )}
 
-
               {mode === "signin" ? (
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Checkbox
@@ -487,11 +478,17 @@ export function AuthPanel({
                     />
                     <span>
                       Saya setuju dengan{" "}
-                      <Link to="/terms-of-service" className="font-semibold text-primary hover:underline">
+                      <Link
+                        to="/terms-of-service"
+                        className="font-semibold text-primary hover:underline"
+                      >
                         Syarat &amp; Ketentuan
                       </Link>{" "}
                       dan{" "}
-                      <Link to="/privacy-policy" className="font-semibold text-primary hover:underline">
+                      <Link
+                        to="/privacy-policy"
+                        className="font-semibold text-primary hover:underline"
+                      >
                         Kebijakan Privasi
                       </Link>
                       .
@@ -567,8 +564,16 @@ export function AuthPanel({
 }
 
 const benefits = [
-  { icon: Package, title: "Riwayat pesanan", text: "Semua transaksi tersimpan rapi di satu tempat." },
-  { icon: Truck, title: "Lacak otomatis", text: "Status pengiriman diperbarui tanpa input manual." },
+  {
+    icon: Package,
+    title: "Riwayat pesanan",
+    text: "Semua transaksi tersimpan rapi di satu tempat.",
+  },
+  {
+    icon: Truck,
+    title: "Lacak otomatis",
+    text: "Status pengiriman diperbarui tanpa input manual.",
+  },
   { icon: Heart, title: "Wishlist tersimpan", text: "Simpan produk favorit dan beli kapan saja." },
   { icon: BadgeCheck, title: "Checkout lebih cepat", text: "Alamat & kontak terisi otomatis." },
 ];

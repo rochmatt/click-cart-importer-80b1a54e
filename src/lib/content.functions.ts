@@ -47,8 +47,8 @@ export const fetchAnnouncements = createServerFn({ method: "GET" }).handler(asyn
 export const adminListAnnouncements = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
-    const { data, error } = await context.supabase
+    await assertAdmin(context.db, context.userId);
+    const { data, error } = await context.db
       .from("announcements")
       .select(ANNOUNCEMENT_COLUMNS)
       .order("priority", { ascending: false })
@@ -83,7 +83,7 @@ export const adminSaveAnnouncement = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid().nullable(), payload: announcementSchema }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     // Klien service: policy tulis lokal bergantung has_role(auth.uid()),
     // sedangkan identitas RLS belum disetel untuk klien ini. assertAdmin di
     // atas sudah menjadi gerbangnya.
@@ -99,7 +99,7 @@ export const adminDeleteAnnouncement = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.string().uuid().parse(input))
   .handler(async ({ data: id, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { error } = await (await db()).from("announcements").delete().eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -115,11 +115,11 @@ export const fetchSalesEvents = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.number().int().min(1).max(400).parse(input))
   .handler(async ({ data: days, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const since = new Date();
     since.setDate(since.getDate() - (days - 1));
 
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("sales_events")
       .select("event_date, marketplace, product_ref, views, clicks, orders, revenue")
       .gte("event_date", since.toISOString().slice(0, 10))

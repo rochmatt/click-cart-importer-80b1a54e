@@ -19,7 +19,6 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
-import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -30,8 +29,6 @@ import { Route as TrackRouteImport } from './routes/track'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as WishlistRouteImport } from './routes/wishlist'
-import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
@@ -43,12 +40,9 @@ import { Route as CategoryIndexRouteImport } from './routes/category.index'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as OrdersOrderNumberRouteImport } from './routes/orders.$orderNumber'
 import { Route as ProductsIdRouteImport } from './routes/products.$id'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
 import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
 import { Route as ApiAdminUploadRouteImport } from './routes/api/admin/upload'
-import { Route as ApiAuthSendEmailRouteImport } from './routes/api/auth/send-email'
 import { Route as ApiPublicHooksOrderStatusEmailsRouteImport } from './routes/api/public/hooks/order-status-emails'
 
 const IndexRoute = IndexRouteImport.update({
@@ -101,11 +95,6 @@ const HowItWorksRoute = HowItWorksRouteImport.update({
   path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
   id: '/privacy-policy',
   path: '/privacy-policy',
@@ -156,18 +145,6 @@ const WishlistRoute = WishlistRouteImport.update({
   path: '/wishlist',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -223,17 +200,6 @@ const ProductsIdRoute = ProductsIdRouteImport.update({
   path: '/products/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AdminProductsIndexRoute = AdminProductsIndexRouteImport.update({
   id: '/products/',
   path: '/products/',
@@ -247,11 +213,6 @@ const AdminProductsIdRoute = AdminProductsIdRouteImport.update({
 const ApiAdminUploadRoute = ApiAdminUploadRouteImport.update({
   id: '/api/admin/upload',
   path: '/api/admin/upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAuthSendEmailRoute = ApiAuthSendEmailRouteImport.update({
-  id: '/api/auth/send-email',
-  path: '/api/auth/send-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicHooksOrderStatusEmailsRoute =
@@ -272,7 +233,6 @@ export interface FileRoutesByFullPath {
   '/faq': typeof FaqRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
-  '/mcp': typeof McpRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -283,8 +243,6 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/wishlist': typeof WishlistRoute
-  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
-  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -296,11 +254,8 @@ export interface FileRoutesByFullPath {
   '/products/$id': typeof ProductsIdRoute
   '/admin/': typeof AdminIndexRoute
   '/category/': typeof CategoryIndexRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
-  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/api/admin/upload': typeof ApiAdminUploadRoute
-  '/api/auth/send-email': typeof ApiAuthSendEmailRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
 }
@@ -314,7 +269,6 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
-  '/mcp': typeof McpRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -325,8 +279,6 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/wishlist': typeof WishlistRoute
-  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
-  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -338,11 +290,8 @@ export interface FileRoutesByTo {
   '/products/$id': typeof ProductsIdRoute
   '/admin': typeof AdminIndexRoute
   '/category': typeof CategoryIndexRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
-  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/api/admin/upload': typeof ApiAdminUploadRoute
-  '/api/auth/send-email': typeof ApiAuthSendEmailRoute
   '/admin/products': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
 }
@@ -358,7 +307,6 @@ export interface FileRoutesById {
   '/faq': typeof FaqRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
-  '/mcp': typeof McpRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -369,8 +317,6 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/wishlist': typeof WishlistRoute
-  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
-  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/categories': typeof AdminCategoriesRoute
@@ -382,11 +328,8 @@ export interface FileRoutesById {
   '/products/$id': typeof ProductsIdRoute
   '/admin/': typeof AdminIndexRoute
   '/category/': typeof CategoryIndexRoute
-  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
-  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/api/admin/upload': typeof ApiAdminUploadRoute
-  '/api/auth/send-email': typeof ApiAuthSendEmailRoute
   '/admin/products/': typeof AdminProductsIndexRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
 }
@@ -403,7 +346,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/forgot-password'
     | '/how-it-works'
-    | '/mcp'
     | '/privacy-policy'
     | '/profile'
     | '/reset-password'
@@ -414,8 +356,6 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-email'
     | '/wishlist'
-    | '/.mcp/list-tools'
-    | '/.well-known/oauth-protected-resource'
     | '/admin/analytics'
     | '/admin/announcements'
     | '/admin/categories'
@@ -427,11 +367,8 @@ export interface FileRouteTypes {
     | '/products/$id'
     | '/admin/'
     | '/category/'
-    | '/.lovable/oauth/consent'
-    | '/.mcp/invoke-tool/$tool'
     | '/admin/products/$id'
     | '/api/admin/upload'
-    | '/api/auth/send-email'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
   fileRoutesByTo: FileRoutesByTo
@@ -445,7 +382,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/forgot-password'
     | '/how-it-works'
-    | '/mcp'
     | '/privacy-policy'
     | '/profile'
     | '/reset-password'
@@ -456,8 +392,6 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-email'
     | '/wishlist'
-    | '/.mcp/list-tools'
-    | '/.well-known/oauth-protected-resource'
     | '/admin/analytics'
     | '/admin/announcements'
     | '/admin/categories'
@@ -469,11 +403,8 @@ export interface FileRouteTypes {
     | '/products/$id'
     | '/admin'
     | '/category'
-    | '/.lovable/oauth/consent'
-    | '/.mcp/invoke-tool/$tool'
     | '/admin/products/$id'
     | '/api/admin/upload'
-    | '/api/auth/send-email'
     | '/admin/products'
     | '/api/public/hooks/order-status-emails'
   id:
@@ -488,7 +419,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/forgot-password'
     | '/how-it-works'
-    | '/mcp'
     | '/privacy-policy'
     | '/profile'
     | '/reset-password'
@@ -499,8 +429,6 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-email'
     | '/wishlist'
-    | '/.mcp/list-tools'
-    | '/.well-known/oauth-protected-resource'
     | '/admin/analytics'
     | '/admin/announcements'
     | '/admin/categories'
@@ -512,11 +440,8 @@ export interface FileRouteTypes {
     | '/products/$id'
     | '/admin/'
     | '/category/'
-    | '/.lovable/oauth/consent'
-    | '/.mcp/invoke-tool/$tool'
     | '/admin/products/$id'
     | '/api/admin/upload'
-    | '/api/auth/send-email'
     | '/admin/products/'
     | '/api/public/hooks/order-status-emails'
   fileRoutesById: FileRoutesById
@@ -532,7 +457,6 @@ export interface RootRouteChildren {
   FaqRoute: typeof FaqRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HowItWorksRoute: typeof HowItWorksRoute
-  McpRoute: typeof McpRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -543,16 +467,11 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   WishlistRoute: typeof WishlistRoute
-  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
-  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   CategorySlugRoute: typeof CategorySlugRoute
   OrdersOrderNumberRoute: typeof OrdersOrderNumberRoute
   ProductsIdRoute: typeof ProductsIdRoute
   CategoryIndexRoute: typeof CategoryIndexRoute
-  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
-  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminUploadRoute: typeof ApiAdminUploadRoute
-  ApiAuthSendEmailRoute: typeof ApiAuthSendEmailRoute
   ApiPublicHooksOrderStatusEmailsRoute: typeof ApiPublicHooksOrderStatusEmailsRoute
 }
 
@@ -628,13 +547,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/privacy-policy': {
       id: '/privacy-policy'
       path: '/privacy-policy'
@@ -703,20 +615,6 @@ declare module '@tanstack/react-router' {
       path: '/wishlist'
       fullPath: '/wishlist'
       preLoaderRoute: typeof WishlistRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.mcp/list-tools': {
-      id: '/.mcp/list-tools'
-      path: '/.mcp/list-tools'
-      fullPath: '/.mcp/list-tools'
-      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -796,20 +694,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/products/': {
       id: '/admin/products/'
       path: '/products'
@@ -829,13 +713,6 @@ declare module '@tanstack/react-router' {
       path: '/api/admin/upload'
       fullPath: '/api/admin/upload'
       preLoaderRoute: typeof ApiAdminUploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/auth/send-email': {
-      id: '/api/auth/send-email'
-      path: '/api/auth/send-email'
-      fullPath: '/api/auth/send-email'
-      preLoaderRoute: typeof ApiAuthSendEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/order-status-emails': {
@@ -885,7 +762,6 @@ const rootRouteChildren: RootRouteChildren = {
   FaqRoute: FaqRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HowItWorksRoute: HowItWorksRoute,
-  McpRoute: McpRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
@@ -896,17 +772,11 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   WishlistRoute: WishlistRoute,
-  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
-  Char91DotwellKnownChar93OauthProtectedResourceRoute:
-    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   CategorySlugRoute: CategorySlugRoute,
   OrdersOrderNumberRoute: OrdersOrderNumberRoute,
   ProductsIdRoute: ProductsIdRoute,
   CategoryIndexRoute: CategoryIndexRoute,
-  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
-  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminUploadRoute: ApiAdminUploadRoute,
-  ApiAuthSendEmailRoute: ApiAuthSendEmailRoute,
   ApiPublicHooksOrderStatusEmailsRoute: ApiPublicHooksOrderStatusEmailsRoute,
 }
 export const routeTree = rootRouteImport

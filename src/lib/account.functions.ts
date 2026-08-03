@@ -30,7 +30,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<AccountProfile> => {
     const email = (context.claims.email as string | undefined) ?? "";
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("profiles")
       .select("display_name, phone, avatar_url, preferences")
       .eq("id", context.userId)
@@ -58,7 +58,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => profileSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("profiles").upsert(
+    const { error } = await context.db.from("profiles").upsert(
       {
         id: context.userId,
         display_name: data.display_name,
@@ -74,7 +74,7 @@ export const updateMyPreferences = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => preferencesSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { error } = await context.db
       .from("profiles")
       .upsert({ id: context.userId, preferences: data }, { onConflict: "id" });
     if (error) throw error;
@@ -87,11 +87,10 @@ export const listMyOrders = createServerFn({ method: "GET" })
     const email = (context.claims.email as string | undefined)?.trim().toLowerCase();
     if (!email) return [];
 
-    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
-    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    // Klien PostgreSQL lokal yang melewati RLS, setara service_role dulu.
     const { createServiceClient } = await import("@/lib/db/client.server");
-    const supabaseAdmin = createServiceClient();
-    const { data, error } = await supabaseAdmin
+    const db = createServiceClient();
+    const { data, error } = await db
       .from("orders")
       .select(
         "order_number, product_name, quantity, status, courier, tracking_number, eta_date, created_at",
@@ -142,11 +141,10 @@ export const getMyOrder = createServerFn({ method: "GET" })
     const email = (context.claims.email as string | undefined)?.trim().toLowerCase();
     if (!email) return null;
 
-    // Nama variabel dipertahankan supaya pemanggilan di bawahnya tidak
-    // berubah; yang berganti hanya tujuannya, ke PostgreSQL lokal.
+    // Klien PostgreSQL lokal yang melewati RLS, setara service_role dulu.
     const { createServiceClient } = await import("@/lib/db/client.server");
-    const supabaseAdmin = createServiceClient();
-    const { data: row, error } = await supabaseAdmin
+    const db = createServiceClient();
+    const { data: row, error } = await db
       .from("orders")
       .select(
         "order_number, product_name, quantity, status, courier, tracking_number, destination_city, eta_date, last_update, created_at, customer_email",
@@ -157,8 +155,8 @@ export const getMyOrder = createServerFn({ method: "GET" })
     if (!row) return null;
     if (row.customer_email.trim().toLowerCase() !== email) return null;
 
-    // admin_products dibaca dari PostgreSQL lokal — sumber yang sama dengan
-    // storefront dan panel admin. Baris pesanannya sendiri masih dari Supabase.
+    // Dicocokkan ke admin_products untuk mengambil harga dan gambar: baris
+    // orders hanya menyimpan nama produk, bukan referensi ke produknya.
     const { createUserClient } = await import("@/lib/db/client.server");
     const { data: product } = await createUserClient(null)
       .from("admin_products")

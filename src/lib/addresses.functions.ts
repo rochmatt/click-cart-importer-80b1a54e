@@ -45,7 +45,7 @@ export type AddressInput = z.infer<typeof addressSchema>;
 export const listMyAddresses = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<Address[]> => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("user_addresses")
       .select(COLUMNS)
       .eq("user_id", context.userId)
@@ -64,14 +64,14 @@ export const saveMyAddress = createServerFn({ method: "POST" })
 
     let savedId = id ?? null;
     if (id) {
-      const { error } = await context.supabase
+      const { error } = await context.db
         .from("user_addresses")
         .update(row)
         .eq("id", id)
         .eq("user_id", context.userId);
       if (error) throw error;
     } else {
-      const { data: inserted, error } = await context.supabase
+      const { data: inserted, error } = await context.db
         .from("user_addresses")
         .insert(row)
         .select("id")
@@ -81,7 +81,7 @@ export const saveMyAddress = createServerFn({ method: "POST" })
     }
 
     if (fields.is_default && savedId) {
-      const { error } = await context.supabase
+      const { error } = await context.db
         .from("user_addresses")
         .update({ is_default: false })
         .eq("user_id", context.userId)
@@ -96,7 +96,7 @@ export const deleteMyAddress = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { error } = await context.db
       .from("user_addresses")
       .delete()
       .eq("id", data.id)
@@ -109,14 +109,14 @@ export const setDefaultAddress = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const clear = await context.supabase
+    const clear = await context.db
       .from("user_addresses")
       .update({ is_default: false })
       .eq("user_id", context.userId)
       .neq("id", data.id);
     if (clear.error) throw clear.error;
 
-    const { error } = await context.supabase
+    const { error } = await context.db
       .from("user_addresses")
       .update({ is_default: true })
       .eq("id", data.id)

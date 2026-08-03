@@ -4,21 +4,14 @@ import { requireAuth } from "@/lib/auth/middleware.server";
 
 // Keranjang, wishlist, dan pemeriksaan peran admin — dipindahkan dari browser.
 //
-// KENAPA SEKARANG, SEBELUM AUTH DIGANTI: ketiganya sebelumnya menembak Supabase
-// LANGSUNG dari browser memakai sesi di localStorage, tanpa pernah menyentuh
-// server Node. Begitu autentikasi diganti, sesi Supabase di browser tidak ada
-// lagi dan ketiganya mati seketika — keranjang kosong, wishlist hilang, panel
-// admin menolak semua orang. Memindahkannya lebih dulu menyisakan SATU titik
-// yang perlu diubah saat auth berganti, bukan tersebar di komponen.
+// Ketiganya dulu menembak Supabase LANGSUNG dari browser memakai sesi di
+// localStorage, tanpa pernah menyentuh server Node. Dipindahkan lebih dulu
+// sebelum autentikasi diganti: kalau tidak, ketiganya mati seketika begitu
+// sesi Supabase hilang dari browser.
 //
-// Datanya SENGAJA masih di Supabase. cart_items dan wishlist_items lokal punya
-// foreign key ke auth.users yang masih kosong, jadi memindahkan datanya
-// sekarang akan ditolak. Yang berpindah adalah tempat pemanggilan, bukan
-// sumber datanya.
-//
-// Efek samping yang menguntungkan: user_id tidak lagi dikirim browser melainkan
-// diturunkan server dari JWT, sehingga tidak ada lagi jalur di mana klien
-// menyebutkan identitasnya sendiri.
+// user_id diturunkan server dari sesi, bukan dikirim klien. Sebelumnya klien
+// menyebutkan identitasnya sendiri di setiap insert dan hanya RLS yang
+// menahannya.
 
 const itemSchema = z.object({
   id: z.string().min(1).max(200),
@@ -45,7 +38,7 @@ export interface CartRow extends WishlistRow {
 export const getMyCart = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<CartRow[]> => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("cart_items")
       .select("product_ref, title, image, price, qty")
       .eq("user_id", context.userId);
@@ -62,9 +55,9 @@ export const replaceMyCart = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => itemsSchema.parse(input))
   .handler(async ({ data: items, context }) => {
-    await context.supabase.from("cart_items").delete().eq("user_id", context.userId);
+    await context.db.from("cart_items").delete().eq("user_id", context.userId);
     if (items.length) {
-      const { error } = await context.supabase.from("cart_items").insert(
+      const { error } = await context.db.from("cart_items").insert(
         items.map((i) => ({
           user_id: context.userId,
           product_ref: i.id,
@@ -82,7 +75,7 @@ export const replaceMyCart = createServerFn({ method: "POST" })
 export const getMyWishlist = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<WishlistRow[]> => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("wishlist_items")
       .select("product_ref, title, image, price")
       .eq("user_id", context.userId);
@@ -94,9 +87,9 @@ export const replaceMyWishlist = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => itemsSchema.parse(input))
   .handler(async ({ data: items, context }) => {
-    await context.supabase.from("wishlist_items").delete().eq("user_id", context.userId);
+    await context.db.from("wishlist_items").delete().eq("user_id", context.userId);
     if (items.length) {
-      const { error } = await context.supabase.from("wishlist_items").insert(
+      const { error } = await context.db.from("wishlist_items").insert(
         items.map((i) => ({
           user_id: context.userId,
           product_ref: i.id,
@@ -118,7 +111,7 @@ export const replaceMyWishlist = createServerFn({ method: "POST" })
 export const amIAdmin = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<boolean> => {
-    const { data, error } = await context.supabase
+    const { data, error } = await context.db
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId)

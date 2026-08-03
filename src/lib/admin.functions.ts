@@ -59,8 +59,8 @@ export interface StaffMember {
 export const listAdminOrders = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<AdminOrder[]> => {
-    await assertAdmin(context.supabase, context.userId);
-    const { data, error } = await context.supabase
+    await assertAdmin(context.db, context.userId);
+    const { data, error } = await context.db
       .from("orders")
       .select(
         "id, order_number, product_name, quantity, status, courier, tracking_number, destination_city, eta_date, last_update, customer_email, shipping_name, total, payment_method, created_at",
@@ -84,9 +84,9 @@ export const updateAdminOrder = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => orderUpdateSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     const { id, ...fields } = data;
-    const { error } = await context.supabase
+    const { error } = await context.db
       .from("orders")
       .update({
         status: fields.status,
@@ -103,7 +103,7 @@ export const updateAdminOrder = createServerFn({ method: "POST" })
 export const listAdminCustomers = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<AdminCustomer[]> => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     // Email dibaca dari auth.users lokal, bukan API admin Supabase — setelah
     // cutover API itu mengembalikan kosong dan seluruh email menghilang tanpa
     // error apa pun.
@@ -111,14 +111,14 @@ export const listAdminCustomers = createServerFn({ method: "GET" })
 
     const [{ data: profiles, error }, users, { data: orders }, { data: roles }] = await Promise.all(
       [
-        context.supabase
+        context.db
           .from("profiles")
           .select("id, display_name, phone, created_at")
           .order("created_at", { ascending: false })
           .limit(200),
         listUsers(200),
-        context.supabase.from("orders").select("customer_email, total, created_at").limit(1000),
-        context.supabase.from("user_roles").select("user_id, role"),
+        context.db.from("orders").select("customer_email, total, created_at").limit(1000),
+        context.db.from("user_roles").select("user_id, role"),
       ],
     );
     if (error) throw error;
@@ -159,14 +159,9 @@ export const listAdminCustomers = createServerFn({ method: "GET" })
     });
   });
 
-// MIGRASI FASE 2 — store_settings dilayani PostgreSQL lokal.
-//
-// Tabel ini dipilih lebih dulu karena satu-satunya yang TIDAK pernah disentuh
-// dari browser: seluruh aksesnya lewat kedua server function di berkas ini.
-// admin_products, announcements, dan sales_events juga dibaca kode browser,
-// jadi memindahkan sisi servernya saja akan menghasilkan dua sumber data
-// berbeda untuk baris yang sama — admin mengedit di browser (Supabase)
-// sementara checkout membaca lokal.
+// store_settings adalah tabel pertama yang dipindahkan ke PostgreSQL lokal,
+// karena satu-satunya yang tidak pernah disentuh kode browser — seluruh
+// aksesnya lewat kedua server function di berkas ini.
 export const getStoreSettings = createServerFn({ method: "GET" }).handler(
   async (): Promise<StoreSettings | null> => {
     const { createServiceClient } = await import("@/lib/db/client.server");
@@ -203,9 +198,8 @@ export const updateStoreSettings = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => settingsSchema.parse(input))
   .handler(async ({ data, context }) => {
-    // Otorisasi tetap diperiksa lewat Supabase karena auth belum dipindahkan
-    // (itu Fase 3). assertAdmin melempar sebelum baris di bawah tersentuh.
-    await assertAdmin(context.supabase, context.userId);
+    // assertAdmin melempar 403 sebelum satu baris pun tersentuh.
+    await assertAdmin(context.db, context.userId);
 
     // Penulisan memakai klien service yang melewati RLS. Policy tulis
     // store_settings lokal bergantung pada has_role(auth.uid(), 'admin'),
@@ -225,12 +219,12 @@ export const updateStoreSettings = createServerFn({ method: "POST" })
 export const listStaff = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<StaffMember[]> => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     // Nama tampilan datang dari profiles, bukan dari metadata pengguna: sistem
     // auth ini tidak menyimpan metadata bebas seperti Supabase.
     const { listUsers } = await import("@/lib/auth/directory.server");
     const [{ data: roles, error }, users] = await Promise.all([
-      context.supabase.from("user_roles").select("user_id, role"),
+      context.db.from("user_roles").select("user_id, role"),
       listUsers(200),
     ]);
     if (error) throw error;
@@ -255,7 +249,7 @@ export const grantRole = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => grantSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ ok: boolean; message: string }> => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     // Pencarian langsung ke auth.users lokal, bukan mengunduh 1000 pengguna
     // lalu menyaringnya di memori seperti versi Supabase sebelumnya.
     const { findUserByEmail } = await import("@/lib/auth/directory.server");
@@ -263,7 +257,7 @@ export const grantRole = createServerFn({ method: "POST" })
     if (!target) {
       return { ok: false, message: "No account found with that email address." };
     }
-    const { error } = await context.supabase
+    const { error } = await context.db
       .from("user_roles")
       .insert({ user_id: target.id, role: data.role });
     if (error && !error.message.includes("duplicate")) throw error;
@@ -278,11 +272,11 @@ export const revokeRole = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }): Promise<{ ok: boolean; message: string }> => {
-    await assertAdmin(context.supabase, context.userId);
+    await assertAdmin(context.db, context.userId);
     if (data.user_id === context.userId && data.role === "admin") {
       return { ok: false, message: "You cannot remove your own admin role." };
     }
-    const { error } = await context.supabase
+    const { error } = await context.db
       .from("user_roles")
       .delete()
       .eq("user_id", data.user_id)

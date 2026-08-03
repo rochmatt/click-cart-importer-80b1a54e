@@ -49,16 +49,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
  *
  * KENAPA PERLU: nginx menerminasi TLS lalu meneruskan ke Node lewat HTTP biasa,
  * jadi request.url selalu berskema http. Apa pun yang menurunkan URL publik dari
- * request.url ikut salah — yang paling merugikan adalah metadata OAuth milik
- * integrasi MCP, yang mengumumkan resource sebagai "http://inipilihanku.com/mcp".
- * Resource indicator OAuth dicocokkan sebagai string persis, jadi ketidakcocokan
- * skema membuat klien MCP gagal 401.
- *
- * Route MCP di-generate oleh @lovable.dev/mcp-js dan hanya menyetel
- * trustForwardedHost; opsi trustForwardedProto ada di implementasi library tapi
- * TIDAK diekspos lewat tipe publik maupun opsi plugin. Diperbaiki di sini supaya
- * keempat berkas generated itu tidak perlu diambil alih — kalau diambil alih,
- * plugin berhenti meregenerasinya dan pembaruan mcp-js tidak akan pernah masuk.
+ * request.url ikut salah — redirect, URL kanonik, dan tautan absolut akan menunjuk
+ * http://, yang memicu satu lompatan tidak terenkripsi sebelum HSTS membetulkannya.
+ * Diperbaiki sekali di sini, sebelum request menyentuh handler mana pun.
  *
  * KENAPA DIGERBANGI ENV: memercayai X-Forwarded-Proto hanya aman kalau proxy di
  * depan MENIMPA header itu, bukan meneruskan apa pun dari klien. nginx di server

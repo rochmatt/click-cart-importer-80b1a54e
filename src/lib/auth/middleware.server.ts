@@ -1,19 +1,13 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getSessionUser } from "./session.server";
 
-// Pengganti requireSupabaseAuth. Identitas datang dari cookie sesi, bukan JWT.
+// Middleware autentikasi. Identitas datang dari cookie sesi httpOnly.
 //
-// BENTUK CONTEXT-NYA SENGAJA DIPERTAHANKAN: { supabase, userId, claims }. Enam
-// berkas server function membacanya, dan `supabase` di sini adalah klien
-// kompatibel yang menghadap PostgreSQL lokal — bukan Supabase. Namanya
-// dipertahankan supaya delapan pemanggilan context.supabase.from() dan
-// assertAdmin() tidak perlu disentuh sama sekali saat cutover.
-//
-// Nama itu memang menyesatkan setelah cutover. Mengganti namanya menjadi
-// sesuatu seperti `db` lebih jujur, tapi itu menyebar perubahan ke enam berkas
-// pada saat yang sama dengan pergantian autentikasi — dua hal yang gagal
-// bersamaan jadi sulit dibedakan. Penggantian nama dilakukan terpisah setelah
-// cutover terbukti stabil.
+// Saat cutover, kunci context ini sengaja masih bernama `supabase` supaya
+// puluhan pemanggilan di berkas lain tidak perlu disentuh bersamaan dengan
+// pergantian mesin autentikasi — dua hal yang gagal serentak sulit dibedakan
+// penyebabnya. Setelah cutover terbukti stabil, namanya diganti menjadi `db`,
+// yang jujur menyebut apa adanya: klien PostgreSQL lokal.
 //
 // TIDAK ADA middleware klien pendamping. attachSupabaseAuth dulu melampirkan
 // header Authorization pada setiap pemanggilan; cookie httpOnly terkirim
@@ -36,7 +30,7 @@ export const requireAuth = createMiddleware({ type: "function" }).server(async (
 
   return next({
     context: {
-      supabase: createUserClient(user.id),
+      db: createUserClient(user.id),
       userId: user.id,
       claims: { sub: user.id, email: user.email } as Record<string, unknown>,
     },
@@ -56,7 +50,7 @@ export const optionalAuth = createMiddleware({ type: "function" }).server(async 
 
   return next({
     context: {
-      supabase: createUserClient(user?.id ?? null),
+      db: createUserClient(user?.id ?? null),
       userId: user?.id ?? null,
       claims: user ? ({ sub: user.id, email: user.email } as Record<string, unknown>) : null,
     },

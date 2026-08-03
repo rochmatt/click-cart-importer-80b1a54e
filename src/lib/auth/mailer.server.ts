@@ -4,9 +4,6 @@
 // tujuan tautannya. Versi Supabase mengarah ke .../auth/v1/verify dengan
 // token_hash; di sini tautannya menunjuk halaman aplikasi sendiri dan token
 // diverifikasi oleh auth.tokens.
-//
-// Endpoint /api/auth/send-email tetap ada dan tidak diubah: ia melayani hook
-// Supabase yang masih aktif sampai cutover. Setelah cutover ia bisa dihapus.
 
 import * as React from "react";
 import { render } from "@react-email/render";
