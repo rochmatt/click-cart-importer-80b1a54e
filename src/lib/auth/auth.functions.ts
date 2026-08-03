@@ -143,16 +143,97 @@ export const verifyEmail = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Hasil kirim-ulang verifikasi.
+ *
+ * ok SELALU true. Yang membedakan hanya angka cooldown, dan angka itu berasal
+ * dari alamat email sebagai teks — bukan dari ada-tidaknya akun. Jawaban yang
+ * membedakan keduanya akan mengubah tombol ini menjadi alat pemeriksa akun.
+ */
+export interface HasilKirimUlang {
+  ok: true;
+  /**
+   * Apakah PEMBATAS mengizinkan percobaan ini — bukan apakah email benar-benar
+   * terkirim. Kiriman nyata bergantung pada ada-tidaknya akun yang belum
+   * terverifikasi, dan itu tidak pernah dilaporkan ke klien.
+   */
+  diizinkan: boolean;
+  sisaDetik: number;
+  terpakai: number;
+  maks: number;
+}
+
+/**
+ * DUA LAPIS PEMBATAS, dengan tugas berbeda.
+ *
+ * Lapis email (di database) adalah yang menjaga KOTAK MASUK korban. Ia sengaja
+ * TIDAK memakai IP, karena itulah yang membuatnya konsisten lintas perangkat —
+ * permintaan yang sama dari ponsel dan laptop berbagi kuota yang sama.
+ *
+ * Harganya jujur: siapa pun yang tahu alamat email seseorang bisa menghabiskan
+ * jatah kirim-ulangnya selama satu jam. Itu diterima secara sadar, karena
+ * ancaman yang lebih besar adalah membanjiri kotak masuk korban dengan puluhan
+ * email verifikasi — dan pembatas ber-IP tidak menahannya sama sekali, penyerang
+ * tinggal berganti IP. Korban yang terkena tetap bisa memakai tautan yang sudah
+ * dikirim sebelumnya.
+ *
+ * Lapis IP (di memori) menjaga hal yang berbeda: satu sumber tidak bisa
+ * menghabiskan jatah BANYAK alamat sekaligus. Batasnya longgar supaya satu
+ * kantor atau rumah dengan IP bersama tidak ikut terkena.
+ */
 export const resendVerification = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ email: emailSchema }).parse(input))
-  .handler(async ({ data }): Promise<HasilAuth> => {
-    const batas = batasi(kunciLaju("verifikasi-ulang", data.email), 3, 60 * 60);
-    if (batas.diizinkan) {
+  .handler(async ({ data }): Promise<HasilKirimUlang> => {
+    const { catatKirim, statusKirim } = await import("./email-throttle.server");
+
+    const perIp = batasi(kunciLaju("verifikasi-ulang-ip", ""), 20, 60 * 60);
+    if (!perIp.diizinkan) {
+      // Tidak dicatat sebagai percobaan pada alamat itu — tidak ada email yang
+      // dikirim, jadi kuota alamatnya tidak pantas berkurang. Yang dilaporkan
+      // adalah tunggu terlama di antara kedua lapis, supaya hitungan mundur di
+      // layar tidak berakhir sebelum tombolnya benar-benar bisa dipakai.
+      const status = await statusKirim("verifikasi", data.email);
+      return {
+        ok: true,
+        diizinkan: false,
+        sisaDetik: Math.max(perIp.sisaDetik, status.sisaDetik),
+        terpakai: status.terpakai,
+        maks: status.maks,
+      };
+    }
+
+    const hasil = await catatKirim("verifikasi", data.email);
+    if (hasil.diizinkan) {
       const token = await tokenVerifikasiUlang(data.email);
       if (token) await kirimEmailVerifikasi(data.email, token);
     }
-    // Sama seperti reset: jawaban seragam apa pun keadaannya.
-    return { ok: true };
+
+    return {
+      ok: true,
+      diizinkan: hasil.diizinkan,
+      sisaDetik: hasil.sisaDetik,
+      terpakai: hasil.terpakai,
+      maks: hasil.maks,
+    };
+  });
+
+/**
+ * Status cooldown untuk ditampilkan saat halaman dibuka, tanpa mencatat apa pun.
+ *
+ * Menerima alamat sembarang karena halaman /verify-email dipakai orang yang
+ * belum masuk. Aman: hitungannya berasal dari alamat sebagai teks dan naik
+ * untuk email tak dikenal juga, jadi tidak membedakan akun yang ada dari yang
+ * tidak.
+ *
+ * POST meski hanya membaca. Server function GET menaruh masukannya di URL, dan
+ * URL tercatat utuh di log akses nginx — alamat email setiap pengunjung halaman
+ * verifikasi akan tersimpan di sana tanpa alasan.
+ */
+export const verificationCooldown = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ email: emailSchema }).parse(input))
+  .handler(async ({ data }) => {
+    const { statusKirim } = await import("./email-throttle.server");
+    return statusKirim("verifikasi", data.email);
   });
 
 export const changePassword = createServerFn({ method: "POST" })

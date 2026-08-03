@@ -1,126 +1,114 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, ShieldAlert } from "lucide-react";
-import { resendVerification } from "@/lib/auth/auth.functions";
+import { resendVerification, verificationCooldown } from "@/lib/auth/auth.functions";
 
-/** Cooldown per attempt (seconds): 60s, 2m, 5m, 15m, then 30m. */
-const COOLDOWN_STEPS = [60, 120, 300, 900, 1800];
-/** Max sends allowed inside the rolling window below. */
-const MAX_SENDS_PER_WINDOW = 5;
-const WINDOW_MS = 60 * 60 * 1000; // 1 hour
+// SUMBER KEBENARAN ADA DI SERVER.
+//
+// Versi sebelumnya menyimpan cooldown dan jumlah kiriman di localStorage. Itu
+// membuat batasnya berbeda di tiap perangkat dan hilang begitu data browser
+// dibersihkan — sementara server memakai angka lain lagi (3/jam, tanpa
+// cooldown) di memori proses yang hilang tiap restart. Akibatnya tombol ini
+// bisa mengatakan "2 kiriman tersisa" padahal server sudah berhenti mengirim,
+// dan tetap menampilkan notifikasi berhasil.
+//
+// Sekarang komponen ini tidak memutuskan apa pun. Ia menampilkan angka yang
+// diberikan server dan menghitung mundur secara lokal di antara dua jawaban.
 
-interface ThrottleState {
-  attempts: number[]; // epoch ms of recent sends
-  nextAllowedAt: number; // epoch ms
+interface Kuota {
+  /**
+   * Kapan tombol boleh dipakai lagi, sebagai waktu absolut — bukan sisa detik
+   * yang dikurangi tiap interval. Browser memperlambat timer pada tab yang
+   * tidak aktif, sehingga hitungan mundur berbasis pengurangan akan tertinggal
+   * dan menampilkan angka yang lebih besar dari kenyataan.
+   */
+  bolehPada: number;
+  terpakai: number;
+  maks: number;
 }
 
-const EMPTY: ThrottleState = { attempts: [], nextAllowedAt: 0 };
+/** Hanya dipakai saat status gagal dibaca; angka sebenarnya selalu dari server. */
+const MAKS_BAWAAN = 5;
 
-function storageKey(email: string) {
-  return `pp:resend-verification:${email.toLowerCase()}`;
-}
-
-function readState(email: string): ThrottleState {
-  if (typeof window === "undefined") return EMPTY;
-  try {
-    const raw = window.localStorage.getItem(storageKey(email));
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as ThrottleState;
-    const cutoff = Date.now() - WINDOW_MS;
-    return {
-      attempts: (parsed.attempts ?? []).filter((t) => t > cutoff),
-      nextAllowedAt: parsed.nextAllowedAt ?? 0,
-    };
-  } catch {
-    return EMPTY;
+function formatSisa(detik: number): string {
+  if (detik >= 60) {
+    const menit = Math.floor(detik / 60);
+    const sisa = detik % 60;
+    return sisa ? `${menit}m ${sisa}s` : `${menit}m`;
   }
-}
-
-function writeState(email: string, state: ThrottleState) {
-  try {
-    window.localStorage.setItem(storageKey(email), JSON.stringify(state));
-  } catch {
-    /* storage unavailable — in-memory throttle still applies */
-  }
-}
-
-function formatRemaining(seconds: number): string {
-  if (seconds >= 60) {
-    const mins = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-    return rest ? `${mins}m ${rest}s` : `${mins}m`;
-  }
-  return `${seconds}s`;
+  return `${detik}s`;
 }
 
 export function ResendVerification({ email }: { email: string }) {
-  const [state, setState] = useState<ThrottleState>(EMPTY);
-  const [remaining, setRemaining] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const inFlight = useRef(false);
+  const [kuota, setKuota] = useState<Kuota | null>(null);
+  const [sisa, setSisa] = useState(0);
+  const [sibuk, setSibuk] = useState(false);
+  const berjalan = useRef(false);
 
+  // Status awal diambil dari server, bukan dari penyimpanan browser — inilah
+  // yang membuat cooldown ikut terbawa saat pengguna berpindah perangkat.
   useEffect(() => {
-    setState(readState(email));
+    let batal = false;
+    if (!email) return;
+    void verificationCooldown({ data: { email } })
+      .then((s) => {
+        if (!batal) setKuota({ bolehPada: Date.now() + s.sisaDetik * 1000, ...s });
+      })
+      .catch(() => {
+        // Gagal membaca status bukan alasan menyembunyikan tombol. Kalau
+        // ternyata masih dalam cooldown, server yang akan menolaknya.
+        if (!batal) setKuota({ bolehPada: 0, terpakai: 0, maks: MAKS_BAWAAN });
+      });
+    return () => {
+      batal = true;
+    };
   }, [email]);
 
-  // Tick down the visible cooldown once per second.
+  // Hitung mundur hanya untuk tampilan; penegakannya tetap di server.
   useEffect(() => {
-    function tick() {
-      setRemaining(Math.max(0, Math.ceil((state.nextAllowedAt - Date.now()) / 1000)));
-    }
-    tick();
-    const id = window.setInterval(tick, 1000);
+    if (!kuota) return;
+    const hitung = () => setSisa(Math.max(0, Math.ceil((kuota.bolehPada - Date.now()) / 1000)));
+    hitung();
+    const id = window.setInterval(hitung, 1000);
     return () => window.clearInterval(id);
-  }, [state.nextAllowedAt]);
+  }, [kuota]);
 
-  const recentAttempts = state.attempts.filter((t) => t > Date.now() - WINDOW_MS).length;
-  const windowExhausted = recentAttempts >= MAX_SENDS_PER_WINDOW;
-  const blocked = busy || remaining > 0 || windowExhausted;
+  const kuotaHabis = kuota ? kuota.terpakai >= kuota.maks && sisa > 0 : false;
+  const terkunci = sibuk || sisa > 0 || kuota === null;
 
-  const onResend = useCallback(async () => {
-    if (!email || inFlight.current) return;
-
-    const current = readState(email);
-    const now = Date.now();
-    const attemptsInWindow = current.attempts.filter((t) => t > now - WINDOW_MS);
-
-    if (current.nextAllowedAt > now) {
-      const wait = Math.ceil((current.nextAllowedAt - now) / 1000);
-      setState({ ...current, attempts: attemptsInWindow });
-      toast.error(`Please wait ${formatRemaining(wait)} before requesting another email.`);
-      return;
-    }
-    if (attemptsInWindow.length >= MAX_SENDS_PER_WINDOW) {
-      setState({ ...current, attempts: attemptsInWindow });
-      toast.error("Too many verification emails requested. Try again in about an hour.");
-      return;
-    }
-
-    inFlight.current = true;
-    setBusy(true);
+  const kirimUlang = useCallback(async () => {
+    if (!email || berjalan.current) return;
+    berjalan.current = true;
+    setSibuk(true);
     try {
-      // Server sengaja selalu menjawab ok — termasuk saat akun tidak ada,
-      // sudah terverifikasi, atau pembatas laju menolak — supaya tombol ini
-      // tidak bisa dipakai memeriksa keberadaan akun. Pembatas di sisi klien
-      // di bawah tetap ada demi kenyamanan, bukan sebagai penegakan.
-      await resendVerification({ data: { email } });
+      const hasil = await resendVerification({ data: { email } });
+      setKuota({
+        bolehPada: Date.now() + hasil.sisaDetik * 1000,
+        terpakai: hasil.terpakai,
+        maks: hasil.maks,
+      });
 
-      const step = COOLDOWN_STEPS[Math.min(attemptsInWindow.length, COOLDOWN_STEPS.length - 1)]!;
-      const next: ThrottleState = {
-        attempts: [...attemptsInWindow, Date.now()],
-        nextAllowedAt: Date.now() + step * 1000,
-      };
-      setState(next);
-      writeState(email, next);
-
-      toast.success(
-        `Verification email sent. You can request another in ${formatRemaining(step)}.`,
-      );
+      // diizinkan berarti PEMBATAS meloloskan percobaan ini — bukan bahwa email
+      // pasti terkirim. Apakah akunnya ada dan belum terverifikasi sengaja tidak
+      // pernah dilaporkan, jadi pesan sukses ditulis netral.
+      if (hasil.diizinkan) {
+        toast.success(
+          `Kalau alamat itu terdaftar dan belum terverifikasi, emailnya sudah dikirim. Bisa minta lagi dalam ${formatSisa(hasil.sisaDetik)}.`,
+        );
+      } else if (hasil.terpakai >= hasil.maks) {
+        toast.error(`Batas kirim ulang tercapai. Coba lagi dalam ${formatSisa(hasil.sisaDetik)}.`);
+      } else {
+        toast.error(`Tunggu ${formatSisa(hasil.sisaDetik)} sebelum meminta email lagi.`);
+      }
+    } catch {
+      toast.error("Gagal mengirim. Coba lagi sebentar lagi.");
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      berjalan.current = false;
+      setSibuk(false);
     }
   }, [email]);
+
+  const tersisa = kuota ? Math.max(0, kuota.maks - kuota.terpakai) : 0;
 
   return (
     <div className="rounded-2xl border border-chart-4/40 bg-chart-4/10 p-4">
@@ -129,27 +117,28 @@ export function ResendVerification({ email }: { email: string }) {
         Confirm your email address
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        We sent a verification link to {email}. Confirm it to secure your account and receive
-        order updates.
+        We sent a verification link to {email}. Confirm it to secure your account and receive order
+        updates.
       </p>
       <button
         type="button"
-        onClick={() => void onResend()}
-        disabled={blocked}
+        onClick={() => void kirimUlang()}
+        disabled={terkunci}
         aria-live="polite"
         className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition-colors hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
       >
-        {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-        {windowExhausted && remaining === 0
-          ? "Resend limit reached — try again later"
-          : remaining > 0
-            ? `Resend available in ${formatRemaining(remaining)}`
-            : "Resend verification email"}
+        {sibuk && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        {kuota === null
+          ? "Memeriksa…"
+          : kuotaHabis
+            ? `Batas tercapai — coba lagi dalam ${formatSisa(sisa)}`
+            : sisa > 0
+              ? `Kirim ulang tersedia dalam ${formatSisa(sisa)}`
+              : "Kirim ulang email verifikasi"}
       </button>
-      {recentAttempts > 0 && !windowExhausted && (
+      {kuota !== null && tersisa > 0 && tersisa < kuota.maks && (
         <p className="mt-1 text-[11px] text-muted-foreground">
-          {MAX_SENDS_PER_WINDOW - recentAttempts} resend
-          {MAX_SENDS_PER_WINDOW - recentAttempts === 1 ? "" : "s"} left this hour.
+          Sisa {tersisa} kiriman dalam satu jam ke depan. Batas ini berlaku untuk semua perangkat.
         </p>
       )}
     </div>
