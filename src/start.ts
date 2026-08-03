@@ -2,11 +2,9 @@ import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/r
 
 import { renderErrorPage } from "./lib/error-page";
 
-const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
-  // Internal /lovable/* routes authenticate themselves — never wrap or redirect them.
-  if (new URL(request.url).pathname.startsWith("/lovable/")) {
-    return next();
-  }
+const errorMiddleware = createMiddleware().server(async ({ next }) => {
+  // Dulu ada pengecualian untuk rute /lovable/*, yang mengautentikasi dirinya
+  // sendiri dan tidak boleh dibungkus. Rute-rute itu hilang bersama Supabase.
   try {
     return await next();
   } catch (error) {

@@ -61,6 +61,14 @@ export async function sendTemplateEmail(
     text,
     replyTo: options.replyTo,
     idempotencyKey: options.idempotencyKey,
+    // Nama template dipakai apa adanya sebagai jenis email di Log Email: ia
+    // sudah membedakan order-shipped dari order-refunded, dan menambah pemetaan
+    // sendiri hanya akan jadi daftar kedua yang harus ikut diperbarui.
+    kind: templateName,
+    orderNumber:
+      typeof templateData === "object" && templateData !== null
+        ? ((templateData as Record<string, unknown>).orderNumber as string | undefined)
+        : undefined,
   });
 
   return { sent: true };

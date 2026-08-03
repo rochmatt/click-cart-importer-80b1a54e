@@ -18,6 +18,8 @@ import {
   LogOut,
   UserCog,
   Menu,
+  History,
+  MailCheck,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -38,6 +40,8 @@ const NAV = [
   { label: "Customers", to: "/admin/customers", icon: Users, exact: false },
   { label: "Announcements", to: "/admin/announcements", icon: Megaphone, exact: false },
   { label: "Analytics", to: "/admin/analytics", icon: BarChart3, exact: false },
+  { label: "Audit Log", to: "/admin/audit", icon: History, exact: false },
+  { label: "Log Email", to: "/admin/email-logs", icon: MailCheck, exact: false },
   { label: "Settings", to: "/admin/settings", icon: Settings, exact: false },
 ] as const;
 

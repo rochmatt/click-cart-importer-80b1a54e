@@ -43,6 +43,48 @@ export interface SendEmailInput {
   idempotencyKey?: string;
   /** Override pengirim; default dari EMAIL_FROM. */
   from?: string;
+  /** Label jenis email untuk halaman Log Email, mis. "verifikasi", "pesanan". */
+  kind?: string;
+  /** Nomor pesanan terkait, kalau ada — supaya log bisa dicari per pesanan. */
+  orderNumber?: string;
+}
+
+/**
+ * Mencatat satu percobaan kirim ke email_logs.
+ *
+ * Tidak pernah melempar, dengan alasan yang sama seperti audit log: kegagalan
+ * mencatat tidak boleh menggagalkan pengirimannya. Yang dicatat adalah alamat,
+ * subjek, dan status — BUKAN isi email, karena isinya sering memuat token reset
+ * password dan tautan verifikasi sekali pakai. Menyimpannya berarti membuat
+ * tabel yang bisa dibaca admin menjadi jalan pintas untuk mengambil alih akun
+ * pengguna mana pun.
+ */
+async function catatEmail(baris: {
+  recipient: string;
+  subject: string;
+  kind: string;
+  orderNumber?: string;
+  status: "terkirim" | "gagal";
+  providerId?: string;
+  errorMessage?: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const { error } = await createServiceClient()
+      .from("email_logs")
+      .insert({
+        recipient: baris.recipient,
+        subject: baris.subject,
+        kind: baris.kind,
+        order_number: baris.orderNumber ?? null,
+        status: baris.status,
+        provider_id: baris.providerId ?? null,
+        error_message: baris.errorMessage ? baris.errorMessage.slice(0, 500) : null,
+      });
+    if (error) console.error("email log gagal ditulis", error);
+  } catch (error) {
+    console.error("email log gagal ditulis", error);
+  }
 }
 
 /**
@@ -72,22 +114,50 @@ export async function sendEmail(input: SendEmailInput): Promise<{ id: string }> 
     headers["Idempotency-Key"] = input.idempotencyKey;
   }
 
-  const response = await fetch(endpoint(), {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      from: input.from ?? emailFrom(),
-      to: Array.isArray(input.to) ? input.to : [input.to],
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-      reply_to: input.replyTo,
-    }),
-  });
+  const penerima = (Array.isArray(input.to) ? input.to : [input.to]).join(", ");
+  const dasar = {
+    recipient: penerima,
+    subject: input.subject,
+    kind: input.kind ?? "lain",
+    orderNumber: input.orderNumber,
+  };
 
-  if (!response.ok) {
-    throw new EmailSendError(response.status, await response.text());
+  let response: Response;
+  try {
+    response = await fetch(endpoint(), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        from: input.from ?? emailFrom(),
+        to: Array.isArray(input.to) ? input.to : [input.to],
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        reply_to: input.replyTo,
+      }),
+    });
+  } catch (error) {
+    // Jaringan putus sebelum Resend menjawab. Dicatat juga — kalau tidak,
+    // gangguan koneksi akan terlihat identik dengan "email tidak pernah dikirim".
+    await catatEmail({
+      ...dasar,
+      status: "gagal",
+      errorMessage: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 
-  return (await response.json()) as { id: string };
+  if (!response.ok) {
+    const body = await response.text();
+    await catatEmail({
+      ...dasar,
+      status: "gagal",
+      errorMessage: `HTTP ${response.status}: ${body}`,
+    });
+    throw new EmailSendError(response.status, body);
+  }
+
+  const hasil = (await response.json()) as { id: string };
+  await catatEmail({ ...dasar, status: "terkirim", providerId: hasil.id });
+  return hasil;
 }

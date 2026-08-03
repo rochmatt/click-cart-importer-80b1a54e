@@ -29,10 +29,15 @@ function tautan(path: string, token: string): string {
   return url.toString();
 }
 
-async function kirim(to: string, subject: string, element: React.ReactElement): Promise<void> {
+async function kirim(
+  to: string,
+  subject: string,
+  element: React.ReactElement,
+  kind: string,
+): Promise<void> {
   const html = await render(element);
   const text = await render(element, { plainText: true });
-  await sendEmail({ to, subject, html, text });
+  await sendEmail({ to, subject, html, text, kind });
 }
 
 export async function kirimEmailVerifikasi(to: string, token: string): Promise<void> {
@@ -45,6 +50,7 @@ export async function kirimEmailVerifikasi(to: string, token: string): Promise<v
       recipient: to,
       confirmationUrl: tautan("/verify-email", token),
     }),
+    "verifikasi-email",
   );
 }
 
@@ -56,5 +62,6 @@ export async function kirimEmailReset(to: string, token: string): Promise<void> 
       siteName: SITE_NAME,
       confirmationUrl: tautan("/reset-password", token),
     }),
+    "reset-password",
   );
 }
