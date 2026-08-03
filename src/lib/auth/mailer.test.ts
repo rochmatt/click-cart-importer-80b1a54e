@@ -24,6 +24,23 @@ const OWNER = { rls: false } as const;
 const EMAIL = "uji.mailer@contoh.id";
 const PW = "password-uji-yang-panjang";
 
+/**
+ * Membersihkan SEMUA jejak tes ini, bukan hanya auth.users.
+ *
+ * email_logs ikut dibersihkan karena sendEmail sekarang mencatat setiap
+ * kiriman. Tanpa ini, setiap kali tes dijalankan tabel itu bertambah beberapa
+ * baris — dan tabel itulah yang ditampilkan halaman admin "Log Email", jadi
+ * data uji akan tampil sebagai riwayat pengiriman sungguhan.
+ *
+ * Pelajaran yang lebih umum: menambah pencatatan pada fungsi yang dipakai tes
+ * berarti menambah tabel yang harus ikut dibersihkan tes tersebut.
+ */
+async function bersihkan(): Promise<void> {
+  await run("DELETE FROM auth.users WHERE lower(email) LIKE 'uji.mailer%'", [], OWNER);
+  await run("DELETE FROM email_logs WHERE lower(recipient) LIKE 'uji.mailer%'", [], OWNER);
+  await run("DELETE FROM auth.email_throttle WHERE email LIKE 'uji.mailer%'", [], OWNER);
+}
+
 interface Tertangkap {
   to: string[];
   subject: string;
@@ -74,13 +91,29 @@ describe.skipIf(!CONFIGURED)("email autentikasi ujung-ke-ujung", () => {
     process.env.SITE_URL = envAsli.site ?? "";
     if (!envAsli.endpoint) delete process.env.RESEND_ENDPOINT;
     await new Promise<void>((r) => server.close(() => r()));
-    await run("DELETE FROM auth.users WHERE lower(email) LIKE 'uji.mailer%'", [], OWNER);
+    await bersihkan();
+
+    // Penjaga: membuktikan pembersihan benar-benar menghabiskan jejak tes ini.
+    // Tanpa pemeriksaan ini, tabel baru yang lupa ikut dibersihkan akan diam-diam
+    // menumpuk baris uji setiap kali suite dijalankan — persis yang terjadi pada
+    // email_logs, dan baru ketahuan setelah 24 baris uji muncul di panel admin.
+    const sisa = await run<{ tabel: string; n: number }>(
+      `SELECT 'email_logs' AS tabel, count(*)::int AS n FROM email_logs WHERE lower(recipient) LIKE 'uji.mailer%'
+       UNION ALL
+       SELECT 'auth.users', count(*)::int FROM auth.users WHERE lower(email) LIKE 'uji.mailer%'
+       UNION ALL
+       SELECT 'email_throttle', count(*)::int FROM auth.email_throttle WHERE email LIKE 'uji.mailer%'`,
+      [],
+      OWNER,
+    );
+    expect(sisa.filter((r) => r.n > 0)).toEqual([]);
+
     await closePools();
   });
 
   beforeEach(async () => {
     tertangkap = [];
-    await run("DELETE FROM auth.users WHERE lower(email) LIKE 'uji.mailer%'", [], OWNER);
+    await bersihkan();
   });
 
   it("email verifikasi terkirim dengan tautan yang bisa dipakai", async () => {
