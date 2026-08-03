@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyWishlist, replaceMyWishlist } from "@/lib/basket.functions";
 
 export interface WishlistItem {
   id: string;
@@ -47,18 +48,9 @@ async function pushToServer() {
   const uid = userId;
   const snapshot = items;
   try {
-    await supabase.from("wishlist_items").delete().eq("user_id", uid);
-    if (snapshot.length) {
-      await supabase.from("wishlist_items").insert(
-        snapshot.map((i) => ({
-          user_id: uid,
-          product_ref: i.id,
-          title: i.title,
-          image: i.image,
-          price: i.price,
-        })),
-      );
-    }
+    // user_id tidak lagi dikirim dari sini — server menurunkannya dari JWT.
+    void uid;
+    await replaceMyWishlist({ data: snapshot });
   } catch {
     /* transient — local storage keeps the list */
   }
@@ -90,11 +82,12 @@ export function useWishlist() {
 async function adoptServerWishlist(uid: string) {
   hydrate();
   userId = uid;
-  const { data, error } = await supabase
-    .from("wishlist_items")
-    .select("product_ref, title, image, price")
-    .eq("user_id", uid);
-  if (error) return;
+  let data;
+  try {
+    data = await getMyWishlist();
+  } catch {
+    return;
+  }
 
   const merged = new Map<string, WishlistItem>();
   for (const row of data ?? []) {

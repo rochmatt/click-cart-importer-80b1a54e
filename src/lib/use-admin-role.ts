@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { amIAdmin } from "@/lib/basket.functions";
 import { useAuth } from "@/lib/auth";
 
 export interface AdminRoleState {
@@ -29,15 +29,14 @@ export function useAdminRole(): AdminRoleState {
     let cancelled = false;
     setState((prev) => ({ ...prev, loading: true }));
 
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        setState({ loading: false, isAdmin: Boolean(data) });
+    // Peran ditentukan server dari JWT, bukan dibaca browser dari user_roles.
+    // Kegagalan diperlakukan sebagai bukan-admin: gagal ke arah menolak akses.
+    amIAdmin()
+      .then((isAdmin) => {
+        if (!cancelled) setState({ loading: false, isAdmin });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ loading: false, isAdmin: false });
       });
 
     return () => {

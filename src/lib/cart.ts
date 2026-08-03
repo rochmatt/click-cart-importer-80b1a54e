@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyCart, replaceMyCart } from "@/lib/basket.functions";
 
 export interface CartItem {
   id: string;
@@ -49,19 +50,9 @@ async function pushToServer() {
   const uid = userId;
   const snapshot = items;
   try {
-    await supabase.from("cart_items").delete().eq("user_id", uid);
-    if (snapshot.length) {
-      await supabase.from("cart_items").insert(
-        snapshot.map((i) => ({
-          user_id: uid,
-          product_ref: i.id,
-          title: i.title,
-          image: i.image,
-          price: i.price,
-          qty: i.qty,
-        })),
-      );
-    }
+    // user_id tidak lagi dikirim dari sini — server menurunkannya dari JWT.
+    void uid;
+    await replaceMyCart({ data: snapshot });
   } catch {
     /* offline / transient — local storage remains the source of truth */
   }
@@ -94,11 +85,12 @@ export function useCart() {
 async function adoptServerCart(uid: string) {
   hydrate();
   userId = uid;
-  const { data, error } = await supabase
-    .from("cart_items")
-    .select("product_ref, title, image, price, qty")
-    .eq("user_id", uid);
-  if (error) return;
+  let data;
+  try {
+    data = await getMyCart();
+  } catch {
+    return;
+  }
 
   const merged = new Map<string, CartItem>();
   for (const row of data ?? []) {
@@ -112,7 +104,10 @@ async function adoptServerCart(uid: string) {
   }
   for (const local of items) {
     const existing = merged.get(local.id);
-    merged.set(local.id, existing ? { ...existing, qty: Math.max(existing.qty, local.qty) } : local);
+    merged.set(
+      local.id,
+      existing ? { ...existing, qty: Math.max(existing.qty, local.qty) } : local,
+    );
   }
   setItems([...merged.values()]);
 }
