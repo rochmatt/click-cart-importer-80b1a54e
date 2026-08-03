@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import { sendTemplateEmail } from "@/lib/email-templates/send-email";
 import {
@@ -12,19 +13,44 @@ import {
 } from "@/lib/order-emails.server";
 
 /**
+ * Membandingkan rahasia hook tanpa membocorkan lewat waktu eksekusi.
+ *
+ * GAGAL TERTUTUP: kalau ORDER_HOOK_SECRET belum disetel, fungsi ini menolak
+ * semua permintaan. Perbandingan biasa akan menyamakan dua nilai kosong dan
+ * membuka endpoint ini ke internet begitu variabelnya lupa dipasang.
+ *
+ * Panjang yang berbeda dijawab lebih dulu karena timingSafeEqual melempar bila
+ * panjang buffer tidak sama. Panjang rahasia bukan informasi yang berguna bagi
+ * penyerang; isinya yang dilindungi.
+ */
+function hookSecretCocok(request: Request): boolean {
+  const diharapkan = process.env.ORDER_HOOK_SECRET;
+  if (!diharapkan) {
+    console.error("ORDER_HOOK_SECRET belum disetel — hook status pesanan menolak semua permintaan");
+    return false;
+  }
+  const diberikan =
+    request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
+    request.headers.get("x-hook-secret") ||
+    "";
+  const a = Buffer.from(diberikan);
+  const b = Buffer.from(diharapkan);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/**
  * Reliable status-change trigger: scans orders whose current status differs from
  * the last status we emailed about and sends one update per change.
- * Called on a schedule (pg_cron) — safe to call repeatedly, sends are deduped
- * by status and idempotency key.
+ *
+ * Dipanggil terjadwal — dulu oleh pg_cron milik Supabase, kini oleh cron server
+ * ini sendiri. Aman dipanggil berulang: pengiriman didedup oleh notified_status
+ * dan idempotency key, jadi jadwal yang rapat hanya memboroskan satu query.
  */
 export const Route = createFileRoute("/api/public/hooks/order-status-emails")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey =
-          request.headers.get("apikey") ||
-          request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-        if (!apiKey || apiKey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
+        if (!hookSecretCocok(request)) {
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
 
