@@ -142,7 +142,12 @@ function ProductDetailPage() {
         tautan tipis di dalam konten, bukan header tersendiri yang menumpuk.
       */}
       <AnnouncementBar />
-      <Header query={headerQuery} onQueryChange={setHeaderQuery} showCategoryNav={false} />
+      <Header
+        query={headerQuery}
+        onQueryChange={setHeaderQuery}
+        showCategoryNav={false}
+        sticky={false}
+      />
 
       {/*
         Lebar desktop sengaja DITAHAN. Sebelumnya max-w-7xl dengan dua kolom

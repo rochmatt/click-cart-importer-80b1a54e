@@ -27,6 +27,14 @@ interface HeaderProps {
    * produk, dan baris menjelajah kategori hanya menambah kebisingan.
    */
   showCategoryNav?: boolean;
+  /**
+   * Header menempel di atas saat digulir. Default true — begitu di beranda dan
+   * halaman jelajah, tempat pencarian sebaiknya selalu terjangkau. Halaman
+   * detail produk mematikannya supaya header ikut tergulir naik dan konten
+   * mendapat ruang penuh; bar beli sticky di bawah sudah menjaga aksi utama
+   * tetap dekat, jadi header di atas tidak perlu menempel.
+   */
+  sticky?: boolean;
 }
 
 const trending = ["iphone 15", "sepatu lari", "skincare", "kopi susu", "mechanical keyboard"];
@@ -37,7 +45,12 @@ const navLinks = [
   { label: "Vouchers", icon: Ticket },
 ];
 
-export function Header({ query, onQueryChange, showCategoryNav = true }: HeaderProps) {
+export function Header({
+  query,
+  onQueryChange,
+  showCategoryNav = true,
+  sticky = true,
+}: HeaderProps) {
   const navigate = useNavigate();
   useCartSync();
   useWishlistSync();
@@ -50,7 +63,11 @@ export function Header({ query, onQueryChange, showCategoryNav = true }: HeaderP
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-header-muted/20 bg-header-background/90 text-header-foreground backdrop-blur-md">
+      <header
+        className={`z-50 w-full border-b border-header-muted/20 bg-header-background/90 text-header-foreground backdrop-blur-md ${
+          sticky ? "sticky top-0" : ""
+        }`}
+      >
         <div className="hidden border-b border-header-muted/15 lg:block">
           <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-xs text-header-muted sm:px-6 lg:px-8">
             <div className="flex items-center gap-4">
