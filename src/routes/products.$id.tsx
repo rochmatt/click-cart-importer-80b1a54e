@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Check, Heart, ShoppingCart, Star, Zap } from "lucide-react";
 import { products } from "@/data/products";
@@ -9,6 +9,9 @@ import { ProductDescription } from "@/components/store/ProductDescription";
 import { RelatedProducts } from "@/components/store/RelatedProducts";
 import { ProductAssurance } from "@/components/store/ProductAssurance";
 import { ProductStickyActions } from "@/components/store/ProductStickyActions";
+import { AnnouncementBar } from "@/components/store/AnnouncementBar";
+import { Header } from "@/components/store/Header";
+import { Footer } from "@/components/store/Footer";
 
 import { useProductImages } from "@/lib/cover-overrides";
 import { addToCart } from "@/lib/cart";
@@ -97,6 +100,7 @@ function ProductDetailPage() {
   const images = useProductImages(product?.id ?? id, product?.images ?? []);
   const wishlisted = isWishlisted(useWishlist(), id);
   const { added, tandai } = useAddedFeedback();
+  const [headerQuery, setHeaderQuery] = useState("");
 
   // Satu jalur tambah-ke-keranjang dipakai tombol desktop DAN bar sticky, supaya
   // keduanya menampilkan konfirmasi yang sama dan logikanya tidak menyimpang.
@@ -129,17 +133,16 @@ function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to home
-          </Link>
-        </div>
-      </header>
+      {/*
+        Header dan Footer situs yang sama dengan halaman lain, supaya navigasi,
+        pencarian, dan keranjang tetap terjangkau dari halaman produk. Bar
+        kategori sekunder (Semua Kategori, Flash Sale, Official Store, Vouchers)
+        sengaja dimatikan lewat showCategoryNav={false}: di halaman satu produk,
+        baris menjelajah kategori itu hanya kebisingan. "Back to home" pindah ke
+        tautan tipis di dalam konten, bukan header tersendiri yang menumpuk.
+      */}
+      <AnnouncementBar />
+      <Header query={headerQuery} onQueryChange={setHeaderQuery} showCategoryNav={false} />
 
       {/*
         Lebar desktop sengaja DITAHAN. Sebelumnya max-w-7xl dengan dua kolom
@@ -149,7 +152,15 @@ function ProductDetailPage() {
         mendapat sisa ruang alih-alih dipaksa selebar gambar. Di bawah lg tetap
         satu kolom (gambar penuh), jadi tampilan ponsel tidak terpengaruh.
       */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <Link
+          to="/"
+          className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to home
+        </Link>
+
         <div className="grid gap-8 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:gap-10">
           <ProductImageCarousel images={images} alt={product.title} />
 
@@ -239,6 +250,8 @@ function ProductDetailPage() {
 
         <RelatedProducts currentId={product.id} />
       </main>
+
+      <Footer />
       <ProductStickyActions productId={product.id} onAddToCart={tambahKeKeranjang} added={added} />
     </div>
   );

@@ -1,4 +1,15 @@
-import { Heart, Search, ShoppingBag, Truck, BadgeCheck, Ticket, Zap, HelpCircle, Store, LayoutGrid } from "lucide-react";
+import {
+  Heart,
+  Search,
+  ShoppingBag,
+  Truck,
+  BadgeCheck,
+  Ticket,
+  Zap,
+  HelpCircle,
+  Store,
+  LayoutGrid,
+} from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CartMenu } from "@/components/store/CartMenu";
 import { AccountMenu } from "@/components/store/AccountMenu";
@@ -10,6 +21,12 @@ import { useWishlist, useWishlistSync } from "@/lib/wishlist";
 interface HeaderProps {
   query: string;
   onQueryChange: (value: string) => void;
+  /**
+   * Bar kategori sekunder (Semua Kategori, Flash Sale, Official Store, Vouchers).
+   * Default tampil. Halaman detail produk mematikannya: di sana fokusnya satu
+   * produk, dan baris menjelajah kategori hanya menambah kebisingan.
+   */
+  showCategoryNav?: boolean;
 }
 
 const trending = ["iphone 15", "sepatu lari", "skincare", "kopi susu", "mechanical keyboard"];
@@ -20,12 +37,11 @@ const navLinks = [
   { label: "Vouchers", icon: Ticket },
 ];
 
-export function Header({ query, onQueryChange }: HeaderProps) {
+export function Header({ query, onQueryChange, showCategoryNav = true }: HeaderProps) {
   const navigate = useNavigate();
   useCartSync();
   useWishlistSync();
   const wishlist = useWishlist();
-
 
   const submitSearch = () => {
     const q = query.trim();
@@ -46,13 +62,19 @@ export function Header({ query, onQueryChange }: HeaderProps) {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/track" className="inline-flex items-center gap-1.5 transition-colors hover:text-primary">
+              <Link
+                to="/track"
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-primary"
+              >
                 <Truck className="h-3.5 w-3.5" /> Track order
               </Link>
               <Link to="/unsubscribe" className="transition-colors hover:text-primary">
                 Email settings
               </Link>
-              <Link to="/track" className="inline-flex items-center gap-1.5 transition-colors hover:text-primary">
+              <Link
+                to="/track"
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-primary"
+              >
                 <HelpCircle className="h-3.5 w-3.5" /> Help
               </Link>
             </div>
@@ -60,7 +82,6 @@ export function Header({ query, onQueryChange }: HeaderProps) {
         </div>
 
         <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:gap-6 sm:px-6 lg:px-8">
-
           <a href="/" className="flex min-w-0 shrink-0 items-center gap-2 text-header-foreground">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
               <ShoppingBag className="h-5 w-5" />
@@ -107,7 +128,6 @@ export function Header({ query, onQueryChange }: HeaderProps) {
             </div>
           </form>
 
-
           <nav className="flex shrink-0 items-center gap-1">
             <Link
               to="/wishlist"
@@ -128,33 +148,35 @@ export function Header({ query, onQueryChange }: HeaderProps) {
         </div>
       </header>
 
-      <nav className="hidden border-b border-header-muted/15 bg-header-background lg:block">
-        <div className="mx-auto flex h-10 max-w-7xl items-center gap-5 px-4 text-sm sm:px-6 lg:px-8">
-          <CategoryMegaMenu onQueryChange={onQueryChange} />
-          <Link
-            to="/categories"
-            className="inline-flex items-center gap-1.5 font-medium text-header-foreground transition-colors hover:text-primary"
-          >
-            <LayoutGrid className="h-4 w-4 text-primary" />
-            Semua Kategori
-          </Link>
-          <span className="h-4 w-px bg-header-muted/20" />
-          {navLinks.map(({ label, icon: Icon }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => onQueryChange("")}
+      {showCategoryNav && (
+        <nav className="hidden border-b border-header-muted/15 bg-header-background lg:block">
+          <div className="mx-auto flex h-10 max-w-7xl items-center gap-5 px-4 text-sm sm:px-6 lg:px-8">
+            <CategoryMegaMenu onQueryChange={onQueryChange} />
+            <Link
+              to="/categories"
               className="inline-flex items-center gap-1.5 font-medium text-header-foreground transition-colors hover:text-primary"
             >
-              <Icon className="h-4 w-4 text-primary" />
-              {label}
-            </button>
-          ))}
-          <span className="ml-auto text-xs text-header-muted">
-            Compare prices across marketplaces
-          </span>
-        </div>
-      </nav>
+              <LayoutGrid className="h-4 w-4 text-primary" />
+              Semua Kategori
+            </Link>
+            <span className="h-4 w-px bg-header-muted/20" />
+            {navLinks.map(({ label, icon: Icon }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => onQueryChange("")}
+                className="inline-flex items-center gap-1.5 font-medium text-header-foreground transition-colors hover:text-primary"
+              >
+                <Icon className="h-4 w-4 text-primary" />
+                {label}
+              </button>
+            ))}
+            <span className="ml-auto text-xs text-header-muted">
+              Compare prices across marketplaces
+            </span>
+          </div>
+        </nav>
+      )}
     </>
   );
 }
