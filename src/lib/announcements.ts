@@ -57,7 +57,14 @@ export function kindMeta(kind: string) {
 const SELECT =
   "id, title, message, kind, link_url, link_label, show_as_banner, priority, is_active, starts_at, ends_at, created_at";
 
-/** Active, in-window announcements. RLS already filters schedule + active flag. */
+/**
+ * Pengumuman aktif yang sedang dalam jendela jadwalnya.
+ *
+ * Penyaringan jadwal + status aktif dilakukan server di fetchAnnouncements
+ * (lihat pengumumanTampil di announcement-window.ts) — BUKAN oleh RLS. Policy
+ * announce_read hanya membuka baca publik tanpa menyaring jadwal; klien tinggal
+ * meneruskan hasil yang sudah tersaring.
+ */
 export async function fetchLiveAnnouncements(): Promise<Announcement[]> {
   return (await fetchAnnouncements()) as unknown as Announcement[];
 }

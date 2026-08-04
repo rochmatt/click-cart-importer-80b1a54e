@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { assertAdmin } from "@/lib/admin-access.server";
 import { requireAuth } from "@/lib/auth/middleware.server";
+import { pengumumanTampil } from "@/lib/announcement-window";
 
 // Pengumuman dan data analitik penjualan — dipindahkan dari browser.
 //
@@ -35,12 +36,16 @@ export const fetchAnnouncements = createServerFn({ method: "GET" }).handler(asyn
   if (error) throw new Error(error.message);
 
   const sekarang = Date.now();
-  return (data ?? []).filter((a: Record<string, unknown>) => {
-    if (!a.is_active) return false;
-    if (a.starts_at && new Date(a.starts_at as string).getTime() > sekarang) return false;
-    if (a.ends_at && new Date(a.ends_at as string).getTime() < sekarang) return false;
-    return true;
-  });
+  return (data ?? []).filter((a: Record<string, unknown>) =>
+    pengumumanTampil(
+      {
+        is_active: Boolean(a.is_active),
+        starts_at: a.starts_at as string | null | undefined,
+        ends_at: a.ends_at as string | null | undefined,
+      },
+      sekarang,
+    ),
+  );
 });
 
 /** Semua pengumuman, termasuk yang tidak aktif — untuk panel admin. */
