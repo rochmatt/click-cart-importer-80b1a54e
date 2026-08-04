@@ -141,13 +141,21 @@ function ProductDetailPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+      {/*
+        Lebar desktop sengaja DITAHAN. Sebelumnya max-w-7xl dengan dua kolom
+        sama lebar membuat gambar persegi tumbuh sampai ~584px dan mendominasi
+        layar — terasa "kebesaran/zoom". Kini container max-w-6xl, dan kolom
+        gambar dipatok maksimum 440px lewat grid asimetris sehingga info produk
+        mendapat sisa ruang alih-alih dipaksa selebar gambar. Di bawah lg tetap
+        satu kolom (gambar penuh), jadi tampilan ponsel tidak terpengaruh.
+      */}
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:gap-10">
           <ProductImageCarousel images={images} alt={product.title} />
 
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-5">
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
                 {product.title}
               </h1>
               <div className="mt-3 flex items-center gap-2 text-sm sm:text-base">
@@ -160,11 +168,11 @@ function ProductDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-baseline gap-3">
-              <span className="text-3xl font-extrabold tracking-tight text-foreground">
+              <span className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
                 {product.price}
               </span>
               {product.oldPrice && (
-                <span className="text-lg text-muted-foreground line-through">
+                <span className="text-base text-muted-foreground line-through">
                   {product.oldPrice}
                 </span>
               )}
