@@ -84,7 +84,7 @@ export function ProductCard({
                 e.stopPropagation();
               }}
               aria-label={`Add ${product.title} to wishlist`}
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             >
               <Heart className="h-4 w-4" />
             </button>
@@ -115,7 +115,7 @@ export function ProductCard({
               }}
               aria-label={`Quick view ${product.title}`}
               data-testid="product-cta"
-              className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              className="mt-auto inline-flex h-9 w-full min-w-0 items-center justify-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             >
               <Eye className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">Quick view</span>

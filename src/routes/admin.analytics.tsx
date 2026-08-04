@@ -1,4 +1,6 @@
 import { createFileRoute, stripSearchParams, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
 import {
@@ -20,12 +22,14 @@ import {
   MARKETPLACES,
   formatCompactIDR,
   formatIDR,
+  productTitle,
   summarize,
   useSalesAnalytics,
   type DrillSelection,
   type RangeDays,
 } from "@/lib/sales-analytics";
 import { AnalyticsDrilldown } from "@/components/admin/AnalyticsDrilldown";
+import { adminTopViewedProducts } from "@/lib/analytics.functions";
 
 const analyticsSearchSchema = z.object({
   days: fallback(z.number(), 30).default(30),
@@ -47,8 +51,7 @@ function searchToSelection(s: AnalyticsSearch): DrillSelection | null {
 
 function selectionToSearch(sel: DrillSelection | null) {
   if (!sel) return { drill: "", date: "", from: "", to: "", channel: "" };
-  if (sel.type === "date")
-    return { drill: "date", date: sel.value, from: "", to: "", channel: "" };
+  if (sel.type === "date") return { drill: "date", date: sel.value, from: "", to: "", channel: "" };
   if (sel.type === "range")
     return { drill: "range", date: "", from: sel.from, to: sel.to, channel: "" };
   return { drill: "channel", date: "", from: "", to: "", channel: sel.value };
@@ -72,7 +75,8 @@ export const Route = createFileRoute("/admin/analytics")({
       { property: "og:title", content: "Sales Analytics — PasarPilih Admin" },
       {
         property: "og:description",
-        content: "Revenue by channel, top products and conversion rates for the PasarPilih storefront.",
+        content:
+          "Revenue by channel, top products and conversion rates for the PasarPilih storefront.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -107,6 +111,68 @@ function Card({
       </header>
       {children}
     </section>
+  );
+}
+
+/**
+ * Produk paling dilihat di ETALASE SENDIRI — traffic web milik toko, bukan
+ * performa channel marketplace. Mengambil datanya sendiri lewat server function
+ * supaya bisa gagal atau memuat terpisah dari dashboard marketplace utama;
+ * kalau product_view_stats kosong (belum ada view), section-nya menjelaskan itu
+ * alih-alih tampil rusak.
+ */
+function TopViewedCard({ days }: { days: RangeDays }) {
+  const ambil = useServerFn(adminTopViewedProducts);
+  const query = useQuery({
+    queryKey: ["admin", "top-viewed", days],
+    queryFn: () => ambil({ data: { days } }),
+    staleTime: 60_000,
+  });
+
+  const rows = query.data ?? [];
+  const maks = rows[0]?.views ?? 0;
+
+  return (
+    <Card
+      title="Produk paling dilihat di etalase"
+      subtitle={`Kunjungan halaman produk di situs ini, ${days} hari terakhir`}
+    >
+      {query.isPending ? (
+        <div className="h-40 animate-pulse rounded-lg bg-muted/40" />
+      ) : query.isError ? (
+        <p className="text-sm text-destructive">Gagal memuat data kunjungan.</p>
+      ) : rows.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          Belum ada kunjungan tercatat pada rentang ini.
+        </p>
+      ) : (
+        <ul className="space-y-3">
+          {rows.map((r, i) => (
+            <li key={r.product_ref} className="flex items-center gap-3">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent text-xs font-semibold text-accent-foreground">
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {productTitle(r.product_ref)}
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums text-foreground">
+                    {r.views.toLocaleString("id-ID")} views
+                  </p>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${maks ? (r.views / maks) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 
@@ -151,7 +217,10 @@ function AnalyticsPage() {
   const setDays = (value: RangeDays) =>
     navigate({ search: (prev: AnalyticsSearch) => ({ ...prev, days: value }), replace: true });
   const setDrill = (sel: DrillSelection | null) =>
-    navigate({ search: (prev: AnalyticsSearch) => ({ ...prev, ...selectionToSearch(sel) }), replace: true });
+    navigate({
+      search: (prev: AnalyticsSearch) => ({ ...prev, ...selectionToSearch(sel) }),
+      replace: true,
+    });
 
   const { data, isPending, isError, error } = useSalesAnalytics(days);
 
@@ -194,7 +263,10 @@ function AnalyticsPage() {
       {isPending ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl border border-border bg-muted/40" />
+            <div
+              key={i}
+              className="h-24 animate-pulse rounded-xl border border-border bg-muted/40"
+            />
           ))}
         </div>
       ) : (
@@ -288,7 +360,10 @@ function AnalyticsPage() {
               </div>
             </Card>
 
-            <Card title="Revenue by channel" subtitle="Share of total revenue — click a slice to drill down">
+            <Card
+              title="Revenue by channel"
+              subtitle="Share of total revenue — click a slice to drill down"
+            >
               <div className="h-44 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -329,16 +404,16 @@ function AnalyticsPage() {
                       onClick={() => setDrill({ type: "channel", value: c.id })}
                       className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-0.5 text-xs transition-colors hover:bg-accent"
                     >
-                    <span className="flex items-center gap-2 text-foreground">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: c.color }}
-                      />
-                      {c.label}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {formatCompactIDR(c.revenue)} · {c.share.toFixed(1)}%
-                    </span>
+                      <span className="flex items-center gap-2 text-foreground">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: c.color }}
+                        />
+                        {c.label}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {formatCompactIDR(c.revenue)} · {c.share.toFixed(1)}%
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -486,6 +561,11 @@ function AnalyticsPage() {
               ))}
             </ul>
           </Card>
+
+          {/* Traffic etalase sendiri, terpisah dari performa marketplace di atas.
+              Sumbernya product_view_stats, bukan sales_events — dua metrik yang
+              berbeda jenis sengaja tidak dicampur. */}
+          <TopViewedCard days={days} />
         </>
       )}
 

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Heart, ShoppingCart, Star, Zap } from "lucide-react";
+import { ArrowLeft, Check, Heart, ShoppingCart, Star, Zap } from "lucide-react";
 import { products } from "@/data/products";
 import { useCatalogProduct } from "@/lib/catalog";
 import { productExists } from "@/lib/catalog.functions";
@@ -20,6 +20,8 @@ import { NotFoundPage } from "@/components/store/NotFoundPage";
 import { reviewsForProduct } from "@/data/reviews";
 import { ProductReviews } from "@/components/store/ProductReviews";
 import { recordView } from "@/lib/recently-viewed";
+import { useAddedFeedback } from "@/lib/use-added-feedback";
+import { recordProductView } from "@/lib/analytics.functions";
 
 /** Dipakai dua kali: sebagai notFoundComponent, dan saat katalog selesai
  *  dimuat tapi produknya tidak ada di dalamnya. */
@@ -94,11 +96,25 @@ function ProductDetailPage() {
   const product = seed ?? live;
   const images = useProductImages(product?.id ?? id, product?.images ?? []);
   const wishlisted = isWishlisted(useWishlist(), id);
+  const { added, tandai } = useAddedFeedback();
 
-  // Feeds the "Rekomendasi Untukmu" section on the homepage.
+  // Satu jalur tambah-ke-keranjang dipakai tombol desktop DAN bar sticky, supaya
+  // keduanya menampilkan konfirmasi yang sama dan logikanya tidak menyimpang.
+  const tambahKeKeranjang = () => {
+    if (!product) return;
+    addToCart({ id: product.id, title: product.title, price: product.price, image: images[0] });
+    tandai();
+    toast.success("Added to cart", { description: product.title });
+  };
+
+  // Feeds the "Rekomendasi Untukmu" section on the homepage, dan mencatat view
+  // ke analytics server. Keduanya fire-and-forget: analytics tidak boleh menunda
+  // atau menggagalkan render halaman, jadi hasilnya sengaja diabaikan.
   const viewedCategory = product?.category;
   useEffect(() => {
-    if (viewedCategory) recordView(id, viewedCategory);
+    if (!viewedCategory) return;
+    recordView(id, viewedCategory);
+    void recordProductView({ data: { productRef: id } }).catch(() => {});
   }, [id, viewedCategory]);
 
   if (!product) {
@@ -157,24 +173,21 @@ function ProductDetailPage() {
             <div className="hidden flex-col gap-3 sm:flex sm:flex-row">
               <button
                 type="button"
-                onClick={() => {
-                  addToCart({
-                    id: product.id,
-                    title: product.title,
-                    price: product.price,
-                    image: images[0],
-                  });
-                  toast.success("Added to cart", { description: product.title });
-                }}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border-2 border-primary px-6 py-3 text-base font-semibold text-primary transition-colors hover:bg-accent"
+                onClick={tambahKeKeranjang}
+                aria-label={added ? "Added to cart" : "Add to cart"}
+                className={`inline-flex flex-1 items-center justify-center gap-2 rounded-full border-2 px-6 py-3 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                  added
+                    ? "border-success bg-success/10 text-success"
+                    : "border-primary text-primary hover:bg-accent"
+                }`}
               >
-                <ShoppingCart className="h-5 w-5" />
-                Add to Cart
+                {added ? <Check className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
+                {added ? "Added" : "Add to Cart"}
               </button>
               <Link
                 to="/checkout"
                 search={{ product: product.id, qty: 1 }}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-semibold text-primary-foreground shadow-[var(--shadow-brand)] transition-colors hover:bg-primary/90"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-base font-semibold text-primary-foreground shadow-[var(--shadow-brand)] transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <Zap className="h-5 w-5" />
                 Buy Now
@@ -195,7 +208,7 @@ function ProductDetailPage() {
                   { description: product.title },
                 );
               }}
-              className={`inline-flex items-center justify-center gap-2 self-start rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`inline-flex items-center justify-center gap-2 self-start rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                 wishlisted ? "text-primary" : "text-muted-foreground hover:text-primary"
               }`}
             >
@@ -218,18 +231,7 @@ function ProductDetailPage() {
 
         <RelatedProducts currentId={product.id} />
       </main>
-      <ProductStickyActions
-        productId={product.id}
-        onAddToCart={() => {
-          addToCart({
-            id: product.id,
-            title: product.title,
-            price: product.price,
-            image: images[0],
-          });
-          toast.success("Added to cart", { description: product.title });
-        }}
-      />
+      <ProductStickyActions productId={product.id} onAddToCart={tambahKeKeranjang} added={added} />
     </div>
   );
 }

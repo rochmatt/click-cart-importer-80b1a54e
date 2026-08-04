@@ -39,6 +39,14 @@ function buildPicks(viewed: { id: string; category: string }[]): Pick[] {
     }
   }
 
+  // Penyeimbang: produk terlaris yang belum masuk lewat kecocokan kategori.
+  //
+  // Labelnya SELALU "Populer minggu ini", bukan hanya saat riwayat kosong.
+  // Sebelumnya begitu ada riwayat penyeimbang ini berlabel "Sering dilihat
+  // pembeli lain", sehingga dua perilaku yang dijanjikan — utamakan kategori
+  // terakhir dilihat, LALU seimbangkan dengan yang populer — tidak pernah
+  // berdampingan dengan nama yang benar. Item-item ini memang diurutkan dari
+  // paling laris, jadi labelnya jujur di kedua keadaan.
   const popular = [...products].sort(
     (a, b) => (b.sold ?? 0) - (a.sold ?? 0) || b.rating - a.rating,
   );
@@ -46,10 +54,7 @@ function buildPicks(viewed: { id: string; category: string }[]): Pick[] {
     if (picks.length >= 8) break;
     if (used.has(candidate.id) || seenIds.has(candidate.id)) continue;
     used.add(candidate.id);
-    picks.push({
-      product: candidate,
-      reason: viewed.length ? "Sering dilihat pembeli lain" : "Populer minggu ini",
-    });
+    picks.push({ product: candidate, reason: "Populer minggu ini" });
   }
 
   return picks;
