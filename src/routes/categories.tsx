@@ -2,6 +2,12 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, LayoutGrid } from "lucide-react";
 import { categoryCatalog, productsInCategory } from "@/data/categories";
+import {
+  type RentangJumlah,
+  type UrutKategori,
+  dalamRentangJumlah,
+  urutkanKategori,
+} from "@/lib/category-directory";
 import { AnnouncementBar } from "@/components/store/AnnouncementBar";
 import { Header } from "@/components/store/Header";
 import { Footer } from "@/components/store/Footer";
@@ -39,10 +45,12 @@ export const Route = createFileRoute("/categories")({
 function CategoriesPage() {
   const [headerQuery, setHeaderQuery] = useState("");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<UrutKategori>("popular");
+  const [countRange, setCountRange] = useState<RentangJumlah>("all");
 
   const cards = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return categoryCatalog
+    const disaring = categoryCatalog
       .map((c) => {
         const items = productsInCategory(c.label);
         return {
@@ -51,10 +59,14 @@ function CategoriesPage() {
           thumbs: items.slice(0, 3).map((p) => ({ id: p.id, image: p.images[0], title: p.title })),
         };
       })
-      .filter((c) =>
-        term ? c.label.toLowerCase().includes(term) || c.blurb.toLowerCase().includes(term) : true,
+      .filter(
+        (c) =>
+          (term
+            ? c.label.toLowerCase().includes(term) || c.blurb.toLowerCase().includes(term)
+            : true) && dalamRentangJumlah(c.count, countRange),
       );
-  }, [query]);
+    return urutkanKategori(disaring, sort);
+  }, [query, sort, countRange]);
 
   const total = categoryCatalog.reduce((sum, c) => sum + productsInCategory(c.label).length, 0);
 
@@ -90,17 +102,46 @@ function CategoriesPage() {
             </p>
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <label htmlFor="category-filter" className="sr-only">
-              Cari kategori
-            </label>
-            <input
-              id="category-filter"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari kategori…"
-              className="h-10 w-full min-w-[14rem] rounded-full border border-border bg-card px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30 sm:w-auto"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor="category-filter" className="sr-only">
+                Cari kategori
+              </label>
+              <input
+                id="category-filter"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cari kategori…"
+                className="h-10 w-full min-w-[12rem] rounded-full border border-border bg-card px-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30 sm:w-auto"
+              />
+              <label htmlFor="category-sort" className="sr-only">
+                Urutkan kategori
+              </label>
+              <select
+                id="category-sort"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as UrutKategori)}
+                className="h-10 rounded-full border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+              >
+                <option value="popular">Terpopuler</option>
+                <option value="az">Alfabet (A–Z)</option>
+                <option value="za">Alfabet (Z–A)</option>
+              </select>
+              <label htmlFor="category-count" className="sr-only">
+                Rentang jumlah produk
+              </label>
+              <select
+                id="category-count"
+                value={countRange}
+                onChange={(e) => setCountRange(e.target.value as RentangJumlah)}
+                className="h-10 rounded-full border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+              >
+                <option value="all">Semua jumlah</option>
+                <option value="0-50">0–50 produk</option>
+                <option value="51-200">51–200 produk</option>
+                <option value="200+">&gt; 200 produk</option>
+              </select>
+            </div>
             <p className="text-sm text-muted-foreground" aria-live="polite">
               {cards.length} kategori · {total} produk
             </p>
@@ -164,7 +205,10 @@ function CategoriesPage() {
             </p>
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => {
+                setQuery("");
+                setCountRange("all");
+              }}
               className="mt-4 inline-flex h-10 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
             >
               Tampilkan semua kategori

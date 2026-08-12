@@ -1,8 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, notFound, stripSearchParams } from "@tanstack/react-router";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { z } from "zod";
-import { ArrowLeft, PackageSearch, SlidersHorizontal } from "lucide-react";
+import { zodValidator } from "@tanstack/zod-adapter";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  PackageSearch,
+  SlidersHorizontal,
+} from "lucide-react";
 import { CategoryFilters, activeFilterCount } from "@/components/store/CategoryFilters";
 import type { CategoryFilterState } from "@/components/store/CategoryFilters";
 import { categoryCatalog, findCategory, productsInCategory } from "@/data/categories";
@@ -16,18 +21,19 @@ import { MobileBottomNav } from "@/components/store/MobileBottomNav";
 import type { Product } from "@/data/products";
 import { breadcrumbJsonLd, itemListJsonLd, jsonLdScript } from "@/lib/structured-data";
 import { NotFoundPage } from "@/components/store/NotFoundPage";
+import { getRequestOrigin } from "@/lib/origin.functions";
+import {
+  CATEGORY_PAGE_SIZE,
+  hitungHalaman,
+  jendelaHalaman,
+  metaPaginationKategori,
+} from "@/lib/category-pagination";
+import { CATEGORY_SEARCH_DEFAULTS, categorySearchSchema } from "@/lib/category-search-params";
+import { ringkasanFilterAktif } from "@/lib/category-filter-summary";
 
 type SortKey = "popular" | "rating" | "price-low" | "price-high";
 
 const sortKeys: SortKey[] = ["popular", "rating", "price-low", "price-high"];
-
-const categorySearchSchema = z.object({
-  q: fallback(z.string(), "").default(""),
-  min: fallback(z.string(), "").default(""),
-  max: fallback(z.string(), "").default(""),
-  rating: fallback(z.number(), 0).default(0),
-  sort: fallback(z.string(), "popular").default("popular"),
-});
 
 const categoryGroups = [
   {
@@ -56,19 +62,28 @@ const idrCompact = (n: number) =>
 export const Route = createFileRoute("/category/$slug")({
   validateSearch: zodValidator(categorySearchSchema),
   search: {
-    middlewares: [stripSearchParams({ q: "", min: "", max: "", rating: 0, sort: "popular" })],
+    middlewares: [stripSearchParams(CATEGORY_SEARCH_DEFAULTS)],
   },
-  loader: ({ params }) => {
+  // Halaman ikut menentukan metadata (canonical/prev/next), jadi loader harus
+  // dijalankan ulang saat ?page berubah — bukan hanya saat slug berubah.
+  loaderDeps: ({ search }) => ({ page: search.page }),
+  loader: async ({ params, deps }) => {
     const category = findCategory(params.slug);
     if (!category) throw notFound();
     const products = productsInCategory(category.label);
     const prices = products.map((p) => priceValue(p.price)).filter((n) => n > 0);
+    // Total halaman untuk SEO dihitung dari SELURUH produk kategori (keadaan
+    // yang di-crawl mesin pencari; filter hanya query param sisi klien).
+    const { page, totalPages } = hitungHalaman(products.length, deps.page);
     return {
       ...category,
       productCount: products.length,
       minPrice: prices.length ? Math.min(...prices) : 0,
       maxPrice: prices.length ? Math.max(...prices) : 0,
       topRating: products.reduce((m, p) => Math.max(m, p.rating), 0),
+      origin: await getRequestOrigin(),
+      page,
+      totalPages,
     };
   },
   head: ({ loaderData }) => {
@@ -91,17 +106,24 @@ export const Route = createFileRoute("/category/$slug")({
     }
 
     const path = `/category/${loaderData.slug}`;
+    // canonical (menunjuk halaman ini sendiri) + rel prev/next + label halaman.
+    const seo = metaPaginationKategori(
+      loaderData.origin,
+      loaderData.slug,
+      loaderData.page,
+      loaderData.totalPages,
+    );
+    const canonical = seo.links[0].href;
     const priceRange =
       loaderData.maxPrice > 0
         ? ` Harga Rp${idrCompact(loaderData.minPrice)}–Rp${idrCompact(loaderData.maxPrice)}.`
         : "";
-    const title = `${loaderData.label} — ${loaderData.productCount} Produk Terbaik | PasarPilih`;
+    const title = `${loaderData.label} — ${loaderData.productCount} Produk Terbaik${seo.labelJudul} | PasarPilih`;
     const description =
-      `${loaderData.blurb} Bandingkan ${loaderData.productCount} produk ${loaderData.label.toLowerCase()} ` +
-      `dari Shopee, Tokopedia, dan TikTok Shop.${priceRange} Filter harga, rating, dan pencarian.`.slice(
-        0,
-        320,
-      );
+      (
+        `${loaderData.blurb} Bandingkan ${loaderData.productCount} produk ${loaderData.label.toLowerCase()} ` +
+        `dari Shopee, Tokopedia, dan TikTok Shop.${priceRange} Filter harga, rating, dan pencarian.`
+      ).slice(0, 300) + seo.labelDeskripsi;
 
     return {
       meta: [
@@ -110,13 +132,15 @@ export const Route = createFileRoute("/category/$slug")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:type", content: "website" },
-        { property: "og:url", content: path },
+        { property: "og:url", content: canonical },
         { property: "og:site_name", content: "PasarPilih" },
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: title },
         { name: "twitter:description", content: description },
       ],
-      links: [{ rel: "canonical", href: path }],
+      // canonical + rel=prev/next: satu URL kanonik per halaman agar mesin
+      // pencari tidak menduplikasi konten antar halaman pagination.
+      links: seo.links,
       scripts: [
         jsonLdScript(
           breadcrumbJsonLd([
@@ -145,11 +169,13 @@ function CategoryPage() {
   const [quickView, setQuickView] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // URL menyimpan harga sebagai number (URL bersih); state filter UI memakai
+  // string. Konversi di batas ini: 0 di URL berarti "tak ada filter" → "".
   const filters: CategoryFilterState = useMemo(
     () => ({
       query: search.q,
-      minPrice: search.min.replace(/[^\d]/g, ""),
-      maxPrice: search.max.replace(/[^\d]/g, ""),
+      minPrice: search.min > 0 ? String(search.min) : "",
+      maxPrice: search.max > 0 ? String(search.max) : "",
       minRating: [0, 3.5, 4, 4.5].includes(search.rating) ? search.rating : 0,
     }),
     [search.q, search.min, search.max, search.rating],
@@ -165,9 +191,10 @@ function CategoryPage() {
       search: {
         ...search,
         q: next.query,
-        min: next.minPrice,
-        max: next.maxPrice,
+        min: Number(next.minPrice) || 0,
+        max: Number(next.maxPrice) || 0,
         rating: next.minRating,
+        page: 1, // filter berubah → kembali ke halaman 1
       },
       replace: true,
       resetScroll: false,
@@ -177,7 +204,7 @@ function CategoryPage() {
   const setSort = (next: SortKey) => {
     navigate({
       to: ".",
-      search: { ...search, sort: next },
+      search: { ...search, sort: next, page: 1 },
       replace: true,
       resetScroll: false,
     });
@@ -269,6 +296,34 @@ function CategoryPage() {
     return entries;
   }, [all, category.subcategories]);
 
+  // Pagination sisi klien atas hasil terfilter+terurut. Metadata SEO (head)
+  // memakai jumlah penuh kategori; UI di sini mengikuti apa yang benar-benar
+  // tampil setelah filter.
+  const paginasi = hitungHalaman(items.length, search.page, CATEGORY_PAGE_SIZE);
+  const pageItems = items.slice(paginasi.start, paginasi.end);
+
+  // Ringkasan filter aktif untuk screen reader. Dibacakan saat filter berubah
+  // DAN saat halaman pertama dimuat: region aria-live tidak mengumumkan konten
+  // awalnya, jadi isinya disetel lewat useEffect (mulai kosong → terisi setelah
+  // mount) sehingga perubahan pertama pun terdengar.
+  const ringkasan = useMemo(
+    () =>
+      ringkasanFilterAktif(
+        {
+          pencarian: filters.query.trim() || query.trim(),
+          hargaMin: search.min,
+          hargaMax: search.max,
+          rating: filters.minRating,
+        },
+        items.length,
+      ),
+    [filters.query, filters.minRating, query, search.min, search.max, items.length],
+  );
+  const [ringkasanDibacakan, setRingkasanDibacakan] = useState("");
+  useEffect(() => {
+    setRingkasanDibacakan(ringkasan);
+  }, [ringkasan]);
+
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
       <AnnouncementBar />
@@ -334,10 +389,18 @@ function CategoryPage() {
           </aside>
 
           <div className="mt-6 space-y-6 lg:mt-0">
+            {/* Ringkasan filter aktif — satu-satunya region yang diumumkan ke
+                screen reader (saat filter berubah & saat halaman dimuat). */}
+            <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {ringkasanDibacakan}
+            </p>
+
             <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground" aria-live="polite">
+                  {/* Versi visual — disembunyikan dari screen reader agar tidak
+                      dibaca ganda dengan ringkasan naratif di atas. */}
+                  <p className="text-sm text-muted-foreground" aria-hidden="true">
                     Menampilkan <span className="font-bold text-foreground">{items.length}</span>{" "}
                     produk
                     {searchTerm ? ` untuk “${searchTerm}”` : ""}
@@ -379,11 +442,88 @@ function CategoryPage() {
             </div>
 
             {items.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-                {items.map((product) => (
-                  <ProductCard key={product.id} product={product} onQuickView={setQuickView} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+                  {pageItems.map((product) => (
+                    <ProductCard key={product.id} product={product} onQuickView={setQuickView} />
+                  ))}
+                </div>
+
+                {paginasi.totalPages > 1 && (
+                  <nav
+                    aria-label="Navigasi halaman"
+                    className="flex flex-wrap items-center justify-center gap-1.5 pt-2"
+                  >
+                    {paginasi.page > 1 ? (
+                      <Link
+                        to="."
+                        search={(prev) => ({ ...prev, page: paginasi.page - 1 })}
+                        rel="prev"
+                        aria-label="Halaman sebelumnya"
+                        className="inline-flex h-9 items-center gap-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Sebelumnya
+                      </Link>
+                    ) : (
+                      <span
+                        aria-disabled="true"
+                        className="inline-flex h-9 items-center gap-1 rounded-lg border border-border/60 px-3 text-sm font-medium text-muted-foreground/50"
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden="true" /> Sebelumnya
+                      </span>
+                    )}
+
+                    {jendelaHalaman(paginasi.page, paginasi.totalPages).map((n, idx) =>
+                      n === "…" ? (
+                        <span
+                          key={`gap-${idx}`}
+                          aria-hidden="true"
+                          className="px-2 text-sm text-muted-foreground"
+                        >
+                          …
+                        </span>
+                      ) : n === paginasi.page ? (
+                        <span
+                          key={n}
+                          aria-current="page"
+                          className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground"
+                        >
+                          {n}
+                        </span>
+                      ) : (
+                        <Link
+                          key={n}
+                          to="."
+                          search={(prev) => ({ ...prev, page: n })}
+                          aria-label={`Halaman ${n}`}
+                          className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {n}
+                        </Link>
+                      ),
+                    )}
+
+                    {paginasi.page < paginasi.totalPages ? (
+                      <Link
+                        to="."
+                        search={(prev) => ({ ...prev, page: paginasi.page + 1 })}
+                        rel="next"
+                        aria-label="Halaman berikutnya"
+                        className="inline-flex h-9 items-center gap-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        Berikutnya <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <span
+                        aria-disabled="true"
+                        className="inline-flex h-9 items-center gap-1 rounded-lg border border-border/60 px-3 text-sm font-medium text-muted-foreground/50"
+                      >
+                        Berikutnya <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                    )}
+                  </nav>
+                )}
+              </>
             ) : (
               <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
                 <PackageSearch
