@@ -82,6 +82,20 @@ function scorePassword(password: string) {
   return { checks, score, ...meta };
 }
 
+/** Pesan ramah untuk kode ?authError dari callback OAuth Google. */
+function pesanAuthError(reason: string): string {
+  switch (reason) {
+    case "google_belum_disetel":
+      return "Login Google belum diaktifkan. Gunakan email dan password dulu.";
+    case "google_dibatalkan":
+      return "Login Google dibatalkan.";
+    case "google_email_belum_terverifikasi":
+      return "Email Google kamu belum terverifikasi.";
+    default:
+      return "Login dengan Google gagal. Coba lagi atau gunakan email dan password.";
+  }
+}
+
 export function AuthPanel({ initialMode, nextPath }: { initialMode: Mode; nextPath?: string }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -101,6 +115,19 @@ export function AuthPanel({ initialMode, nextPath }: { initialMode: Mode; nextPa
   const [resetBusy, setResetBusy] = useState(false);
 
   useEffect(() => setMode(initialMode), [initialMode]);
+
+  // Callback OAuth Google memantulkan ?authError=<alasan> saat gagal. Tampilkan
+  // pesan ramah lalu bersihkan dari URL agar tak muncul lagi saat refresh.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("authError");
+    if (!reason) return;
+    setGoogleBusy(false);
+    toast.error(pesanAuthError(reason));
+    params.delete("authError");
+    const qs = params.toString();
+    window.history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : ""));
+  }, []);
 
   useEffect(() => {
     try {
@@ -174,18 +201,14 @@ export function AuthPanel({ initialMode, nextPath }: { initialMode: Mode; nextPa
     }
   }
 
-  // LOGIN GOOGLE DINONAKTIFKAN OLEH CUTOVER AUTENTIKASI.
+  // LOGIN GOOGLE — OAuth langsung ke aplikasi ini (bukan lagi lewat Supabase).
   //
-  // lovable.auth.signInWithOAuth menyetel sesi SUPABASE, yang setelah cutover
-  // tidak lagi dibaca aplikasi — pengguna akan kembali dari Google dan tetap
-  // tampak belum masuk. Tombol yang diam tanpa penjelasan lebih buruk daripada
-  // tombol yang jujur mengatakan fiturnya sedang tidak tersedia.
-  //
-  // Untuk menghidupkannya kembali diperlukan OAuth Google langsung ke aplikasi
-  // ini: registrasi client di Google Cloud, endpoint callback, lalu pembuatan
-  // sesi lokal — bukan sekadar menyambung ulang tombolnya.
-  async function onGoogle() {
-    toast.info("Masuk dengan Google sedang tidak tersedia. Gunakan email dan password.");
+  // Navigasi TINGKAT-HALAMAN penuh ke /api/auth/google/start (bukan fetch): alur
+  // OAuth butuh redirect top-level ke accounts.google.com lalu balik ke callback.
+  // Server yang membuat URL Google (client_id dari env) + cookie state anti-CSRF.
+  function onGoogle() {
+    setGoogleBusy(true);
+    window.location.href = "/api/auth/google/start";
   }
 
   async function onForgotPassword() {

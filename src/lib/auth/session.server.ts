@@ -57,7 +57,7 @@ export interface SessionUser {
  * Token dikembalikan HANYA lewat cookie; nilainya tidak pernah masuk badan
  * respons supaya tidak tersimpan tanpa sengaja di state klien atau log.
  */
-export async function createSession(userId: string): Promise<void> {
+export async function createSessionToken(userId: string): Promise<string> {
   const token = randomBytes(32).toString("base64url");
   const request = getRequest();
 
@@ -74,7 +74,20 @@ export async function createSession(userId: string): Promise<void> {
     OWNER,
   );
 
+  return token;
+}
+
+export async function createSession(userId: string): Promise<void> {
+  const token = await createSessionToken(userId);
   setCookie(SESSION_COOKIE, token, { ...COOKIE_OPTIONS, maxAge: SESSION_TTL_SECONDS });
+}
+
+/**
+ * Nilai Set-Cookie sesi untuk route yang mengembalikan Response manual (mis.
+ * callback OAuth Google), di mana setCookie() tak melekat ke Response.
+ */
+export function sessionCookieHeader(token: string): string {
+  return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}`;
 }
 
 /**

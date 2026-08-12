@@ -3,16 +3,18 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   type StoreSettings,
+  getGoogleOAuth,
   getStoreSettings,
   grantRole,
   listStaff,
   revokeRole,
+  updateGoogleOAuth,
   updateStoreSettings,
 } from "@/lib/admin.functions";
 
@@ -45,6 +47,7 @@ function AdminSettingsPage() {
       </header>
 
       <StoreProfileCard />
+      <GoogleOAuthCard />
       <StaffCard />
     </div>
   );
@@ -130,6 +133,146 @@ function StoreProfileCard() {
         Save settings
       </button>
     </form>
+  );
+}
+
+function GoogleOAuthCard() {
+  const queryClient = useQueryClient();
+  const fetchStatus = useServerFn(getGoogleOAuth);
+  const save = useServerFn(updateGoogleOAuth);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [seeded, setSeeded] = useState(false);
+
+  const statusQuery = useQuery({
+    queryKey: ["admin", "google-oauth"],
+    queryFn: () => fetchStatus(),
+  });
+
+  useEffect(() => {
+    // Isi Client ID sekali dari server; Secret sengaja TIDAK pernah diisi ulang
+    // (write-only) — kosong berarti "pertahankan yang tersimpan".
+    if (statusQuery.data && !seeded) {
+      setClientId(statusQuery.data.client_id);
+      setSeeded(true);
+    }
+  }, [statusQuery.data, seeded]);
+
+  const saveMutation = useMutation({
+    mutationFn: (input: { client_id: string; client_secret: string }) => save({ data: input }),
+    onSuccess: () => {
+      setClientSecret("");
+      queryClient.invalidateQueries({ queryKey: ["admin", "google-oauth"] });
+      toast.success("Kredensial Google disimpan — langsung aktif, tanpa restart");
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan kredensial"),
+  });
+
+  const status = statusQuery.data;
+  const redirectUri = status?.redirect_uri ?? "https://inipilihanku.com/api/auth/google/callback";
+
+  const copyRedirect = async () => {
+    try {
+      await navigator.clipboard.writeText(redirectUri);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Tidak bisa menyalin otomatis — salin manual dari kolomnya");
+    }
+  };
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <KeyRound className="h-4 w-4 text-primary" />
+          Login Google (OAuth)
+        </h2>
+        {status &&
+          (status.active ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              <Check className="h-3.5 w-3.5" /> Aktif
+            </span>
+          ) : (
+            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              Belum aktif
+            </span>
+          ))}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Tempel Client ID &amp; Client Secret dari Google Cloud Console di sini. Secret disimpan aman
+        di server dan tidak pernah ditampilkan kembali. Perubahan langsung berlaku — tanpa restart.
+      </p>
+
+      <div className="mt-4 space-y-1.5">
+        <Label htmlFor="google-redirect">Authorized redirect URI (salin ke Google Console)</Label>
+        <div className="flex gap-2">
+          <Input
+            id="google-redirect"
+            readOnly
+            value={redirectUri}
+            onFocus={(e) => e.currentTarget.select()}
+            className="font-mono text-xs"
+          />
+          <button
+            type="button"
+            onClick={copyRedirect}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? "Tersalin" : "Salin"}
+          </button>
+        </div>
+      </div>
+
+      {statusQuery.isLoading ? (
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Memuat status…
+        </p>
+      ) : (
+        <form
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveMutation.mutate({ client_id: clientId, client_secret: clientSecret });
+          }}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="google-client-id">Client ID</Label>
+            <Input
+              id="google-client-id"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="1234567890-abc.apps.googleusercontent.com"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="google-client-secret">Client Secret</Label>
+            <Input
+              id="google-client-secret"
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              placeholder={status?.has_secret ? "•••••••• tersimpan (kosongkan = tetap)" : "GOCSPX-…"}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={saveMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Simpan kredensial
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

@@ -291,6 +291,89 @@ export const updateStoreSettings = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export interface GoogleOAuthStatus {
+  client_id: string;
+  has_secret: boolean;
+  redirect_uri: string;
+  active: boolean;
+}
+
+// Status kredensial login Google untuk panel admin. Client ID BUKAN rahasia
+// (muncul di URL OAuth), jadi boleh ditampilkan. Client Secret rahasia: hanya
+// flag has_secret yang dikembalikan, nilainya TIDAK PERNAH keluar dari server.
+export const getGoogleOAuth = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<GoogleOAuthStatus> => {
+    await assertAdmin(context.db, context.userId);
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const { data, error } = await createServiceClient()
+      .from("store_settings")
+      .select("google_client_id, google_client_secret")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    const client_id = ((data?.google_client_id as string | undefined) ?? "").trim();
+    const has_secret = (((data?.google_client_secret as string | undefined) ?? "").trim()).length > 0;
+    return {
+      client_id,
+      has_secret,
+      redirect_uri: "https://inipilihanku.com/api/auth/google/callback",
+      active: client_id.length > 0 && has_secret,
+    };
+  });
+
+const googleOAuthSchema = z.object({
+  client_id: z.string().trim().max(300),
+  // Kosong = pertahankan secret yang tersimpan (pola write-only). Non-kosong = ganti.
+  client_secret: z.string().max(500),
+});
+
+export const updateGoogleOAuth = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => googleOAuthSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.db, context.userId);
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const db = createServiceClient();
+
+    const { data: row, error: readErr } = await db
+      .from("store_settings")
+      .select("id, google_client_id, google_client_secret")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (readErr) throw readErr;
+    if (!row) throw new Error("Baris store_settings tidak ditemukan");
+
+    const newSecret = data.client_secret.trim();
+    const fields: { google_client_id: string; google_client_secret?: string } = {
+      google_client_id: data.client_id.trim(),
+    };
+    // Hanya menulis secret bila admin mengetik nilai baru; field kosong = biarkan
+    // yang lama (form tak pernah menerima secret tersimpan untuk dikirim balik).
+    if (newSecret.length > 0) fields.google_client_secret = newSecret;
+
+    const { error } = await db.from("store_settings").update(fields).eq("id", row.id);
+    if (error) throw error;
+
+    // Audit tanpa membocorkan nilai: hanya menyebut BAGIAN mana yang berubah.
+    const idBerubah = ((row.google_client_id as string | undefined) ?? "").trim() !== data.client_id.trim();
+    const bagian: string[] = [];
+    if (idBerubah) bagian.push("Client ID");
+    if (newSecret.length > 0) bagian.push("Client Secret");
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pengaturan",
+      entityId: row.id as string,
+      entityLabel: "Login Google (OAuth)",
+      action: "ubah",
+      detail: bagian.length ? `Memperbarui: ${bagian.join(", ")}` : "Menyimpan tanpa perubahan",
+    });
+
+    return { ok: true };
+  });
+
 export const listStaff = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<StaffMember[]> => {
