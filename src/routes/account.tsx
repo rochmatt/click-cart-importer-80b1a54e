@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -18,8 +18,8 @@ import { ResendVerification } from "@/components/account/ResendVerification";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { signOut } from "@/lib/auth/auth.functions";
-import { displayNameFor, initialsFor, setAuthUser, useAuth } from "@/lib/auth";
+import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
+import { useSignOut } from "@/lib/use-sign-out";
 
 import { getMyProfile, listMyOrders, updateMyProfile } from "@/lib/account.functions";
 
@@ -141,8 +141,8 @@ const statusTone: Record<string, string> = {
 
 function SignedInView() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const keluar = useSignOut();
   const fetchProfile = useServerFn(getMyProfile);
   const fetchOrders = useServerFn(listMyOrders);
   const saveProfile = useServerFn(updateMyProfile);
@@ -176,17 +176,6 @@ function SignedInView() {
     },
     onError: () => toast.error("Could not save your profile. Please try again."),
   });
-
-  async function keluar() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    // Nama fungsi ini sengaja BUKAN signOut: nama yang sama akan membayangi
-    // import di atas dan memanggil dirinya sendiri tanpa henti.
-    await signOut();
-    setAuthUser(null);
-    toast.success("Signed out");
-    navigate({ to: "/", replace: true });
-  }
 
   const label = profileQuery.data?.display_name || displayNameFor(user);
 
@@ -257,7 +246,7 @@ function SignedInView() {
           </Link>
           <button
             type="button"
-            onClick={keluar}
+            onClick={() => void keluar()}
             className="mt-3 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-destructive"
           >
             <LogOut className="h-4 w-4" />

@@ -1,9 +1,8 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 import {
   Heart,
   HelpCircle,
+  LayoutDashboard,
   LogIn,
   LogOut,
   Package,
@@ -20,31 +19,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/lib/auth/auth.functions";
-import { setAuthUser } from "@/lib/auth";
 import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
+import { useWishlist } from "@/lib/wishlist";
+import { useHoverMenu } from "@/lib/use-hover-menu";
+import { useAdminRole } from "@/lib/use-admin-role";
+import { useSignOut } from "@/lib/use-sign-out";
 
 export function AccountMenu() {
   const { loading, user } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const name = displayNameFor(user);
-
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await signOut();
-    setAuthUser(null);
-    toast.success("Signed out");
-    navigate({ to: "/", replace: true });
-  }
+  const wishlist = useWishlist();
+  const { open, setOpen, triggerHoverProps, contentHoverProps } = useHoverMenu();
+  const { isAdmin } = useAdminRole();
+  const signOut = useSignOut();
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           aria-label={user ? `Account: ${name}` : "Account"}
+          {...triggerHoverProps}
           className="grid h-10 w-10 place-items-center rounded-full text-header-muted transition-colors hover:bg-header-foreground/10 hover:text-primary data-[state=open]:bg-header-foreground/10 data-[state=open]:text-primary"
         >
           {user ? (
@@ -57,7 +52,11 @@ export function AccountMenu() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-[min(16rem,calc(100vw-2rem))] p-0">
+      <DropdownMenuContent
+        align="end"
+        className="w-[min(16rem,calc(100vw-2rem))] p-0"
+        {...contentHoverProps}
+      >
         <div className="space-y-2 border-b border-border px-4 py-3">
           {user ? (
             <>
@@ -99,6 +98,17 @@ export function AccountMenu() {
             My account
           </DropdownMenuLabel>
 
+          {isAdmin && (
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link
+                to="/admin"
+                className="flex items-center gap-2 text-sm font-semibold text-primary"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Panel admin
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link to="/account" className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4 text-muted-foreground" />
@@ -118,9 +128,14 @@ export function AccountMenu() {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link to="/" className="flex items-center gap-2 text-sm">
+            <Link to="/wishlist" className="flex items-center gap-2 text-sm">
               <Heart className="h-4 w-4 text-muted-foreground" />
-              Wishlist
+              <span className="flex-1">Wishlist</span>
+              {wishlist.length > 0 && (
+                <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                  {wishlist.length > 99 ? "99+" : wishlist.length}
+                </span>
+              )}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">

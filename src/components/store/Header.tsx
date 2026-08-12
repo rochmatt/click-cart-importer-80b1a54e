@@ -1,5 +1,4 @@
 import {
-  Heart,
   Search,
   ShoppingBag,
   Truck,
@@ -9,14 +8,18 @@ import {
   HelpCircle,
   Store,
   LayoutGrid,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "@/lib/theme";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CartMenu } from "@/components/store/CartMenu";
 import { AccountMenu } from "@/components/store/AccountMenu";
 import { NotificationsMenu } from "@/components/store/NotificationsMenu";
+import { AnnouncementToasts } from "@/components/store/AnnouncementToasts";
 import { CategoryMegaMenu } from "@/components/store/CategoryMegaMenu";
 import { useCartSync } from "@/lib/cart";
-import { useWishlist, useWishlistSync } from "@/lib/wishlist";
+import { useWishlistSync } from "@/lib/wishlist";
 
 interface HeaderProps {
   query: string;
@@ -52,9 +55,9 @@ export function Header({
   sticky = true,
 }: HeaderProps) {
   const navigate = useNavigate();
+  const { theme, toggle: toggleTheme } = useTheme();
   useCartSync();
   useWishlistSync();
-  const wishlist = useWishlist();
 
   const submitSearch = () => {
     const q = query.trim();
@@ -94,6 +97,20 @@ export function Header({
               >
                 <HelpCircle className="h-3.5 w-3.5" /> Help
               </Link>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label="Ganti tema terang/gelap"
+                aria-pressed={theme === "dark"}
+                className="inline-flex items-center gap-1.5 transition-colors hover:text-primary"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-3.5 w-3.5" />
+                ) : (
+                  <Moon className="h-3.5 w-3.5" />
+                )}
+                Tema
+              </button>
             </div>
           </div>
         </div>
@@ -146,19 +163,9 @@ export function Header({
           </form>
 
           <nav className="flex shrink-0 items-center gap-1">
-            <Link
-              to="/wishlist"
-              aria-label={wishlist.length > 0 ? `Wishlist, ${wishlist.length} items` : "Wishlist"}
-              className="relative grid h-10 w-10 place-items-center rounded-full text-header-muted transition-colors hover:bg-header-foreground/10 hover:text-primary"
-            >
-              <Heart className="h-5 w-5" />
-              {wishlist.length > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-bold leading-none text-primary-foreground">
-                  {wishlist.length > 99 ? "99+" : wishlist.length}
-                </span>
-              )}
-            </Link>
+            {/* Wishlist dipindah ke panel akun (AccountMenu). */}
             <NotificationsMenu />
+            <AnnouncementToasts />
             <CartMenu />
             <AccountMenu />
           </nav>

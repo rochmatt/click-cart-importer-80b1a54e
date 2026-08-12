@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import { useAdminRole } from "@/lib/use-admin-role";
 
 export function AdminGuard({ children }: { children: ReactNode }) {
-  const { loading, isAdmin, signedIn } = useAdminRole();
+  // fresh: gerbang nyata /admin selalu tanya server tiap mount (bukan cache sesi),
+  // supaya pencabutan peran langsung terlihat saat admin masuk kembali.
+  const { loading, isAdmin, signedIn } = useAdminRole({ fresh: true });
 
   if (loading) {
     return (

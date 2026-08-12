@@ -1,10 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useHoverMenu } from "@/lib/use-hover-menu";
 import {
   cartCount,
   cartSubtotal,
@@ -18,13 +15,15 @@ export function CartMenu() {
   const items = useCart();
   const count = cartCount(items);
   const subtotal = cartSubtotal(items);
+  const { open, setOpen, triggerHoverProps, contentHoverProps } = useHoverMenu();
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
           aria-label={count > 0 ? `Cart, ${count} items` : "Cart"}
+          {...triggerHoverProps}
           className="relative grid h-10 w-10 place-items-center rounded-full text-header-muted transition-colors hover:bg-header-foreground/10 hover:text-primary"
         >
           <ShoppingCart className="h-5 w-5" />
@@ -35,7 +34,11 @@ export function CartMenu() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(22rem,calc(100vw-2rem))] p-0">
+      <PopoverContent
+        align="end"
+        className="w-[min(22rem,calc(100vw-2rem))] p-0"
+        {...contentHoverProps}
+      >
         <div className="border-b border-border px-4 py-3">
           <p className="text-sm font-semibold text-foreground">
             My cart {count > 0 && <span className="text-muted-foreground">({count})</span>}

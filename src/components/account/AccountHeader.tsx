@@ -1,8 +1,7 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  LayoutDashboard,
   LogOut,
   Package,
   ShoppingBag,
@@ -10,9 +9,9 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { signOut } from "@/lib/auth/auth.functions";
-import { setAuthUser } from "@/lib/auth";
 import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
+import { useAdminRole } from "@/lib/use-admin-role";
+import { useSignOut } from "@/lib/use-sign-out";
 
 const TABS = [
   { label: "Profil", to: "/account", icon: UserRound },
@@ -24,19 +23,10 @@ const TABS = [
 /** Header khusus panel akun pengguna (bukan header storefront). */
 export function AccountHeader() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { isAdmin } = useAdminRole();
+  const signOut = useSignOut();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const label = displayNameFor(user);
-
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await signOut();
-    setAuthUser(null);
-    toast.success("Kamu sudah keluar");
-    navigate({ to: "/", replace: true });
-  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card">
@@ -61,9 +51,20 @@ export function AccountHeader() {
               Panel akun
             </span>
           </span>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              aria-label="Panel admin"
+              className="ml-1 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-primary/40 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Panel admin</span>
+            </Link>
+          )}
           <button
             type="button"
-            onClick={signOut}
+            aria-label="Keluar"
+            onClick={() => void signOut("Kamu sudah keluar")}
             className="ml-1 inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
           >
             <LogOut className="h-3.5 w-3.5" />
