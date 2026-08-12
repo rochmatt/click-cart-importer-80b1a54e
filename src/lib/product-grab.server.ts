@@ -4,10 +4,18 @@
  */
 
 import { normalizePrices, parsePriceValue, type PriceIssue } from "./price-normalize";
+import { normalizeAvailability, type Availability } from "./product-sync";
 
 export type GrabbedProduct = {
   sourceUrl: string;
   marketplace: "shopee" | "tokopedia" | "tiktok" | null;
+  /**
+   * Ketersediaan stok di sumber, dari schema.org/offers.availability atau meta
+   * product:availability. "unknown" bila halaman tidak mengeksposnya — banyak
+   * marketplace merender stok via JS, jadi fetch server sering tak melihatnya.
+   * Dipakai mesin sinkronisasi untuk auto-sembunyi produk yang habis.
+   */
+  availability: Availability;
   title: string;
   description: string;
   brand: string;
@@ -308,9 +316,25 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
     });
   }
 
+  // Ketersediaan: kumpulkan semua sinyal (offers + meta), "tersedia" menang atas
+  // "habis" supaya tidak salah menyembunyikan produk yang masih ada.
+  const availabilitySignals = [
+    ...offers.map((o) => o.availability).filter((a): a is string => typeof a === "string"),
+    meta(html, "product:availability"),
+    meta(html, "og:availability"),
+  ].filter((a): a is string => typeof a === "string" && a.length > 0);
+  const availability: Availability = availabilitySignals.some(
+    (s) => normalizeAvailability(s) === "in",
+  )
+    ? "in"
+    : availabilitySignals.some((s) => normalizeAvailability(s) === "out")
+      ? "out"
+      : "unknown";
+
   return {
     sourceUrl: base,
     marketplace: detectMarketplace(base),
+    availability,
     title: title.slice(0, 140).trim(),
     description: stripTags(description).slice(0, 2000),
     brand: brand.slice(0, 80).trim(),
