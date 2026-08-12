@@ -20,6 +20,7 @@ import {
   Menu,
   History,
   MailCheck,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ import { displayNameFor, initialsFor, useAuth } from "@/lib/auth";
 const NAV = [
   { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Products", to: "/admin/products", icon: Package, exact: false },
+  { label: "Sync Produk", to: "/admin/sync", icon: RefreshCw, exact: false },
   { label: "Categories", to: "/admin/categories", icon: FolderTree, exact: false },
   { label: "Orders", to: "/admin/orders", icon: ShoppingCart, exact: false },
   { label: "Customers", to: "/admin/customers", icon: Users, exact: false },

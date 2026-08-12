@@ -4,6 +4,8 @@ import {
   decideProductSync,
   normalizeAvailability,
   sourceFingerprint,
+  tierHoursFor,
+  TIER_HOURS,
   type SyncCurrent,
 } from "./product-sync";
 
@@ -186,5 +188,26 @@ describe("decideProductSync — kegagalan", () => {
     expect(d.syncStatus).toBe("ok");
     expect(d.failCount).toBe(0);
     expect(d.event?.type).toBe("recovered");
+  });
+});
+
+describe("tierHoursFor — penjadwalan bertingkat", () => {
+  it("error dicek paling sering, apa pun status admin", () => {
+    expect(tierHoursFor("active", "error")).toBe(TIER_HOURS.error);
+    expect(tierHoursFor("draft", "error")).toBe(TIER_HOURS.error);
+  });
+
+  it("out_of_stock dipantau untuk restok", () => {
+    expect(tierHoursFor("active", "out_of_stock")).toBe(TIER_HOURS.outOfStock);
+  });
+
+  it("produk aktif dicek lebih sering daripada draft yang sehat", () => {
+    expect(tierHoursFor("active", "ok")).toBe(TIER_HOURS.active);
+    expect(tierHoursFor("draft", "ok")).toBe(TIER_HOURS.other);
+    expect(tierHoursFor("active", "ok")).toBeLessThan(tierHoursFor("draft", "ok"));
+  });
+
+  it("status sync menang atas status admin (draft+error tetap sering)", () => {
+    expect(tierHoursFor("draft", "error")).toBeLessThan(tierHoursFor("active", "ok"));
   });
 });

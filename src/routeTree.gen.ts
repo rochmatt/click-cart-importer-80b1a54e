@@ -38,6 +38,7 @@ import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminEmailLogsRouteImport } from './routes/admin.email-logs'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSyncRouteImport } from './routes/admin.sync'
 import { Route as CategoryIndexRouteImport } from './routes/category.index'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as OrdersOrderNumberRouteImport } from './routes/orders.$orderNumber'
@@ -195,6 +196,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSyncRoute = AdminSyncRouteImport.update({
+  id: '/sync',
+  path: '/sync',
+  getParentRoute: () => AdminRoute,
+} as any)
 const CategoryIndexRoute = CategoryIndexRouteImport.update({
   id: '/category/',
   path: '/category/',
@@ -282,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/admin/email-logs': typeof AdminEmailLogsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/sync': typeof AdminSyncRoute
   '/category/$slug': typeof CategorySlugRoute
   '/orders/$orderNumber': typeof OrdersOrderNumberRoute
   '/products/$id': typeof ProductsIdRoute
@@ -323,6 +330,7 @@ export interface FileRoutesByTo {
   '/admin/email-logs': typeof AdminEmailLogsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/sync': typeof AdminSyncRoute
   '/category/$slug': typeof CategorySlugRoute
   '/orders/$orderNumber': typeof OrdersOrderNumberRoute
   '/products/$id': typeof ProductsIdRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/admin/email-logs': typeof AdminEmailLogsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/sync': typeof AdminSyncRoute
   '/category/$slug': typeof CategorySlugRoute
   '/orders/$orderNumber': typeof OrdersOrderNumberRoute
   '/products/$id': typeof ProductsIdRoute
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
     | '/admin/email-logs'
     | '/admin/orders'
     | '/admin/settings'
+    | '/admin/sync'
     | '/category/$slug'
     | '/orders/$orderNumber'
     | '/products/$id'
@@ -451,6 +461,7 @@ export interface FileRouteTypes {
     | '/admin/email-logs'
     | '/admin/orders'
     | '/admin/settings'
+    | '/admin/sync'
     | '/category/$slug'
     | '/orders/$orderNumber'
     | '/products/$id'
@@ -493,6 +504,7 @@ export interface FileRouteTypes {
     | '/admin/email-logs'
     | '/admin/orders'
     | '/admin/settings'
+    | '/admin/sync'
     | '/category/$slug'
     | '/orders/$orderNumber'
     | '/products/$id'
@@ -744,6 +756,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/sync': {
+      id: '/admin/sync'
+      path: '/sync'
+      fullPath: '/admin/sync'
+      preLoaderRoute: typeof AdminSyncRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/category/': {
       id: '/category/'
       path: '/category'
@@ -833,6 +852,7 @@ interface AdminRouteChildren {
   AdminEmailLogsRoute: typeof AdminEmailLogsRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSyncRoute: typeof AdminSyncRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminProductsIdRoute: typeof AdminProductsIdRoute
   AdminProductsIndexRoute: typeof AdminProductsIndexRoute
@@ -847,6 +867,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEmailLogsRoute: AdminEmailLogsRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminSyncRoute: AdminSyncRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminProductsIdRoute: AdminProductsIdRoute,
   AdminProductsIndexRoute: AdminProductsIndexRoute,

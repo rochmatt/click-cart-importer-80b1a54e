@@ -179,3 +179,27 @@ export function decideProductSync(current: SyncCurrent, grab: GrabOutcome): Sync
 
   return hasil;
 }
+
+// --- Penjadwalan bertingkat (Fase 2) ---------------------------------------
+//
+// Seberapa sering sebuah produk dicek ulang, dalam JAM. Yang butuh perhatian
+// dicek lebih sering; draft/ekor-panjang lebih jarang. Angka ini dipakai kueri
+// kandidat di product-sync.server.ts — CASE di SQL harus mencerminkan URUTAN
+// cabang fungsi ini.
+export const TIER_HOURS = { error: 3, outOfStock: 4, active: 6, other: 24 } as const;
+
+/** Interval cek (jam) untuk satu produk: status sync menang atas status admin. */
+export function tierHoursFor(adminStatus: string, syncStatus: string): number {
+  if (syncStatus === "error") return TIER_HOURS.error; // gagal → coba lagi lebih cepat
+  if (syncStatus === "out_of_stock") return TIER_HOURS.outOfStock; // pantau restok
+  if (adminStatus === "active") return TIER_HOURS.active; // tayang → lebih penting
+  return TIER_HOURS.other; // draft / ekor panjang
+}
+
+/** Label tier ringkas untuk tampilan dashboard. */
+export function tierLabel(adminStatus: string, syncStatus: string): "sering" | "normal" | "jarang" {
+  const h = tierHoursFor(adminStatus, syncStatus);
+  if (h <= TIER_HOURS.outOfStock) return "sering";
+  if (h <= TIER_HOURS.active) return "normal";
+  return "jarang";
+}

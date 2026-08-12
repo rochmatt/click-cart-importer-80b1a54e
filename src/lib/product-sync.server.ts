@@ -1,17 +1,18 @@
-// Mesin sinkronisasi produk — Fase 1 (server-only).
+// Mesin sinkronisasi produk — Fase 1 + penjadwalan bertingkat & sinkron-satuan (Fase 2).
 //
-// Alur: ambil sebatch produk marketplace (yang paling lama tak dicek dulu) →
-// baca ulang halaman sumbernya pakai grabber yang sama dengan fitur "Grab dari
-// URL" → putuskan perubahan (product-sync.ts, murni & teruji) → tulis
-// product_sync_state, dan HANYA saat stok berubah, ubah admin_products.status →
-// kirim satu email ringkasan bila ada perubahan.
+// Alur: ambil sebatch produk marketplace yang JATUH TEMPO (per tier) → baca ulang
+// halaman sumbernya pakai grabber yang sama dengan fitur "Grab dari URL" →
+// putuskan perubahan (product-sync.ts, murni & teruji) → tulis product_sync_state,
+// dan HANYA saat stok berubah, ubah admin_products.status → kirim satu email
+// ringkasan bila ada perubahan.
 //
 // Sengaja SEKUENSIAL dengan jeda sopan: batch kecil per run, dipanggil berkala
-// oleh cron, merotasi seluruh katalog. Konkurensi + proxy adalah urusan Fase 2.
+// oleh cron, merotasi katalog. Konkurensi + proxy + adapter internal-API adalah
+// urusan Fase 2 lanjutan.
 
 import { run } from "@/lib/db/pool.server";
 import { grabProductFromUrl } from "@/lib/product-grab.server";
-import { decideProductSync, type GrabOutcome } from "@/lib/product-sync";
+import { decideProductSync, TIER_HOURS, type GrabOutcome } from "@/lib/product-sync";
 import { emailFrom, isEmailConfigured, sendEmail } from "@/lib/email/resend.server";
 
 const DEFAULT_LIMIT = 40;
@@ -76,26 +77,122 @@ async function bacaSumber(url: string): Promise<GrabOutcome> {
   }
 }
 
+// Kolom kandidat yang dibaca kedua jalur (batch & satuan) — dijaga sama persis.
+const CANDIDATE_COLS = `p.id, p.title, p.status AS admin_status, p.links,
+            s.status AS sync_status, s.source_hash, s.source_price,
+            s.fail_count, s.previous_status`;
+
 /**
- * Membaca ulang sebatch produk dan menuliskan perubahannya. Mengembalikan daftar
- * event untuk ringkasan email. Tidak melempar untuk kegagalan per-produk — satu
- * produk yang bermasalah tidak boleh menggagalkan seluruh batch.
+ * Membaca ulang & menuliskan SATU produk. Mengembalikan event (bila ada) + status
+ * sync baru. Tidak melempar: kegagalan tulis dicatat dan dianggap "tak terproses".
+ * Dipakai bersama oleh batch dan tombol "Sinkron sekarang" di dashboard.
+ */
+async function syncProductRow(
+  row: CandidateRow,
+): Promise<{ processed: boolean; event: SyncEventRow | null; syncStatus: string | null }> {
+  const source = pickSource(row.links);
+  if (!source) return { processed: false, event: null, syncStatus: null };
+
+  const grab = await bacaSumber(source.url);
+  const decision = decideProductSync(
+    {
+      adminStatus: row.admin_status,
+      syncStatus: row.sync_status ?? "idle",
+      sourceHash: row.source_hash,
+      sourcePrice: row.source_price,
+      failCount: row.fail_count ?? 0,
+      previousStatus: row.previous_status,
+    },
+    grab,
+  );
+
+  try {
+    await run(
+      `INSERT INTO public.product_sync_state
+         (product_id, marketplace, source_url, status, source_price, source_hash,
+          fail_count, previous_status, last_error, last_checked_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+       ON CONFLICT (product_id) DO UPDATE SET
+         marketplace = EXCLUDED.marketplace,
+         source_url = EXCLUDED.source_url,
+         status = EXCLUDED.status,
+         source_price = EXCLUDED.source_price,
+         source_hash = EXCLUDED.source_hash,
+         fail_count = EXCLUDED.fail_count,
+         previous_status = EXCLUDED.previous_status,
+         last_error = EXCLUDED.last_error,
+         last_checked_at = now(),
+         updated_at = now()`,
+      [
+        row.id,
+        source.marketplace,
+        source.url,
+        decision.syncStatus,
+        decision.sourcePrice,
+        decision.sourceHash,
+        decision.failCount,
+        decision.previousStatus,
+        decision.lastError,
+      ],
+      { rls: false },
+    );
+
+    // Hanya perubahan stok yang menyentuh admin_products (dan memicu trigger
+    // updated_at). Bookkeeping lain tetap di product_sync_state.
+    if (decision.adminStatus) {
+      await run(
+        `UPDATE public.admin_products SET status = $1 WHERE id = $2`,
+        [decision.adminStatus, row.id],
+        { rls: false },
+      );
+    }
+  } catch (error) {
+    console.error("sinkronisasi: gagal tulis state", row.id, error);
+    return { processed: false, event: null, syncStatus: null };
+  }
+
+  const event: SyncEventRow | null = decision.event
+    ? {
+        productId: row.id,
+        title: row.title || "(tanpa judul)",
+        marketplace: source.marketplace,
+        url: source.url,
+        type: decision.event.type,
+        detail: decision.event.detail,
+      }
+    : null;
+  return { processed: true, event, syncStatus: decision.syncStatus };
+}
+
+/**
+ * Membaca ulang sebatch produk yang JATUH TEMPO dan menuliskan perubahannya.
+ * Penjadwalan bertingkat: tiap produk punya interval cek sendiri (TIER_HOURS),
+ * jadi yang laris/bermasalah dicek lebih sering dan draft/ekor-panjang lebih
+ * jarang — CASE di SQL mencerminkan tierHoursFor() di product-sync.ts.
  */
 export async function syncAllProducts(opts: { limit?: number } = {}): Promise<SyncSummary> {
   const limit = Math.min(Math.max(1, opts.limit ?? DEFAULT_LIMIT), MAX_LIMIT);
 
   const candidates = await run<CandidateRow>(
-    `SELECT p.id, p.title, p.status AS admin_status, p.links,
-            s.status AS sync_status, s.source_hash, s.source_price,
-            s.fail_count, s.previous_status
+    `SELECT ${CANDIDATE_COLS}
        FROM public.admin_products p
        LEFT JOIN public.product_sync_state s ON s.product_id = p.id
-      WHERE COALESCE(p.links->>'shopee', '') <> ''
-         OR COALESCE(p.links->>'tokopedia', '') <> ''
-         OR COALESCE(p.links->>'tiktok', '') <> ''
+      WHERE (COALESCE(p.links->>'shopee', '') <> ''
+          OR COALESCE(p.links->>'tokopedia', '') <> ''
+          OR COALESCE(p.links->>'tiktok', '') <> '')
+        AND (
+          s.last_checked_at IS NULL
+          OR s.last_checked_at < now() - (
+              CASE
+                WHEN s.status = 'error' THEN $2::int
+                WHEN s.status = 'out_of_stock' THEN $3::int
+                WHEN p.status = 'active' THEN $4::int
+                ELSE $5::int
+              END * interval '1 hour')
+        )
       ORDER BY s.last_checked_at ASC NULLS FIRST
       LIMIT $1`,
-    [limit],
+    [limit, TIER_HOURS.error, TIER_HOURS.outOfStock, TIER_HOURS.active, TIER_HOURS.other],
     { rls: false },
   );
 
@@ -103,81 +200,10 @@ export async function syncAllProducts(opts: { limit?: number } = {}): Promise<Sy
   let checked = 0;
 
   for (let i = 0; i < candidates.length; i++) {
-    const row = candidates[i];
-    const source = pickSource(row.links);
-    if (!source) continue;
-
     if (i > 0) await sleep(JEDA_MIN_MS + Math.floor(Math.random() * JEDA_JITTER_MS));
-
-    const grab = await bacaSumber(source.url);
-    const decision = decideProductSync(
-      {
-        adminStatus: row.admin_status,
-        syncStatus: row.sync_status ?? "idle",
-        sourceHash: row.source_hash,
-        sourcePrice: row.source_price,
-        failCount: row.fail_count ?? 0,
-        previousStatus: row.previous_status,
-      },
-      grab,
-    );
-    checked++;
-
-    try {
-      await run(
-        `INSERT INTO public.product_sync_state
-           (product_id, marketplace, source_url, status, source_price, source_hash,
-            fail_count, previous_status, last_error, last_checked_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
-         ON CONFLICT (product_id) DO UPDATE SET
-           marketplace = EXCLUDED.marketplace,
-           source_url = EXCLUDED.source_url,
-           status = EXCLUDED.status,
-           source_price = EXCLUDED.source_price,
-           source_hash = EXCLUDED.source_hash,
-           fail_count = EXCLUDED.fail_count,
-           previous_status = EXCLUDED.previous_status,
-           last_error = EXCLUDED.last_error,
-           last_checked_at = now(),
-           updated_at = now()`,
-        [
-          row.id,
-          source.marketplace,
-          source.url,
-          decision.syncStatus,
-          decision.sourcePrice,
-          decision.sourceHash,
-          decision.failCount,
-          decision.previousStatus,
-          decision.lastError,
-        ],
-        { rls: false },
-      );
-
-      // Hanya perubahan stok yang menyentuh admin_products (dan memicu trigger
-      // updated_at). Bookkeeping lain tetap di product_sync_state.
-      if (decision.adminStatus) {
-        await run(
-          `UPDATE public.admin_products SET status = $1 WHERE id = $2`,
-          [decision.adminStatus, row.id],
-          { rls: false },
-        );
-      }
-    } catch (error) {
-      console.error("sinkronisasi: gagal tulis state", row.id, error);
-      continue;
-    }
-
-    if (decision.event) {
-      events.push({
-        productId: row.id,
-        title: row.title || "(tanpa judul)",
-        marketplace: source.marketplace,
-        url: source.url,
-        type: decision.event.type,
-        detail: decision.event.detail,
-      });
-    }
+    const { processed, event } = await syncProductRow(candidates[i]);
+    if (processed) checked++;
+    if (event) events.push(event);
   }
 
   return {
@@ -189,6 +215,27 @@ export async function syncAllProducts(opts: { limit?: number } = {}): Promise<Sy
     errors: events.filter((e) => e.type === "error").length,
     events,
   };
+}
+
+/**
+ * Sinkron satu produk atas permintaan (tombol "Sinkron sekarang" di dashboard).
+ * Tidak menghormati tier/jatuh-tempo — admin memang minta cek sekarang.
+ */
+export async function syncProductById(
+  id: string,
+): Promise<{ synced: boolean; event: SyncEventRow | null; syncStatus: string | null }> {
+  const rows = await run<CandidateRow>(
+    `SELECT ${CANDIDATE_COLS}
+       FROM public.admin_products p
+       LEFT JOIN public.product_sync_state s ON s.product_id = p.id
+      WHERE p.id = $1
+      LIMIT 1`,
+    [id],
+    { rls: false },
+  );
+  if (!rows.length) return { synced: false, event: null, syncStatus: null };
+  const { processed, event, syncStatus } = await syncProductRow(rows[0]);
+  return { synced: processed, event, syncStatus };
 }
 
 // --- Ringkasan email -------------------------------------------------------
