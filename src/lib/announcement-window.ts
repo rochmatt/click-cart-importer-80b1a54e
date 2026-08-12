@@ -46,3 +46,50 @@ export function pengumumanTampil(a: JendelaPengumuman, nowMs: number): boolean {
   }
   return true;
 }
+
+// ---------------------------------------------------------------------------
+// AUDIENCE TARGETING. Selain jendela jadwal, tiap pengumuman menyasar satu
+// kelompok penonton. Predikat ini dan pengumumanTampil di atas adalah dua
+// gerbang yang independen: sebuah pengumuman tayang hanya jika LOLOS keduanya.
+// Dipisah supaya masing-masing bisa diuji tuntas tanpa runtime server.
+
+/** Kelompok penonton yang bisa disasar satu pengumuman. */
+export type AudiensPengumuman = "all" | "guest" | "member" | "admin" | "moderator";
+
+/** Siapa yang sedang melihat — ditentukan server dari sesi, bukan browser. */
+export interface PenontonPengumuman {
+  /** Apakah penonton sudah login. admin/moderator selalu menyiratkan login. */
+  loggedIn: boolean;
+  /** Peran penonton (mis. ["admin"]). Kosong untuk tamu atau pengguna biasa. */
+  roles?: readonly string[];
+}
+
+/**
+ * Apakah pengumuman dengan sasaran `audience` boleh tampil untuk `penonton`.
+ *
+ * "member" berarti pengunjung login mana pun — jadi admin pun melihat pengumuman
+ * member (admin juga seorang member). Sebaliknya "guest" hanya untuk yang BELUM
+ * login, sehingga banner "daftar sekarang" tidak mengganggu yang sudah punya akun.
+ *
+ * Nilai yang tak dikenal (termasuk null/undefined dan data lama sebelum kolom
+ * audience ada) diperlakukan sebagai "all" — sama filosofinya dengan
+ * pengumumanTampil: lebih baik satu baris salah-bentuk tetap tampil ke semua
+ * daripada hilang diam-diam.
+ */
+export function pengumumanUntukPenonton(
+  audience: string | null | undefined,
+  penonton: PenontonPengumuman,
+): boolean {
+  switch (audience) {
+    case "guest":
+      return !penonton.loggedIn;
+    case "member":
+      return penonton.loggedIn;
+    case "admin":
+      return penonton.loggedIn && (penonton.roles ?? []).includes("admin");
+    case "moderator":
+      return penonton.loggedIn && (penonton.roles ?? []).includes("moderator");
+    default:
+      return true; // "all" + nilai tak dikenal → tampil ke semua
+  }
+}

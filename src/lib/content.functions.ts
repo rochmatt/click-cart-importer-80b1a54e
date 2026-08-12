@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { assertAdmin } from "@/lib/admin-access.server";
-import { requireAuth } from "@/lib/auth/middleware.server";
-import { pengumumanTampil } from "@/lib/announcement-window";
+import { optionalAuth, requireAuth } from "@/lib/auth/middleware.server";
+import { pengumumanTampil, pengumumanUntukPenonton } from "@/lib/announcement-window";
 
 // Pengumuman dan data analitik penjualan — dipindahkan dari browser.
 //
@@ -10,43 +10,58 @@ import { pengumumanTampil } from "@/lib/announcement-window";
 // halaman. Setelah ini tidak ada lagi kueri tabel dari browser sama sekali.
 
 const ANNOUNCEMENT_COLUMNS =
-  "id, title, message, kind, link_url, link_label, show_as_banner, priority, is_active, starts_at, ends_at, created_at";
-
-async function anon() {
-  const { createUserClient } = await import("@/lib/db/client.server");
-  return createUserClient(null);
-}
+  "id, title, message, kind, link_url, link_label, show_as_banner, priority, is_active, starts_at, ends_at, audience, created_at";
 
 /**
- * Pengumuman yang sedang tayang.
+ * Pengumuman yang sedang tayang UNTUK penonton yang meminta.
  *
- * Versi Supabase mengandalkan RLS untuk menyaring jadwal dan status aktif.
- * Policy lokal hanya mengizinkan baca publik tanpa menyaring jadwal, jadi
- * penyaringannya dilakukan di sini secara eksplisit — kalau tidak, pengumuman
- * yang sudah dijadwalkan berakhir akan tetap tampil.
+ * Dua penyaringan digabung di sini, keduanya di server:
+ *  1. Jendela jadwal + status aktif (pengumumanTampil) — dulu diandalkan ke RLS
+ *     Supabase; policy lokal hanya membuka baca publik tanpa menyaring jadwal.
+ *  2. Audience targeting (pengumumanUntukPenonton) — berdasarkan status login
+ *     dan peran penonton. Sesi dibaca lewat optionalAuth (null untuk tamu),
+ *     sehingga tamu tetap dilayani tanpa error. Peran diambil dari user_roles
+ *     dengan klien user-scoped: policy roles_read mengizinkan pengguna membaca
+ *     perannya sendiri (auth.uid() = user_id).
+ *
+ * Penyaringan audiens ini soal RELEVANSI, bukan kerahasiaan — announce_read
+ * masih USING(true). Tapi karena browser tak lagi menembak tabel langsung, ia
+ * hanya menerima hasil yang sudah terfilter di sini.
  */
-export const fetchAnnouncements = createServerFn({ method: "GET" }).handler(async () => {
-  const { data, error } = await (
-    await anon()
-  )
-    .from("announcements")
-    .select(ANNOUNCEMENT_COLUMNS)
-    .order("priority", { ascending: false })
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
+export const fetchAnnouncements = createServerFn({ method: "GET" })
+  .middleware([optionalAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.db
+      .from("announcements")
+      .select(ANNOUNCEMENT_COLUMNS)
+      .order("priority", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
 
-  const sekarang = Date.now();
-  return (data ?? []).filter((a: Record<string, unknown>) =>
-    pengumumanTampil(
-      {
-        is_active: Boolean(a.is_active),
-        starts_at: a.starts_at as string | null | undefined,
-        ends_at: a.ends_at as string | null | undefined,
-      },
-      sekarang,
-    ),
-  );
-});
+    const loggedIn = context.userId != null;
+    let roles: string[] = [];
+    if (loggedIn) {
+      const { data: roleRows } = await context.db
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId);
+      roles = ((roleRows ?? []) as { role: string }[]).map((r) => r.role);
+    }
+    const penonton = { loggedIn, roles };
+
+    const sekarang = Date.now();
+    return (data ?? []).filter(
+      (a: Record<string, unknown>) =>
+        pengumumanTampil(
+          {
+            is_active: Boolean(a.is_active),
+            starts_at: a.starts_at as string | null | undefined,
+            ends_at: a.ends_at as string | null | undefined,
+          },
+          sekarang,
+        ) && pengumumanUntukPenonton(a.audience as string | null | undefined, penonton),
+    );
+  });
 
 /** Semua pengumuman, termasuk yang tidak aktif — untuk panel admin. */
 export const adminListAnnouncements = createServerFn({ method: "GET" })
@@ -74,6 +89,10 @@ const announcementSchema = z
     is_active: z.boolean(),
     starts_at: z.string().max(40),
     ends_at: z.string().max(40).nullable(),
+    // Sasaran audiens; default "all" agar pemanggil lama yang tak menyertakan
+    // kolom ini tetap valid. Nilai dikunci ke daftar yang dipahami server dan
+    // dijaga sama dengan CHECK di db/009-announcement-audience.sql.
+    audience: z.enum(["all", "guest", "member", "admin", "moderator"]).default("all"),
   })
   .strict();
 

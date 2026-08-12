@@ -13,7 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { type Announcement, KIND_META, kindMeta } from "@/lib/announcements";
+import {
+  type Announcement,
+  type AnnouncementAudience,
+  AUDIENCE_META,
+  audienceMeta,
+  KIND_META,
+  kindMeta,
+} from "@/lib/announcements";
 
 const title = "Announcements — PasarPilih Admin";
 const description =
@@ -42,6 +49,7 @@ type Draft = {
   link_label: string;
   show_as_banner: boolean;
   priority: number;
+  audience: AnnouncementAudience;
   ends_at: string;
 };
 
@@ -53,6 +61,7 @@ const emptyDraft: Draft = {
   link_label: "",
   show_as_banner: true,
   priority: 10,
+  audience: "all",
   ends_at: "",
 };
 
@@ -86,6 +95,7 @@ function AdminAnnouncementsPage() {
             show_as_banner: input.show_as_banner,
             priority: Number.isFinite(input.priority) ? input.priority : 0,
             is_active: true,
+            audience: input.audience,
             starts_at: new Date().toISOString(),
             ends_at: input.ends_at ? new Date(input.ends_at).toISOString() : null,
           },
@@ -119,6 +129,7 @@ function AdminAnnouncementsPage() {
             show_as_banner: patch.show_as_banner ?? kini.show_as_banner,
             priority: patch.priority ?? kini.priority,
             is_active: patch.is_active ?? kini.is_active,
+            audience: patch.audience ?? kini.audience ?? "all",
             starts_at: patch.starts_at ?? kini.starts_at,
             ends_at: patch.ends_at ?? kini.ends_at ?? null,
           },
@@ -198,6 +209,27 @@ function AdminAnnouncementsPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <Label htmlFor="a-audience">Audiens</Label>
+          <select
+            id="a-audience"
+            value={draft.audience}
+            onChange={(e) =>
+              setDraft({ ...draft, audience: e.target.value as AnnouncementAudience })
+            }
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground"
+          >
+            {Object.entries(AUDIENCE_META).map(([value, meta]) => (
+              <option key={value} value={value}>
+                {meta.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {AUDIENCE_META[draft.audience].hint}
+          </p>
         </div>
 
         <div>
@@ -292,6 +324,9 @@ function AdminAnnouncementsPage() {
                     <p className="truncate text-xs text-muted-foreground">{a.message}</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">
                       {meta.label} · prioritas {a.priority}
+                      {a.audience && a.audience !== "all"
+                        ? ` · ${audienceMeta(a.audience).label}`
+                        : ""}
                       {a.show_as_banner ? " · banner" : ""}
                       {a.ends_at
                         ? ` · berakhir ${new Date(a.ends_at).toLocaleString("id-ID")}`

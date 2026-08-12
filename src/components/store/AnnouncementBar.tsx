@@ -1,14 +1,29 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import {
+  audienceMeta,
   kindMeta,
   useAnnouncements,
   useDismissedAnnouncements,
 } from "@/lib/announcements";
 
 const FALLBACK = [
-  { id: "fallback-1", kind: "promo", title: "Voucher pengguna baru", message: "Klaim voucher hingga Rp100.000 untuk pesanan pertamamu.", link_url: "", link_label: "" },
-  { id: "fallback-2", kind: "info", title: "Gratis ongkir", message: "Gratis ongkir seluruh Indonesia tanpa minimum belanja.", link_url: "", link_label: "" },
+  {
+    id: "fallback-1",
+    kind: "promo",
+    title: "Voucher pengguna baru",
+    message: "Klaim voucher hingga Rp100.000 untuk pesanan pertamamu.",
+    link_url: "",
+    link_label: "",
+  },
+  {
+    id: "fallback-2",
+    kind: "info",
+    title: "Gratis ongkir",
+    message: "Gratis ongkir seluruh Indonesia tanpa minimum belanja.",
+    link_url: "",
+    link_label: "",
+  },
 ];
 
 /**
@@ -36,6 +51,12 @@ export function AnnouncementBar() {
   const meta = kindMeta(current.kind);
   const Icon = meta.icon;
 
+  // Badge audiens pada tiap banner (termasuk "Semua"), meniru mock yang memberi
+  // badge ke semua varian. Item FALLBACK tidak punya kolom audience → tanpa badge.
+  const audience: string | undefined =
+    "audience" in current ? (current.audience as string) : undefined;
+  const showAudience = Boolean(audience);
+
   return (
     <div className="text-primary-foreground" style={{ backgroundImage: "var(--gradient-flash)" }}>
       <div className="mx-auto flex h-9 max-w-7xl items-center gap-2 px-4">
@@ -44,6 +65,11 @@ export function AnnouncementBar() {
           key={current.id}
           className="animate-in fade-in slide-in-from-bottom-1 min-w-0 flex-1 truncate text-center text-[11px] font-semibold tracking-tight sm:text-xs"
         >
+          {showAudience ? (
+            <span className="mr-1.5 inline-flex items-center rounded-full bg-primary-foreground/20 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase leading-none tracking-wide">
+              {audienceMeta(audience!).short}
+            </span>
+          ) : null}
           <span className="font-extrabold">{current.title}</span>
           {current.message ? <span className="opacity-90"> — {current.message}</span> : null}
           {current.link_url ? (

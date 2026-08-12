@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgePercent, Info, AlertTriangle, Wrench } from "lucide-react";
 import { fetchAnnouncements } from "@/lib/content.functions";
+import type { AudiensPengumuman } from "@/lib/announcement-window";
+import { useAuth } from "@/lib/auth";
 
 export type AnnouncementKind = "promo" | "info" | "warning" | "maintenance";
+export type AnnouncementAudience = AudiensPengumuman;
 
 export interface Announcement {
   id: string;
@@ -17,7 +20,30 @@ export interface Announcement {
   is_active: boolean;
   starts_at: string;
   ends_at: string | null;
+  audience: AnnouncementAudience;
   created_at: string;
+}
+
+/**
+ * Label audiens. `label` untuk panel admin (jelas & panjang), `short` untuk pill
+ * badge sempit di storefront. Urutan objek = urutan yang ditampilkan.
+ */
+export const AUDIENCE_META: Record<
+  AnnouncementAudience,
+  { label: string; short: string; hint: string }
+> = {
+  all: { label: "Semua", short: "Semua", hint: "Tampil ke semua pengunjung" },
+  guest: { label: "Tamu (belum login)", short: "Tamu", hint: "Hanya yang belum masuk akun" },
+  member: { label: "Member (sudah login)", short: "Member", hint: "Hanya pengunjung yang login" },
+  admin: { label: "Admin", short: "Admin", hint: "Hanya penonton berperan admin" },
+  moderator: { label: "Moderator", short: "Moderator", hint: "Hanya penonton berperan moderator" },
+};
+
+/** Label pendek satu audiens; jatuh ke "Semua" untuk nilai tak dikenal. */
+export function audienceMeta(audience: string) {
+  return AUDIENCE_META[
+    (audience as AnnouncementAudience) in AUDIENCE_META ? (audience as AnnouncementAudience) : "all"
+  ];
 }
 
 export const KIND_META: Record<
@@ -54,9 +80,6 @@ export function kindMeta(kind: string) {
   return KIND_META[(kind as AnnouncementKind) in KIND_META ? (kind as AnnouncementKind) : "info"];
 }
 
-const SELECT =
-  "id, title, message, kind, link_url, link_label, show_as_banner, priority, is_active, starts_at, ends_at, created_at";
-
 /**
  * Pengumuman aktif yang sedang dalam jendela jadwalnya.
  *
@@ -92,8 +115,26 @@ function useAnnouncementsRealtime() {
   }, [queryClient]);
 }
 
+/**
+ * Hasil fetchAnnouncements kini bergantung pada sesi (audience targeting), jadi
+ * cache tamu vs member berbeda. Saat identitas berubah (login/logout) segarkan
+ * segera alih-alih menunggu polling 60 detik — kalau tidak, banner "member"
+ * baru muncul semenit setelah masuk, dan banner "tamu" masih menempel semenit
+ * setelah keluar.
+ */
+function useAnnouncementsAuthSync() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ANNOUNCEMENTS_KEY });
+  }, [queryClient, userId]);
+}
+
 export function useAnnouncements() {
   useAnnouncementsRealtime();
+  useAnnouncementsAuthSync();
   return useQuery({
     queryKey: ANNOUNCEMENTS_KEY,
     queryFn: fetchLiveAnnouncements,

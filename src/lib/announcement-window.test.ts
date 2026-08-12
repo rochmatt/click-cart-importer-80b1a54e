@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { pengumumanTampil } from "./announcement-window";
+import {
+  type AudiensPengumuman,
+  pengumumanTampil,
+  pengumumanUntukPenonton,
+} from "./announcement-window";
 
 // Jendela penjadwalan pengumuman: kapan banner muncul dan hilang.
 //
@@ -111,5 +115,80 @@ describe("pengumumanTampil — konsistensi timezone", () => {
     // 23:00 WIB = 16:00 UTC, jauh sesudah NOW (03:00 UTC). Menguji bahwa tidak
     // ada pergeseran tanggal yang membuatnya keliru dianggap sudah mulai.
     expect(pengumumanTampil(aktif("2026-08-04T23:00:00.000+07:00"), NOW)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AUDIENCE TARGETING. Empat penonton acuan menutup semua kombinasi yang penting.
+const TAMU = { loggedIn: false, roles: [] as string[] };
+const MEMBER = { loggedIn: true, roles: [] as string[] };
+const ADMIN = { loggedIn: true, roles: ["admin"] };
+const MODER = { loggedIn: true, roles: ["moderator"] };
+
+describe("pengumumanUntukPenonton — matriks audiens × penonton", () => {
+  // Ekspektasi lengkap untuk tiap (audience, penonton). true = harus tampil.
+  const matriks: Array<[AudiensPengumuman, boolean, boolean, boolean, boolean]> = [
+    // audience     tamu   member admin  moderator
+    ["all", true, true, true, true],
+    ["guest", true, false, false, false],
+    ["member", false, true, true, true],
+    ["admin", false, false, true, false],
+    ["moderator", false, false, false, true],
+  ];
+
+  for (const [audience, tamu, member, admin, moder] of matriks) {
+    it(`audiens "${audience}" menyasar kelompok yang tepat`, () => {
+      expect(pengumumanUntukPenonton(audience, TAMU)).toBe(tamu);
+      expect(pengumumanUntukPenonton(audience, MEMBER)).toBe(member);
+      expect(pengumumanUntukPenonton(audience, ADMIN)).toBe(admin);
+      expect(pengumumanUntukPenonton(audience, MODER)).toBe(moder);
+    });
+  }
+
+  it("admin adalah member juga: melihat pengumuman member", () => {
+    // Bukan hanya lolos di matriks — dinyatakan eksplisit karena ini keputusan
+    // desain yang mudah keliru dibalik.
+    expect(pengumumanUntukPenonton("member", ADMIN)).toBe(true);
+  });
+
+  it("member biasa tidak melihat pengumuman admin/moderator", () => {
+    expect(pengumumanUntukPenonton("admin", MEMBER)).toBe(false);
+    expect(pengumumanUntukPenonton("moderator", MEMBER)).toBe(false);
+  });
+
+  it("penonton bisa punya banyak peran sekaligus", () => {
+    const keduanya = { loggedIn: true, roles: ["admin", "moderator"] };
+    expect(pengumumanUntukPenonton("admin", keduanya)).toBe(true);
+    expect(pengumumanUntukPenonton("moderator", keduanya)).toBe(true);
+  });
+});
+
+describe("pengumumanUntukPenonton — nilai tak dikenal & tepi", () => {
+  it("null/undefined diperlakukan sebagai 'all' (tampil ke semua)", () => {
+    expect(pengumumanUntukPenonton(null, TAMU)).toBe(true);
+    expect(pengumumanUntukPenonton(undefined, MEMBER)).toBe(true);
+  });
+
+  it("string audiens tak dikenal tidak menyembunyikan diam-diam", () => {
+    // Sejalan dengan pengumumanTampil: data lama/rusak jatuh ke 'tampil semua',
+    // bukan hilang.
+    expect(pengumumanUntukPenonton("segmen-lama", TAMU)).toBe(true);
+    expect(pengumumanUntukPenonton("", ADMIN)).toBe(true);
+  });
+
+  it("roles yang tak ada dianggap kosong, bukan error", () => {
+    expect(pengumumanUntukPenonton("admin", { loggedIn: true })).toBe(false);
+    expect(pengumumanUntukPenonton("member", { loggedIn: true })).toBe(true);
+  });
+
+  it("gerbang jadwal dan audiens independen: keduanya harus lolos", () => {
+    // Simulasi bagaimana fetchAnnouncements menggabungkannya. Terjadwal-aktif
+    // TAPI salah audiens → tidak tampil; audiens benar TAPI belum mulai → juga
+    // tidak tampil. Hanya lolos-keduanya yang tayang.
+    const terjadwalAktif = pengumumanTampil(aktif("2026-08-04T02:00:00.000Z"), NOW); // true
+    expect(terjadwalAktif && pengumumanUntukPenonton("guest", MEMBER)).toBe(false);
+    const belumMulai = pengumumanTampil(aktif("2026-08-04T04:00:00.000Z"), NOW); // false
+    expect(belumMulai && pengumumanUntukPenonton("guest", TAMU)).toBe(false);
+    expect(terjadwalAktif && pengumumanUntukPenonton("guest", TAMU)).toBe(true);
   });
 });
