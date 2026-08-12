@@ -24,7 +24,7 @@ import {
   type CartItem,
 } from "@/lib/cart";
 import { computeTotals, validatePromo, type Promo } from "@/lib/commerce-pricing";
-import { placeOrder } from "@/lib/commerce.functions";
+import { buyerFieldsSchema, placeOrder } from "@/lib/commerce.functions";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/checkout")({
@@ -133,14 +133,28 @@ function CheckoutPage() {
   };
 
   const validateForm = () => {
+    // Skema yang SAMA dengan server (placeOrder) → validasi klien & server selalu
+    // selaras; error muncul di field yang tepat, bukan toast generik dari server.
+    const parsed = buyerFieldsSchema.safeParse({
+      email: form.email,
+      name: form.name,
+      phone: form.phone,
+      address: form.address,
+      city: form.city,
+      postalCode: form.postalCode,
+      notes: form.notes,
+    });
+    if (parsed.success) {
+      setErrors({});
+      return true;
+    }
     const next: FieldErrors = {};
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = "Enter a valid email address.";
-    if (form.name.trim().length < 2) next.name = "Enter the recipient name.";
-    if (form.phone.trim().length < 6) next.phone = "Enter a valid phone number.";
-    if (form.address.trim().length < 6) next.address = "Enter the full street address.";
-    if (form.city.trim().length < 2) next.city = "Enter the destination city.";
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0]);
+      if (key && !next[key]) next[key] = issue.message;
+    }
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return false;
   };
 
   const submit = async () => {
@@ -240,9 +254,7 @@ function CheckoutPage() {
             <div className="space-y-6">
               {/* Cart lines */}
               <section className="rounded-2xl border border-border bg-card p-5">
-                <h2 className="text-sm font-bold text-foreground">
-                  Your items ({items.length})
-                </h2>
+                <h2 className="text-sm font-bold text-foreground">Your items ({items.length})</h2>
                 <ul className="mt-4 divide-y divide-border">
                   {items.map((item) => (
                     <li key={item.id} className="flex gap-3 py-3">
@@ -304,59 +316,90 @@ function CheckoutPage() {
               {/* Shipping details */}
               <section className="rounded-2xl border border-border bg-card p-5">
                 <h2 className="text-sm font-bold text-foreground">Shipping details</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Fields marked <span className="font-semibold text-destructive">*</span> are
+                  required so we can deliver your order.
+                </p>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <Field label="Email" error={errors.email} className="sm:col-span-2">
+                  <Field label="Email" error={errors.email} required className="sm:col-span-2">
                     <input
                       type="email"
+                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(errors.email)}
+                      maxLength={255}
                       value={form.email}
                       onChange={(e) => setField("email", e.target.value)}
                       placeholder="you@email.com"
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="Recipient name" error={errors.name}>
+                  <Field label="Recipient name" error={errors.name} required>
                     <input
+                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(errors.name)}
+                      maxLength={120}
                       value={form.name}
                       onChange={(e) => setField("name", e.target.value)}
                       placeholder="Full name"
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="Phone" error={errors.phone}>
+                  <Field label="Phone" error={errors.phone} required>
                     <input
+                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(errors.phone)}
+                      inputMode="tel"
+                      maxLength={30}
                       value={form.phone}
                       onChange={(e) => setField("phone", e.target.value)}
                       placeholder="0812xxxxxxx"
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="Address" error={errors.address} className="sm:col-span-2">
+                  <Field label="Address" error={errors.address} required className="sm:col-span-2">
                     <textarea
                       rows={3}
+                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(errors.address)}
+                      maxLength={500}
                       value={form.address}
                       onChange={(e) => setField("address", e.target.value)}
                       placeholder="Street, building, unit"
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="City" error={errors.city}>
+                  <Field label="City" error={errors.city} required>
                     <input
+                      required
+                      aria-required="true"
+                      aria-invalid={Boolean(errors.city)}
+                      maxLength={120}
                       value={form.city}
                       onChange={(e) => setField("city", e.target.value)}
                       placeholder="Jakarta Selatan"
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="Postal code">
+                  <Field label="Postal code" error={errors.postalCode}>
                     <input
+                      maxLength={12}
                       value={form.postalCode}
                       onChange={(e) => setField("postalCode", e.target.value)}
                       placeholder="12190"
                       className={inputClass}
                     />
                   </Field>
-                  <Field label="Order notes (optional)" className="sm:col-span-2">
+                  <Field
+                    label="Order notes (optional)"
+                    error={errors.notes}
+                    className="sm:col-span-2"
+                  >
                     <input
+                      maxLength={500}
                       value={form.notes}
                       onChange={(e) => setField("notes", e.target.value)}
                       placeholder="Leave at the lobby, call on arrival…"
@@ -409,9 +452,7 @@ function CheckoutPage() {
                 <h2 className="text-sm font-bold text-foreground">Order summary</h2>
 
                 <div className="mt-4">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Promo code
-                  </label>
+                  <label className="text-xs font-semibold text-muted-foreground">Promo code</label>
                   <div className="mt-1.5 flex gap-2">
                     <input
                       value={promoInput}
@@ -499,19 +540,31 @@ function Field({
   label,
   error,
   className = "",
+  required = false,
   children,
 }: {
   label: string;
   error?: string;
   className?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className={className}>
-      <label className="text-xs font-semibold text-muted-foreground">{label}</label>
+      <label className="text-xs font-semibold text-muted-foreground">
+        {label}
+        {required && (
+          <span className="ml-0.5 font-semibold text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
+      </label>
       <div className="mt-1.5">{children}</div>
       {error && (
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-destructive">
+        <p
+          role="alert"
+          className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-destructive"
+        >
           <AlertCircle className="h-3.5 w-3.5" />
           {error}
         </p>
