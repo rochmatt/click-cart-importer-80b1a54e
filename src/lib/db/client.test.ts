@@ -338,12 +338,21 @@ describe.skipIf(!CONFIGURED)("lapisan kompatibel Supabase -> PostgreSQL", () => 
             product_name: "Pesanan Budi",
             customer_email: "budi.uji@contoh.id",
             user_id: BUDI,
+            // Data pengiriman wajib (CHECK orders_*_not_blank di schema.sql).
+            shipping_name: "Budi",
+            shipping_phone: "08123456789",
+            shipping_address: "Jl. Uji Budi No. 1",
+            destination_city: "Jakarta",
           },
           {
             order_number: `${PREFIX}siti`,
             product_name: "Pesanan Siti",
             customer_email: "siti.uji@contoh.id",
             user_id: SITI,
+            shipping_name: "Siti",
+            shipping_phone: "08129876543",
+            shipping_address: "Jl. Uji Siti No. 2",
+            destination_city: "Bandung",
           },
         ]);
     });

@@ -189,7 +189,17 @@ CREATE TABLE IF NOT EXISTS public.orders (
   shipping_address      text NOT NULL DEFAULT '',
   shipping_postal_code  text NOT NULL DEFAULT '',
   notes                 text NOT NULL DEFAULT '',
-  notified_status       text NOT NULL DEFAULT ''
+  notified_status       text NOT NULL DEFAULT '',
+  -- Data pengiriman WAJIB terisi — backstop DB di luar validasi zod
+  -- placeOrderSchema (commerce.functions.ts). Kolom shipping_* NOT NULL DEFAULT ''
+  -- tak cukup: regex `~ '[^[:space:]]'` menolak string kosong DAN whitespace-only
+  -- apa pun (tab/newline; btrim hanya buang spasi ASCII). destination_city dijaga
+  -- non-null + non-kosong. postal_code & notes sengaja tetap opsional. Migrasi
+  -- inkremental untuk DB yang sudah ada: db/010-order-shipping-required.sql.
+  CONSTRAINT orders_shipping_name_not_blank    CHECK (shipping_name ~ '[^[:space:]]'),
+  CONSTRAINT orders_shipping_phone_not_blank   CHECK (shipping_phone ~ '[^[:space:]]'),
+  CONSTRAINT orders_shipping_address_not_blank CHECK (shipping_address ~ '[^[:space:]]'),
+  CONSTRAINT orders_destination_city_not_blank CHECK (destination_city IS NOT NULL AND destination_city ~ '[^[:space:]]')
 );
 CREATE UNIQUE INDEX IF NOT EXISTS orders_order_number_key ON public.orders (order_number);
 CREATE INDEX IF NOT EXISTS orders_user_id_idx ON public.orders (user_id);
@@ -279,6 +289,11 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
   utm_source              text NOT NULL DEFAULT 'pasarpilih',
   utm_medium              text NOT NULL DEFAULT 'referral',
   utm_campaign            text NOT NULL DEFAULT '',
+  -- Kredensial login Google (OAuth). google_client_secret RAHASIA: sengaja TIDAK
+  -- pernah ikut di SELECT publik getStoreSettings; hanya dibaca server-side oleh
+  -- googleConfig() dan status-nya (tersimpan/belum) yang dikembalikan ke admin.
+  google_client_id        text NOT NULL DEFAULT '',
+  google_client_secret    text NOT NULL DEFAULT '',
   created_at              timestamptz NOT NULL DEFAULT now(),
   updated_at              timestamptz NOT NULL DEFAULT now()
 );

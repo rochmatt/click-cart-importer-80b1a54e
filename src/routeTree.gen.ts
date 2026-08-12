@@ -45,7 +45,10 @@ import { Route as ProductsIdRouteImport } from './routes/products.$id'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
 import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
 import { Route as ApiAdminUploadRouteImport } from './routes/api/admin/upload'
+import { Route as ApiAuthGoogleCallbackRouteImport } from './routes/api/auth/google/callback'
+import { Route as ApiAuthGoogleStartRouteImport } from './routes/api/auth/google/start'
 import { Route as ApiPublicHooksOrderStatusEmailsRouteImport } from './routes/api/public/hooks/order-status-emails'
+import { Route as ApiPublicHooksSyncProductsRouteImport } from './routes/api/public/hooks/sync-products'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -227,10 +230,26 @@ const ApiAdminUploadRoute = ApiAdminUploadRouteImport.update({
   path: '/api/admin/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthGoogleCallbackRoute = ApiAuthGoogleCallbackRouteImport.update({
+  id: '/api/auth/google/callback',
+  path: '/api/auth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthGoogleStartRoute = ApiAuthGoogleStartRouteImport.update({
+  id: '/api/auth/google/start',
+  path: '/api/auth/google/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksOrderStatusEmailsRoute =
   ApiPublicHooksOrderStatusEmailsRouteImport.update({
     id: '/api/public/hooks/order-status-emails',
     path: '/api/public/hooks/order-status-emails',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSyncProductsRoute =
+  ApiPublicHooksSyncProductsRouteImport.update({
+    id: '/api/public/hooks/sync-products',
+    path: '/api/public/hooks/sync-products',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -271,7 +290,10 @@ export interface FileRoutesByFullPath {
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/api/admin/upload': typeof ApiAdminUploadRoute
   '/admin/products/': typeof AdminProductsIndexRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
+  '/api/public/hooks/sync-products': typeof ApiPublicHooksSyncProductsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -309,7 +331,10 @@ export interface FileRoutesByTo {
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/api/admin/upload': typeof ApiAdminUploadRoute
   '/admin/products': typeof AdminProductsIndexRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
+  '/api/public/hooks/sync-products': typeof ApiPublicHooksSyncProductsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -349,7 +374,10 @@ export interface FileRoutesById {
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/api/admin/upload': typeof ApiAdminUploadRoute
   '/admin/products/': typeof AdminProductsIndexRoute
+  '/api/auth/google/callback': typeof ApiAuthGoogleCallbackRoute
+  '/api/auth/google/start': typeof ApiAuthGoogleStartRoute
   '/api/public/hooks/order-status-emails': typeof ApiPublicHooksOrderStatusEmailsRoute
+  '/api/public/hooks/sync-products': typeof ApiPublicHooksSyncProductsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -390,7 +418,10 @@ export interface FileRouteTypes {
     | '/admin/products/$id'
     | '/api/admin/upload'
     | '/admin/products/'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/start'
     | '/api/public/hooks/order-status-emails'
+    | '/api/public/hooks/sync-products'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -428,7 +459,10 @@ export interface FileRouteTypes {
     | '/admin/products/$id'
     | '/api/admin/upload'
     | '/admin/products'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/start'
     | '/api/public/hooks/order-status-emails'
+    | '/api/public/hooks/sync-products'
   id:
     | '__root__'
     | '/'
@@ -467,7 +501,10 @@ export interface FileRouteTypes {
     | '/admin/products/$id'
     | '/api/admin/upload'
     | '/admin/products/'
+    | '/api/auth/google/callback'
+    | '/api/auth/google/start'
     | '/api/public/hooks/order-status-emails'
+    | '/api/public/hooks/sync-products'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -496,7 +533,10 @@ export interface RootRouteChildren {
   ProductsIdRoute: typeof ProductsIdRoute
   CategoryIndexRoute: typeof CategoryIndexRoute
   ApiAdminUploadRoute: typeof ApiAdminUploadRoute
+  ApiAuthGoogleCallbackRoute: typeof ApiAuthGoogleCallbackRoute
+  ApiAuthGoogleStartRoute: typeof ApiAuthGoogleStartRoute
   ApiPublicHooksOrderStatusEmailsRoute: typeof ApiPublicHooksOrderStatusEmailsRoute
+  ApiPublicHooksSyncProductsRoute: typeof ApiPublicHooksSyncProductsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -753,11 +793,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/google/callback': {
+      id: '/api/auth/google/callback'
+      path: '/api/auth/google/callback'
+      fullPath: '/api/auth/google/callback'
+      preLoaderRoute: typeof ApiAuthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/google/start': {
+      id: '/api/auth/google/start'
+      path: '/api/auth/google/start'
+      fullPath: '/api/auth/google/start'
+      preLoaderRoute: typeof ApiAuthGoogleStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/order-status-emails': {
       id: '/api/public/hooks/order-status-emails'
       path: '/api/public/hooks/order-status-emails'
       fullPath: '/api/public/hooks/order-status-emails'
       preLoaderRoute: typeof ApiPublicHooksOrderStatusEmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/sync-products': {
+      id: '/api/public/hooks/sync-products'
+      path: '/api/public/hooks/sync-products'
+      fullPath: '/api/public/hooks/sync-products'
+      preLoaderRoute: typeof ApiPublicHooksSyncProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -819,7 +880,10 @@ const rootRouteChildren: RootRouteChildren = {
   ProductsIdRoute: ProductsIdRoute,
   CategoryIndexRoute: CategoryIndexRoute,
   ApiAdminUploadRoute: ApiAdminUploadRoute,
+  ApiAuthGoogleCallbackRoute: ApiAuthGoogleCallbackRoute,
+  ApiAuthGoogleStartRoute: ApiAuthGoogleStartRoute,
   ApiPublicHooksOrderStatusEmailsRoute: ApiPublicHooksOrderStatusEmailsRoute,
+  ApiPublicHooksSyncProductsRoute: ApiPublicHooksSyncProductsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
