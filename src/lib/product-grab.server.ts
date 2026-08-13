@@ -5,6 +5,8 @@
 
 import { normalizePrices, parsePriceValue, type PriceIssue } from "./price-normalize";
 import { normalizeAvailability, type Availability } from "./product-sync";
+import { runShopeeByUrls, shopeeItemToOutcome, isApifyConfigured } from "@/lib/apify.server";
+import { parseMarketplaceUrl } from "@/lib/marketplace-url";
 
 export type GrabbedProduct = {
   sourceUrl: string;
@@ -179,6 +181,31 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
   const target = new URL(rawUrl);
   if (target.protocol !== "http:" && target.protocol !== "https:") {
     throw new Error("URL harus memakai http atau https");
+  }
+
+  // Shopee: coba Apify dulu — cloud-nya menembus anti-bot yang memblokir fetch
+  // langsung kita (403 + captcha). Kalau berhasil, pakai datanya & lewati jalur
+  // HTML di bawah. Kalau token belum diisi / gagal, lanjut ke HTML seperti biasa.
+  if (parseMarketplaceUrl(rawUrl)?.marketplace === "shopee" && (await isApifyConfigured())) {
+    const it = (await runShopeeByUrls([rawUrl]))[0];
+    if (it && (typeof it.price === "number" || typeof it.priceMin === "number")) {
+      const out = shopeeItemToOutcome(it);
+      return {
+        sourceUrl: it.url || target.toString(),
+        marketplace: "shopee",
+        availability: out.availability,
+        title: (it.name ?? "").slice(0, 140).trim(),
+        description: "",
+        brand: "",
+        currency: it.currency || "IDR",
+        price: out.price,
+        salePrice: out.salePrice,
+        images: (Array.isArray(it.images) ? it.images : it.image ? [it.image] : []).slice(0, 8),
+        usedAi: false,
+        discountPercent: typeof it.discountPercent === "number" ? it.discountPercent : null,
+        priceIssues: [],
+      };
+    }
   }
 
   const controller = new AbortController();

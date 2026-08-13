@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   type StoreSettings,
+  getApifyIntegration,
   getGoogleOAuth,
   getStoreSettings,
   grantRole,
   listStaff,
   revokeRole,
+  updateApifyIntegration,
   updateGoogleOAuth,
   updateStoreSettings,
 } from "@/lib/admin.functions";
@@ -22,9 +24,15 @@ export const Route = createFileRoute("/admin/settings")({
   head: () => ({
     meta: [
       { title: "Settings — PasarPilih Admin" },
-      { name: "description", content: "Store profile, staff access and marketplace defaults for PasarPilih." },
+      {
+        name: "description",
+        content: "Store profile, staff access and marketplace defaults for PasarPilih.",
+      },
       { property: "og:title", content: "Settings — PasarPilih Admin" },
-      { property: "og:description", content: "Configure store details and marketplace defaults for PasarPilih." },
+      {
+        property: "og:description",
+        content: "Configure store details and marketplace defaults for PasarPilih.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -48,6 +56,7 @@ function AdminSettingsPage() {
 
       <StoreProfileCard />
       <GoogleOAuthCard />
+      <ApifyCard />
       <StaffCard />
     </div>
   );
@@ -98,10 +107,22 @@ function StoreProfileCard() {
     >
       <h2 className="text-sm font-bold text-foreground">Store identity</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Field label="Store name" value={form.store_name} onChange={(v) => set({ store_name: v })} />
+        <Field
+          label="Store name"
+          value={form.store_name}
+          onChange={(v) => set({ store_name: v })}
+        />
         <Field label="Tagline" value={form.tagline} onChange={(v) => set({ tagline: v })} />
-        <Field label="Support email" value={form.support_email} onChange={(v) => set({ support_email: v })} />
-        <Field label="Support phone" value={form.support_phone} onChange={(v) => set({ support_phone: v })} />
+        <Field
+          label="Support email"
+          value={form.support_email}
+          onChange={(v) => set({ support_email: v })}
+        />
+        <Field
+          label="Support phone"
+          value={form.support_phone}
+          onChange={(v) => set({ support_phone: v })}
+        />
         <Field label="Logo URL" value={form.logo_url} onChange={(v) => set({ logo_url: v })} />
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="store-address">Store address</Label>
@@ -116,12 +137,39 @@ function StoreProfileCard() {
 
       <h2 className="mt-6 text-sm font-bold text-foreground">Marketplace link defaults</h2>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Field label="Shopee template" value={form.shopee_link_template} onChange={(v) => set({ shopee_link_template: v })} placeholder="https://shopee.co.id/shop/..." />
-        <Field label="Tokopedia template" value={form.tokopedia_link_template} onChange={(v) => set({ tokopedia_link_template: v })} placeholder="https://tokopedia.com/store/..." />
-        <Field label="TikTok template" value={form.tiktok_link_template} onChange={(v) => set({ tiktok_link_template: v })} placeholder="https://tiktok.com/@store/..." />
-        <Field label="UTM source" value={form.utm_source} onChange={(v) => set({ utm_source: v })} />
-        <Field label="UTM medium" value={form.utm_medium} onChange={(v) => set({ utm_medium: v })} />
-        <Field label="UTM campaign" value={form.utm_campaign} onChange={(v) => set({ utm_campaign: v })} />
+        <Field
+          label="Shopee template"
+          value={form.shopee_link_template}
+          onChange={(v) => set({ shopee_link_template: v })}
+          placeholder="https://shopee.co.id/shop/..."
+        />
+        <Field
+          label="Tokopedia template"
+          value={form.tokopedia_link_template}
+          onChange={(v) => set({ tokopedia_link_template: v })}
+          placeholder="https://tokopedia.com/store/..."
+        />
+        <Field
+          label="TikTok template"
+          value={form.tiktok_link_template}
+          onChange={(v) => set({ tiktok_link_template: v })}
+          placeholder="https://tiktok.com/@store/..."
+        />
+        <Field
+          label="UTM source"
+          value={form.utm_source}
+          onChange={(v) => set({ utm_source: v })}
+        />
+        <Field
+          label="UTM medium"
+          value={form.utm_medium}
+          onChange={(v) => set({ utm_medium: v })}
+        />
+        <Field
+          label="UTM campaign"
+          value={form.utm_campaign}
+          onChange={(v) => set({ utm_campaign: v })}
+        />
       </div>
 
       <button
@@ -256,7 +304,9 @@ function GoogleOAuthCard() {
               type="password"
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
-              placeholder={status?.has_secret ? "•••••••• tersimpan (kosongkan = tetap)" : "GOCSPX-…"}
+              placeholder={
+                status?.has_secret ? "•••••••• tersimpan (kosongkan = tetap)" : "GOCSPX-…"
+              }
               autoComplete="new-password"
             />
           </div>
@@ -270,6 +320,90 @@ function GoogleOAuthCard() {
               Simpan kredensial
             </button>
           </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function ApifyCard() {
+  const queryClient = useQueryClient();
+  const fetchStatus = useServerFn(getApifyIntegration);
+  const save = useServerFn(updateApifyIntegration);
+  const [token, setToken] = useState("");
+
+  const statusQuery = useQuery({ queryKey: ["admin", "apify"], queryFn: () => fetchStatus() });
+
+  const saveMutation = useMutation({
+    mutationFn: (input: { token: string }) => save({ data: input }),
+    onSuccess: () => {
+      setToken("");
+      queryClient.invalidateQueries({ queryKey: ["admin", "apify"] });
+      toast.success("Token Apify disimpan — langsung aktif, tanpa restart");
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan token"),
+  });
+
+  const status = statusQuery.data;
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <KeyRound className="h-4 w-4 text-primary" />
+          Integrasi Apify (baca stok/harga)
+        </h2>
+        {status &&
+          (status.configured ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              <Check className="h-3.5 w-3.5" /> Terkonfigurasi
+            </span>
+          ) : (
+            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              Belum diisi
+            </span>
+          ))}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Tempel Personal API token dari akun Apify (Settings → API &amp; Integrations). Dipakai untuk
+        membaca harga/stok produk marketplace lewat cloud Apify — tanpa browser di server ini. Token
+        disimpan aman &amp; tidak pernah ditampilkan kembali. Berlaku langsung, tanpa restart.
+      </p>
+
+      {statusQuery.isLoading ? (
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Memuat status…
+        </p>
+      ) : (
+        <form
+          className="mt-4 flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveMutation.mutate({ token });
+          }}
+        >
+          <div className="min-w-[16rem] flex-1 space-y-1.5">
+            <Label htmlFor="apify-token">Apify API token</Label>
+            <Input
+              id="apify-token"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder={
+                status?.configured ? "•••••••• tersimpan (kosongkan = tetap)" : "apify_api_…"
+              }
+              autoComplete="new-password"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={saveMutation.isPending || !token.trim()}
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Simpan token
+          </button>
         </form>
       )}
     </section>
@@ -427,7 +561,12 @@ function Field({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   );
 }

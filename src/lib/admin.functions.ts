@@ -314,7 +314,7 @@ export const getGoogleOAuth = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw error;
     const client_id = ((data?.google_client_id as string | undefined) ?? "").trim();
-    const has_secret = (((data?.google_client_secret as string | undefined) ?? "").trim()).length > 0;
+    const has_secret = ((data?.google_client_secret as string | undefined) ?? "").trim().length > 0;
     return {
       client_id,
       has_secret,
@@ -358,7 +358,8 @@ export const updateGoogleOAuth = createServerFn({ method: "POST" })
     if (error) throw error;
 
     // Audit tanpa membocorkan nilai: hanya menyebut BAGIAN mana yang berubah.
-    const idBerubah = ((row.google_client_id as string | undefined) ?? "").trim() !== data.client_id.trim();
+    const idBerubah =
+      ((row.google_client_id as string | undefined) ?? "").trim() !== data.client_id.trim();
     const bagian: string[] = [];
     if (idBerubah) bagian.push("Client ID");
     if (newSecret.length > 0) bagian.push("Client Secret");
@@ -369,6 +370,71 @@ export const updateGoogleOAuth = createServerFn({ method: "POST" })
       entityLabel: "Login Google (OAuth)",
       action: "ubah",
       detail: bagian.length ? `Memperbarui: ${bagian.join(", ")}` : "Menyimpan tanpa perubahan",
+    });
+
+    return { ok: true };
+  });
+
+export interface ApifyStatus {
+  configured: boolean;
+}
+
+// Status token Apify untuk panel admin. Token RAHASIA: hanya flag `configured`
+// yang dikembalikan; nilainya TIDAK PERNAH keluar dari server.
+export const getApifyIntegration = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<ApifyStatus> => {
+    await assertAdmin(context.db, context.userId);
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const { data, error } = await createServiceClient()
+      .from("store_settings")
+      .select("apify_token")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    const token = ((data?.apify_token as string | undefined) ?? "").trim();
+    return { configured: token.length > 0 };
+  });
+
+const apifySchema = z.object({
+  // Kosong = pertahankan token tersimpan (write-only, seperti Google secret).
+  token: z.string().max(200),
+});
+
+export const updateApifyIntegration = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => apifySchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.db, context.userId);
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const db = createServiceClient();
+
+    const { data: row, error: readErr } = await db
+      .from("store_settings")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (readErr) throw readErr;
+    if (!row) throw new Error("Baris store_settings tidak ditemukan");
+
+    const newToken = data.token.trim();
+    if (newToken.length > 0) {
+      const { error } = await db
+        .from("store_settings")
+        .update({ apify_token: newToken })
+        .eq("id", row.id);
+      if (error) throw error;
+    }
+
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pengaturan",
+      entityId: row.id as string,
+      entityLabel: "Integrasi Apify",
+      action: "ubah",
+      detail: newToken.length > 0 ? "Memperbarui token Apify" : "Menyimpan tanpa perubahan",
     });
 
     return { ok: true };
