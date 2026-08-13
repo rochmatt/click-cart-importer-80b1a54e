@@ -13,7 +13,12 @@
 import { run } from "@/lib/db/pool.server";
 import { grabProductFromUrl } from "@/lib/product-grab.server";
 import { readViaAdapter } from "@/lib/marketplace-adapters.server";
-import { decideProductSync, TIER_HOURS, type GrabOutcome } from "@/lib/product-sync";
+import {
+  decideProductSync,
+  TIER_HOURS,
+  type Availability,
+  type GrabOutcome,
+} from "@/lib/product-sync";
 import { emailFrom, isEmailConfigured, sendEmail } from "@/lib/email/resend.server";
 import { isTelegramConfigured, sendTelegram } from "@/lib/telegram.server";
 
@@ -105,9 +110,24 @@ const CANDIDATE_COLS = `p.id, p.title, p.status AS admin_status, p.links,
  */
 async function syncProductRow(
   row: CandidateRow,
-): Promise<{ processed: boolean; event: SyncEventRow | null; syncStatus: string | null }> {
+): Promise<{
+  processed: boolean;
+  event: SyncEventRow | null;
+  syncStatus: string | null;
+  grab: GrabOutcome | null;
+  marketplace: Marketplace | null;
+  sourceUrl: string | null;
+}> {
   const source = pickSource(row.links);
-  if (!source) return { processed: false, event: null, syncStatus: null };
+  if (!source)
+    return {
+      processed: false,
+      event: null,
+      syncStatus: null,
+      grab: null,
+      marketplace: null,
+      sourceUrl: null,
+    };
 
   const grab = await bacaSumber(source.url);
   const decision = decideProductSync(
@@ -165,7 +185,14 @@ async function syncProductRow(
     }
   } catch (error) {
     console.error("sinkronisasi: gagal tulis state", row.id, error);
-    return { processed: false, event: null, syncStatus: null };
+    return {
+      processed: false,
+      event: null,
+      syncStatus: null,
+      grab,
+      marketplace: source.marketplace,
+      sourceUrl: source.url,
+    };
   }
 
   const event: SyncEventRow | null = decision.event
@@ -178,7 +205,14 @@ async function syncProductRow(
         detail: decision.event.detail,
       }
     : null;
-  return { processed: true, event, syncStatus: decision.syncStatus };
+  return {
+    processed: true,
+    event,
+    syncStatus: decision.syncStatus,
+    grab,
+    marketplace: source.marketplace,
+    sourceUrl: source.url,
+  };
 }
 
 /**
@@ -253,6 +287,89 @@ export async function syncProductById(
   if (!rows.length) return { synced: false, event: null, syncStatus: null };
   const { processed, event, syncStatus } = await syncProductRow(rows[0]);
   return { synced: processed, event, syncStatus };
+}
+
+/** Bacaan supplier terkini untuk satu produk (dipakai "cek supplier" di pesanan). */
+export interface SupplierReading {
+  productId: string;
+  title: string;
+  adminStatus: string;
+  linked: boolean; // punya link marketplace?
+  marketplace: Marketplace | null;
+  sourceUrl: string | null;
+  ok: boolean; // sumber berhasil dibaca?
+  error: string | null;
+  cost: number | null; // modal efektif di sumber (salePrice ?? price)
+  price: number | null;
+  salePrice: number | null;
+  availability: Availability;
+}
+
+/**
+ * Membaca ulang sumber SATU produk sekarang dan mengembalikan harga modal + stok
+ * terkini. Sekalian menuliskan state (auto-hide bila rugi/habis tetap berlaku),
+ * jadi cukup SATU pembacaan sumber — hemat kuota Apify. Dipakai tombol "cek
+ * supplier sebelum fulfill" di detail pesanan.
+ */
+export async function readSupplierForProduct(id: string): Promise<SupplierReading | null> {
+  const rows = await run<CandidateRow>(
+    `SELECT ${CANDIDATE_COLS}
+       FROM public.admin_products p
+       LEFT JOIN public.product_sync_state s ON s.product_id = p.id
+      WHERE p.id = $1
+      LIMIT 1`,
+    [id],
+    { rls: false },
+  );
+  if (!rows.length) return null;
+  const row = rows[0];
+  const { grab, marketplace, sourceUrl } = await syncProductRow(row);
+
+  const base = {
+    productId: row.id,
+    title: row.title || "(tanpa judul)",
+    adminStatus: row.admin_status,
+  };
+  if (!marketplace || !sourceUrl) {
+    return {
+      ...base,
+      linked: false,
+      marketplace: null,
+      sourceUrl: null,
+      ok: false,
+      error: null,
+      cost: null,
+      price: null,
+      salePrice: null,
+      availability: "unknown",
+    };
+  }
+  if (!grab || !grab.ok) {
+    return {
+      ...base,
+      linked: true,
+      marketplace,
+      sourceUrl,
+      ok: false,
+      error: grab && !grab.ok ? grab.error : "gagal baca sumber",
+      cost: null,
+      price: null,
+      salePrice: null,
+      availability: "unknown",
+    };
+  }
+  return {
+    ...base,
+    linked: true,
+    marketplace,
+    sourceUrl,
+    ok: true,
+    error: null,
+    cost: grab.salePrice ?? grab.price,
+    price: grab.price,
+    salePrice: grab.salePrice,
+    availability: grab.availability,
+  };
 }
 
 // --- Ringkasan email -------------------------------------------------------

@@ -231,6 +231,80 @@ export function decideProductSync(
   return hasil;
 }
 
+// --- Verdict "cek supplier sebelum fulfill" (dropship) ----------------------
+//
+// Dibandingkan dengan yang DIBAYAR pelanggan (unit_price terkunci saat order),
+// BUKAN harga katalog sekarang — jadi spesifik per pesanan. Murni & teruji;
+// sisi efek (baca sumber, resolve produk) ada di server.
+
+export type OrderFulfillVerdict = "ok" | "margin_loss" | "out_of_stock" | "untracked" | "error";
+
+export interface OrderFulfillInput {
+  /** product_ref pesanan ketemu di katalog? */
+  resolved: boolean;
+  /** produk punya link marketplace? */
+  linked: boolean;
+  /** sumber berhasil dibaca? */
+  ok: boolean;
+  error: string | null;
+  availability: Availability;
+  /** modal supplier terkini (salePrice ?? price di sumber). */
+  cost: number | null;
+  /** yang dibayar pelanggan (unit_price terkunci saat order). */
+  orderedUnitPrice: number;
+}
+
+export interface OrderFulfillResult {
+  verdict: OrderFulfillVerdict;
+  note: string;
+}
+
+/**
+ * Memutuskan apakah aman membelanjakan (fulfill) satu item pesanan ke supplier.
+ * Urutan sengaja: tak-terlacak → gagal-baca → habis → rugi → aman. RUGI dinilai
+ * terhadap yang DIBAYAR pelanggan, bukan harga katalog — pesanan lama bisa saja
+ * dibayar lebih murah dari modal sekarang.
+ */
+export function decideOrderFulfill(input: OrderFulfillInput): OrderFulfillResult {
+  if (!input.resolved) {
+    return {
+      verdict: "untracked",
+      note: "Produk tak ada di katalog — cek stok manual di marketplace.",
+    };
+  }
+  if (!input.linked) {
+    return { verdict: "untracked", note: "Produk tanpa link marketplace — cek stok manual." };
+  }
+  if (!input.ok) {
+    return {
+      verdict: "error",
+      note: `Gagal baca supplier: ${input.error ?? "tidak diketahui"}. Cek manual.`,
+    };
+  }
+  if (input.availability === "out") {
+    return { verdict: "out_of_stock", note: "Stok HABIS di supplier — jangan fulfill dulu." };
+  }
+
+  const { cost } = input;
+  const paid = input.orderedUnitPrice;
+  if (cost != null && paid > 0 && cost >= paid) {
+    return {
+      verdict: "margin_loss",
+      note: `RUGI bila difulfill: modal ${rupiah(cost)} ≥ dibayar pelanggan ${rupiah(paid)}.`,
+    };
+  }
+
+  const stok = input.availability === "in" ? "stok tersedia" : "stok tak terkonfirmasi";
+  if (cost != null && cost > 0 && paid > 0) {
+    const untung = Math.round(((paid - cost) / cost) * 100);
+    return {
+      verdict: "ok",
+      note: `Aman — modal ${rupiah(cost)} < dibayar ${rupiah(paid)} (untung ${untung}%), ${stok}.`,
+    };
+  }
+  return { verdict: "ok", note: `Aman — ${stok} (harga modal tak terbaca).` };
+}
+
 // --- Penjadwalan bertingkat (Fase 2) ---------------------------------------
 //
 // Seberapa sering sebuah produk dicek ulang, dalam JAM. Yang butuh perhatian

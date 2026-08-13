@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth/middleware.server";
 import { assertAdmin } from "@/lib/admin-access.server";
 import { catatAudit, pelaku } from "@/lib/audit/log.server";
+import { decideOrderFulfill } from "@/lib/product-sync";
 
 export interface AdminOrder {
   id: string;
@@ -140,6 +141,127 @@ export const updateAdminOrder = createServerFn({ method: "POST" })
     });
 
     return { ok: true };
+  });
+
+// --- Konfirmasi supplier sebelum fulfill (dropship) ------------------------
+//
+// Sebelum membelanjakan pesanan ke marketplace, admin bisa membaca ulang stok &
+// harga modal LANGSUNG dari sumber (via Apify/grabber, lewat readSupplierForProduct)
+// lalu membandingkannya dengan yang DIBAYAR pelanggan (unit_price terkunci saat
+// order) — bukan harga katalog sekarang. Jadi verdict-nya spesifik per pesanan:
+// kalau modal kini ≥ yang dibayar, fulfill = RUGI; kalau stok habis, jangan
+// fulfill. Pembacaan ini sekalian mem-persist state sync (auto-hide tetap jalan).
+
+export type OrderSupplierVerdict = "ok" | "margin_loss" | "out_of_stock" | "untracked" | "error";
+
+export interface OrderSupplierItem {
+  productRef: string;
+  title: string;
+  quantity: number;
+  orderedUnitPrice: number; // yang dibayar pelanggan (unit_price)
+  productId: string | null;
+  marketplace: string | null;
+  sourceUrl: string | null;
+  cost: number | null; // modal supplier terkini
+  availability: "in" | "out" | "unknown";
+  verdict: OrderSupplierVerdict;
+  note: string;
+}
+
+export interface OrderSupplierCheck {
+  orderNumber: string;
+  items: OrderSupplierItem[];
+  summary: { ok: number; blocked: number; warn: number };
+}
+
+export const checkOrderSupplier = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<OrderSupplierCheck> => {
+    await assertAdmin(context.db, context.userId);
+    const { run } = await import("@/lib/db/pool.server");
+    const { readSupplierForProduct } = await import("@/lib/product-sync.server");
+
+    const orderRows = await run<{ order_number: string }>(
+      `SELECT order_number FROM public.orders WHERE id = $1 LIMIT 1`,
+      [data.id],
+      { rls: false },
+    );
+    const orderNumber = orderRows[0]?.order_number ?? "";
+
+    const orderItems = await run<{
+      product_ref: string | null;
+      title: string;
+      quantity: number | null;
+      unit_price: number | null;
+    }>(
+      `SELECT product_ref, title, quantity, unit_price
+         FROM public.order_items
+        WHERE order_id = $1
+        ORDER BY created_at`,
+      [data.id],
+      { rls: false },
+    );
+
+    const items: OrderSupplierItem[] = [];
+    for (const it of orderItems) {
+      const ref = (it.product_ref ?? "").trim();
+      const ordered = Number(it.unit_price ?? 0);
+      const rincian: OrderSupplierItem = {
+        productRef: ref,
+        title: it.title,
+        quantity: it.quantity ?? 1,
+        orderedUnitPrice: ordered,
+        productId: null,
+        marketplace: null,
+        sourceUrl: null,
+        cost: null,
+        availability: "unknown",
+        verdict: "untracked",
+        note: "Produk tak ada di katalog — cek stok manual di marketplace.",
+      };
+
+      // product_ref cocok ke admin_products.catalog_ref ATAU id (lihat commerce.server).
+      if (ref) {
+        const pr = await run<{ id: string }>(
+          `SELECT id FROM public.admin_products WHERE catalog_ref = $1 OR id::text = $1 LIMIT 1`,
+          [ref],
+          { rls: false },
+        );
+        rincian.productId = pr[0]?.id ?? null;
+      }
+
+      // Baca supplier hanya bila produknya ketemu; jika tidak, biarkan reading null
+      // dan decideOrderFulfill memutuskan "untracked".
+      const reading = rincian.productId ? await readSupplierForProduct(rincian.productId) : null;
+      if (reading) {
+        rincian.marketplace = reading.marketplace;
+        rincian.sourceUrl = reading.sourceUrl;
+        rincian.availability = reading.availability;
+        rincian.cost = reading.cost;
+      }
+
+      const { verdict, note } = decideOrderFulfill({
+        resolved: rincian.productId != null,
+        linked: reading?.linked ?? false,
+        ok: reading?.ok ?? false,
+        error: reading?.error ?? null,
+        availability: reading?.availability ?? "unknown",
+        cost: reading?.cost ?? null,
+        orderedUnitPrice: ordered,
+      });
+      rincian.verdict = verdict;
+      rincian.note = note;
+      items.push(rincian);
+    }
+
+    const summary = {
+      ok: items.filter((i) => i.verdict === "ok").length,
+      blocked: items.filter((i) => i.verdict === "margin_loss" || i.verdict === "out_of_stock").length,
+      warn: items.filter((i) => i.verdict === "untracked" || i.verdict === "error").length,
+    };
+
+    return { orderNumber, items, summary };
   });
 
 export const listAdminCustomers = createServerFn({ method: "GET" })

@@ -3,11 +3,12 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Search, ShoppingCart } from "lucide-react";
+import { ExternalLink, Loader2, RefreshCw, Search, ShoppingCart, Store } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   type AdminOrder,
+  checkOrderSupplier,
   listAdminOrders,
   updateAdminOrder,
 } from "@/lib/admin.functions";
@@ -235,6 +236,9 @@ function AdminOrdersPage() {
           <h2 className="text-sm font-bold text-foreground">
             Update {editing.order_number}
           </h2>
+
+          <SupplierCheckPanel key={editing.id} orderId={editing.id} />
+
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="order-status">Status</Label>
@@ -305,6 +309,114 @@ function AdminOrdersPage() {
             </button>
           </div>
         </form>
+      )}
+    </div>
+  );
+}
+
+const VERDICT_META: Record<string, { label: string; cls: string }> = {
+  ok: { label: "Aman", cls: "bg-chart-2/15 text-chart-2" },
+  margin_loss: { label: "Rugi", cls: "bg-destructive/10 text-destructive" },
+  out_of_stock: { label: "Stok habis", cls: "bg-destructive/10 text-destructive" },
+  untracked: { label: "Tak terlacak", cls: "bg-secondary text-muted-foreground" },
+  error: { label: "Gagal baca", cls: "bg-chart-4/15 text-chart-4" },
+};
+
+/**
+ * Konfirmasi manual sebelum fulfill (dropship): baca ulang stok & harga modal
+ * supplier sekarang, lalu bandingkan dengan yang DIBAYAR pelanggan. Di-remount
+ * per pesanan (key={editing.id}) supaya hasilnya bersih tiap ganti order.
+ */
+function SupplierCheckPanel({ orderId }: { orderId: string }) {
+  const check = useServerFn(checkOrderSupplier);
+  const mutation = useMutation({
+    mutationFn: () => check({ data: { id: orderId } }),
+    onError: () => toast.error("Gagal cek supplier"),
+  });
+  const res = mutation.data;
+
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <Store className="h-4 w-4 text-primary" /> Konfirmasi supplier sebelum fulfill
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Baca ulang stok &amp; harga modal langsung dari marketplace, lalu bandingkan dengan
+            yang dibayar pelanggan.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => mutation.mutate()}
+          disabled={mutation.isPending}
+          className="inline-flex shrink-0 items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {mutation.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          {mutation.isPending ? "Mengecek…" : "Cek supplier sekarang"}
+        </button>
+      </div>
+
+      {mutation.isError && (
+        <p className="mt-3 text-xs text-destructive">Gagal mengecek supplier. Coba lagi.</p>
+      )}
+
+      {res && (
+        <div className="mt-3 space-y-2">
+          {res.summary.blocked > 0 ? (
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">
+              ⚠️ {res.summary.blocked} item bermasalah — sebaiknya JANGAN fulfill dulu.
+            </p>
+          ) : res.summary.warn > 0 ? (
+            <p className="rounded-lg bg-chart-4/15 px-3 py-2 text-xs font-semibold text-chart-4">
+              {res.summary.warn} item tak bisa dipastikan otomatis — cek manual.
+            </p>
+          ) : res.items.length > 0 ? (
+            <p className="rounded-lg bg-chart-2/15 px-3 py-2 text-xs font-semibold text-chart-2">
+              ✓ Semua item aman untuk difulfill.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Pesanan ini tak punya item.</p>
+          )}
+
+          {res.items.map((it, idx) => {
+            const meta = VERDICT_META[it.verdict] ?? VERDICT_META.untracked;
+            return (
+              <div key={idx} className="rounded-lg border border-border bg-card p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{it.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Qty {it.quantity} · dibayar {currency(it.orderedUnitPrice)}
+                      {it.cost != null ? ` · modal kini ${currency(it.cost)}` : ""}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${meta.cls}`}
+                  >
+                    {meta.label}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-foreground/80">{it.note}</p>
+                {it.sourceUrl && (
+                  <a
+                    href={it.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Buka di {it.marketplace ?? "marketplace"}
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

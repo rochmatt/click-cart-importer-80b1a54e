@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
+  decideOrderFulfill,
   decideProductSync,
   normalizeAvailability,
   sourceFingerprint,
   tierHoursFor,
   TIER_HOURS,
+  type OrderFulfillInput,
   type SyncCurrent,
 } from "./product-sync";
 
@@ -286,5 +288,68 @@ describe("tierHoursFor — penjadwalan bertingkat", () => {
 
   it("status sync menang atas status admin (draft+error tetap sering)", () => {
     expect(tierHoursFor("draft", "error")).toBeLessThan(tierHoursFor("active", "ok"));
+  });
+});
+
+describe("decideOrderFulfill — konfirmasi supplier sebelum fulfill", () => {
+  const BACA: OrderFulfillInput = {
+    resolved: true,
+    linked: true,
+    ok: true,
+    error: null,
+    availability: "in",
+    cost: 30000,
+    orderedUnitPrice: 50000,
+  };
+
+  it("produk tak ketemu di katalog → untracked", () => {
+    const r = decideOrderFulfill({ ...BACA, resolved: false });
+    expect(r.verdict).toBe("untracked");
+    expect(r.note).toMatch(/tak ada di katalog/i);
+  });
+
+  it("produk tanpa link marketplace → untracked", () => {
+    expect(decideOrderFulfill({ ...BACA, linked: false }).verdict).toBe("untracked");
+  });
+
+  it("gagal baca sumber → error (jangan simpulkan aman)", () => {
+    const r = decideOrderFulfill({ ...BACA, ok: false, error: "HTTP 403" });
+    expect(r.verdict).toBe("error");
+    expect(r.note).toContain("403");
+  });
+
+  it("stok habis di supplier → out_of_stock, apa pun harganya", () => {
+    const r = decideOrderFulfill({ ...BACA, availability: "out", cost: 1000 });
+    expect(r.verdict).toBe("out_of_stock");
+  });
+
+  it("modal ≥ dibayar pelanggan → margin_loss (fulfill = rugi)", () => {
+    const r = decideOrderFulfill({ ...BACA, cost: 60000, orderedUnitPrice: 50000 });
+    expect(r.verdict).toBe("margin_loss");
+    expect(r.note).toMatch(/RUGI/);
+  });
+
+  it("modal == dibayar juga margin_loss (tak ada untung)", () => {
+    expect(decideOrderFulfill({ ...BACA, cost: 50000, orderedUnitPrice: 50000 }).verdict).toBe(
+      "margin_loss",
+    );
+  });
+
+  it("modal < dibayar & stok ada → ok dengan persen untung", () => {
+    const r = decideOrderFulfill({ ...BACA, cost: 40000, orderedUnitPrice: 50000 });
+    expect(r.verdict).toBe("ok");
+    expect(r.note).toMatch(/untung 25%/); // (50000-40000)/40000 = 25%
+  });
+
+  it("stok tak terkonfirmasi (unknown) masih boleh ok, tapi disebut di catatan", () => {
+    const r = decideOrderFulfill({ ...BACA, availability: "unknown" });
+    expect(r.verdict).toBe("ok");
+    expect(r.note).toMatch(/tak terkonfirmasi/i);
+  });
+
+  it("harga modal tak terbaca (cost null) → ok tapi tanpa klaim margin", () => {
+    const r = decideOrderFulfill({ ...BACA, cost: null });
+    expect(r.verdict).toBe("ok");
+    expect(r.note).toMatch(/tak terbaca/i);
   });
 });
