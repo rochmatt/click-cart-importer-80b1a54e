@@ -5,7 +5,12 @@
 
 import { normalizePrices, parsePriceValue, type PriceIssue } from "./price-normalize";
 import { normalizeAvailability, type Availability } from "./product-sync";
-import { runShopeeByUrls, shopeeItemToOutcome, isApifyConfigured } from "@/lib/apify.server";
+import {
+  runShopeeByUrls,
+  shopeeItemToOutcome,
+  shopeeItemVariations,
+  isApifyConfigured,
+} from "@/lib/apify.server";
 import { parseMarketplaceUrl } from "@/lib/marketplace-url";
 
 export type GrabbedProduct = {
@@ -28,6 +33,12 @@ export type GrabbedProduct = {
   usedAi: boolean;
   discountPercent: number | null;
   priceIssues: PriceIssue[];
+  /**
+   * Varian terdeteksi (mis. Ukuran, Warna) dari marketplace. Opsional & tanpa id
+   * — klien yang menetapkan id saat memasukkan ke form. Hanya terisi untuk jalur
+   * yang mengeksposnya (Shopee via Apify); jalur HTML biasa mengosongkannya.
+   */
+  variations?: { name: string; options: string }[];
 };
 
 function decodeEntities(input: string): string {
@@ -204,6 +215,7 @@ export async function grabProductFromUrl(rawUrl: string): Promise<GrabbedProduct
         usedAi: false,
         discountPercent: typeof it.discountPercent === "number" ? it.discountPercent : null,
         priceIssues: [],
+        variations: shopeeItemVariations(it),
       };
     }
   }

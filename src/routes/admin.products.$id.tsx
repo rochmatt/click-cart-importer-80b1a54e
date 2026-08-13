@@ -392,6 +392,10 @@ function ProductEditor() {
                     }
                   : f.links,
                 images: patch.images ? [...f.images, ...patch.images].slice(0, MAX_IMAGES) : f.images,
+                // Varian hanya diisi bila form masih kosong — jangan timpa yang
+                // sudah diatur manual (keputusan admin: "isi hanya jika kosong").
+                variations:
+                  patch.variations && f.variations.length === 0 ? patch.variations : f.variations,
               }));
               setErrors({});
             }}

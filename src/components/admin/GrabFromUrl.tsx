@@ -16,7 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
-import { formatRupiah, type AdminProduct } from "@/lib/admin-store";
+import { formatRupiah, newId, type AdminProduct } from "@/lib/admin-store";
 import { normalizePrices, parsePriceValue, PRICE_RULES } from "@/lib/price-normalize";
 import {
   AlertDialog,
@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type FieldKey = "title" | "description" | "brand" | "price" | "salePrice" | "link";
+type FieldKey = "title" | "description" | "brand" | "price" | "salePrice" | "link" | "variations";
 
 const FIELD_LABELS: Record<FieldKey, string> = {
   title: "Nama produk",
@@ -38,6 +38,7 @@ const FIELD_LABELS: Record<FieldKey, string> = {
   price: "Harga normal",
   salePrice: "Harga diskon",
   link: "Link marketplace",
+  variations: "Varian",
 };
 
 export default function GrabFromUrl({
@@ -61,6 +62,7 @@ export default function GrabFromUrl({
     price: true,
     salePrice: true,
     link: true,
+    variations: true,
   });
   const [priceInput, setPriceInput] = useState("");
   const [salePriceInput, setSalePriceInput] = useState("");
@@ -147,6 +149,13 @@ export default function GrabFromUrl({
         tiktok: result.marketplace === "tiktok" ? result.sourceUrl : "",
       };
     }
+    if (fields.variations && result.variations && result.variations.length > 0) {
+      patch.variations = result.variations.map((v) => ({
+        id: newId(),
+        name: v.name,
+        options: v.options,
+      }));
+    }
     onApply({ ...patch, ...(pickedImages.length ? { images: pickedImages } : {}) });
     toast.success("Data diterapkan ke form");
   }
@@ -166,6 +175,7 @@ export default function GrabFromUrl({
           result.title ? "title" : null,
           result.description ? "description" : null,
           result.brand ? "brand" : null,
+          result.variations && result.variations.length > 0 ? "variations" : null,
           result.marketplace ? "link" : null,
         ] as (FieldKey | null)[]
       ).filter((k): k is FieldKey => !!k)
@@ -186,6 +196,8 @@ export default function GrabFromUrl({
         return editedSalePrice !== null ? formatRupiah(editedSalePrice) : "";
       case "link":
         return `${result.marketplace} · ${result.sourceUrl}`;
+      case "variations":
+        return (result.variations ?? []).map((v) => `${v.name}: ${v.options}`).join(" · ");
     }
   }
 
@@ -197,7 +209,7 @@ export default function GrabFromUrl({
           <h2 className="text-sm font-semibold text-foreground">Grab dari URL</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Tempel link produk (Shopee, Tokopedia, TikTok Shop, atau toko lain) — sistem membaca
-            nama, deskripsi, harga, brand, dan gambar secara otomatis.
+            nama, deskripsi, harga, brand, gambar, dan varian (ukuran/warna) secara otomatis.
           </p>
         </div>
       </header>

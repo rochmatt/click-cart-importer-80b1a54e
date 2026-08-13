@@ -43,6 +43,7 @@ export interface ApifyShopeeItem {
   currency?: string;
   stock?: number;
   sold?: number | null;
+  tierVariations?: { name?: string; options?: string[] }[];
 }
 
 /**
@@ -103,4 +104,22 @@ export function shopeeItemToOutcome(it: ApifyShopeeItem): {
     return { price: before, salePrice: cur, availability };
   }
   return { price: cur, salePrice: null, availability };
+}
+
+/**
+ * Varian produk Shopee (mis. Ukuran, Warna) → bentuk siap-form editor: tiap
+ * atribut jadi { name, options } dengan options digabung koma ("S, M, L").
+ * Shopee mengekspos ini di `tierVariations`; [] bila tak ada.
+ */
+export function shopeeItemVariations(it: ApifyShopeeItem): { name: string; options: string }[] {
+  if (!Array.isArray(it.tierVariations)) return [];
+  return it.tierVariations
+    .map((tv) => ({
+      name: (tv?.name ?? "").trim(),
+      options: (Array.isArray(tv?.options) ? tv.options : [])
+        .map((o) => String(o).trim())
+        .filter(Boolean)
+        .join(", "),
+    }))
+    .filter((v) => v.name !== "" && v.options !== "");
 }
