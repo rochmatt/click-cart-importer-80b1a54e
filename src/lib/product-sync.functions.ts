@@ -14,8 +14,10 @@ export interface ProductSyncRow {
   admin_status: string; // active | draft | out_of_stock
   marketplace: string | null; // shopee | tokopedia | tiktok
   source_url: string | null;
-  sync_status: string; // idle | ok | out_of_stock | error
-  source_price: number | null;
+  sync_status: string; // idle | ok | out_of_stock | margin_loss | error
+  source_price: number | null; // harga MODAL di sumber
+  price: number | null; // harga jual normal (admin)
+  sale_price: number | null; // harga jual diskon (admin), bila ada
   fail_count: number;
   last_error: string | null;
   last_checked_at: string | null; // ISO
@@ -29,6 +31,7 @@ export const listProductSync = createServerFn({ method: "GET" })
     const { run } = await import("@/lib/db/pool.server");
     return await run<ProductSyncRow>(
       `SELECT p.id, p.title, (p.images)[1] AS image, p.status AS admin_status,
+              p.price, p.sale_price,
               s.marketplace, s.source_url, COALESCE(s.status, 'idle') AS sync_status,
               s.source_price, COALESCE(s.fail_count, 0) AS fail_count,
               s.last_error, s.last_checked_at
@@ -37,7 +40,7 @@ export const listProductSync = createServerFn({ method: "GET" })
         WHERE COALESCE(p.links->>'shopee', '') <> ''
            OR COALESCE(p.links->>'tokopedia', '') <> ''
            OR COALESCE(p.links->>'tiktok', '') <> ''
-        ORDER BY (COALESCE(s.status, 'idle') IN ('error', 'out_of_stock')) DESC,
+        ORDER BY (COALESCE(s.status, 'idle') IN ('error', 'out_of_stock', 'margin_loss')) DESC,
                  s.last_checked_at DESC NULLS LAST
         LIMIT 500`,
       [],

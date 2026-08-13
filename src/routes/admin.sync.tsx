@@ -44,6 +44,7 @@ const SYNC_KEY = ["product-sync"] as const;
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   ok: { label: "OK", cls: "bg-tokopedia/10 text-tokopedia" },
   out_of_stock: { label: "Stok habis", cls: "bg-destructive/10 text-destructive" },
+  margin_loss: { label: "Rugi (disembunyikan)", cls: "bg-destructive/10 text-destructive" },
   error: { label: "Gagal", cls: "bg-muted text-[var(--chart-4)]" },
   idle: { label: "Belum dicek", cls: "bg-muted text-muted-foreground" },
 };
@@ -55,6 +56,29 @@ function lastChecked(iso: string | null): string {
   } catch {
     return "—";
   }
+}
+
+/** Badge margin: Rugi (modal ≥ jual) / margin% (+ "tipis" bila < 15%). */
+function marginBadge(cost: number | null, selling: number | null) {
+  if (cost == null || selling == null) return null;
+  if (cost >= selling) {
+    return (
+      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+        Rugi
+      </span>
+    );
+  }
+  const markup = Math.round(((selling - cost) / cost) * 100);
+  const tipis = markup < 15;
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+        tipis ? "bg-muted text-[var(--chart-4)]" : "bg-tokopedia/10 text-tokopedia"
+      }`}
+    >
+      margin {markup}%{tipis ? " · tipis" : ""}
+    </span>
+  );
 }
 
 function SyncDashboard() {
@@ -169,7 +193,7 @@ function SyncDashboard() {
                 <th className="px-3 py-2.5 font-medium">Produk</th>
                 <th className="px-3 py-2.5 font-medium">Sumber</th>
                 <th className="px-3 py-2.5 font-medium">Status</th>
-                <th className="px-3 py-2.5 font-medium">Harga sumber</th>
+                <th className="px-3 py-2.5 font-medium">Modal / Jual</th>
                 <th className="px-3 py-2.5 font-medium">Terakhir dicek</th>
                 <th className="px-3 py-2.5 text-right font-medium">Aksi</th>
               </tr>
@@ -262,12 +286,24 @@ function SyncRowView({
           </span>
         </div>
       </td>
-      <td className="px-3 py-3 text-foreground">
-        {row.source_price != null ? (
-          formatRupiah(row.source_price)
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
+      <td className="px-3 py-3">
+        <div className="space-y-0.5 text-xs">
+          <div className="text-muted-foreground">
+            Modal:{" "}
+            <span className="font-medium text-foreground">
+              {row.source_price != null ? formatRupiah(row.source_price) : "—"}
+            </span>
+          </div>
+          <div className="text-muted-foreground">
+            Jual:{" "}
+            <span className="font-medium text-foreground">
+              {(row.sale_price ?? row.price) != null
+                ? formatRupiah((row.sale_price ?? row.price)!)
+                : "—"}
+            </span>
+          </div>
+          {marginBadge(row.source_price, row.sale_price ?? row.price)}
+        </div>
       </td>
       <td className="px-3 py-3 text-muted-foreground">{lastChecked(row.last_checked_at)}</td>
       <td className="px-3 py-3">

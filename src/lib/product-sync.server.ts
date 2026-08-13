@@ -12,8 +12,10 @@
 
 import { run } from "@/lib/db/pool.server";
 import { grabProductFromUrl } from "@/lib/product-grab.server";
+import { readViaAdapter } from "@/lib/marketplace-adapters.server";
 import { decideProductSync, TIER_HOURS, type GrabOutcome } from "@/lib/product-sync";
 import { emailFrom, isEmailConfigured, sendEmail } from "@/lib/email/resend.server";
+import { isTelegramConfigured, sendTelegram } from "@/lib/telegram.server";
 
 const DEFAULT_LIMIT = 40;
 const MAX_LIMIT = 200;
@@ -28,6 +30,8 @@ interface CandidateRow {
   title: string;
   admin_status: string;
   links: Partial<Record<Marketplace, string>> | null;
+  price: number | null;
+  sale_price: number | null;
   sync_status: string | null;
   source_hash: string | null;
   source_price: number | null;
@@ -70,6 +74,17 @@ function pickSource(
 
 async function bacaSumber(url: string): Promise<GrabOutcome> {
   try {
+    // Adapter internal-API dulu (stok akurat bila lolos anti-bot); kalau null
+    // (blokir/short-link/belum didukung), fallback ke grabber HTML lama.
+    const via = await readViaAdapter(url);
+    if (via) {
+      return {
+        ok: true,
+        price: via.price,
+        salePrice: via.salePrice,
+        availability: via.availability,
+      };
+    }
     const g = await grabProductFromUrl(url);
     return { ok: true, price: g.price, salePrice: g.salePrice, availability: g.availability };
   } catch (error) {
@@ -79,6 +94,7 @@ async function bacaSumber(url: string): Promise<GrabOutcome> {
 
 // Kolom kandidat yang dibaca kedua jalur (batch & satuan) — dijaga sama persis.
 const CANDIDATE_COLS = `p.id, p.title, p.status AS admin_status, p.links,
+            p.price, p.sale_price,
             s.status AS sync_status, s.source_hash, s.source_price,
             s.fail_count, s.previous_status`;
 
@@ -102,6 +118,7 @@ async function syncProductRow(
       sourcePrice: row.source_price,
       failCount: row.fail_count ?? 0,
       previousStatus: row.previous_status,
+      sellingPrice: row.sale_price ?? row.price,
     },
     grab,
   );
@@ -241,9 +258,12 @@ export async function syncProductById(
 // --- Ringkasan email -------------------------------------------------------
 
 const GRUP: { types: string[]; judul: string }[] = [
+  { types: ["margin_loss"], judul: "🔻 RUGI — disembunyikan (modal ≥ harga jual)" },
   { types: ["out_of_stock"], judul: "🔴 Stok habis (disembunyikan otomatis)" },
+  { types: ["margin_thin"], judul: "⚠️ Margin tipis (masih untung, cek harga)" },
   { types: ["back_in_stock"], judul: "🟢 Tersedia lagi (ditampilkan kembali)" },
-  { types: ["price_up", "price_down"], judul: "💰 Harga sumber berubah" },
+  { types: ["margin_ok"], judul: "🟢 Margin sehat lagi (ditampilkan kembali)" },
+  { types: ["price_up", "price_down"], judul: "💰 Harga modal berubah" },
   { types: ["error"], judul: "⚠️ Gagal sinkron (perlu dicek manual)" },
   { types: ["recovered"], judul: "↩️ Pulih (sumber bisa dibaca lagi)" },
 ];
@@ -328,9 +348,10 @@ async function adminRecipients(): Promise<string[]> {
 /** Menjalankan sinkronisasi lalu mengirim satu email ringkasan bila ada perubahan. */
 export async function runProductSyncDigest(
   opts: { limit?: number } = {},
-): Promise<SyncSummary & { emailed: boolean }> {
+): Promise<SyncSummary & { emailed: boolean; telegramed: boolean }> {
   const summary = await syncAllProducts(opts);
   let emailed = false;
+  let telegramed = false;
 
   const digest = buildDigest(summary);
   if (digest && isEmailConfigured()) {
@@ -351,5 +372,19 @@ export async function runProductSyncDigest(
     }
   }
 
-  return { ...summary, emailed };
+  // Telegram: alert singkat hanya untuk yang mendesak (habis/pulih/gagal).
+  // Config-gated — no-op sampai TELEGRAM_BOT_TOKEN/CHAT_ID diisi.
+  if (summary.changes > 0 && isTelegramConfigured()) {
+    const urgent = summary.events.filter((e) =>
+      ["out_of_stock", "back_in_stock", "margin_loss", "margin_ok", "error"].includes(e.type),
+    );
+    if (urgent.length) {
+      const lines = urgent.slice(0, 20).map((e) => `• ${e.title} — ${e.detail}`);
+      telegramed = await sendTelegram(
+        `[PasarPilih] Sinkron produk: ${summary.changes} perubahan\n${lines.join("\n")}`,
+      );
+    }
+  }
+
+  return { ...summary, emailed, telegramed };
 }

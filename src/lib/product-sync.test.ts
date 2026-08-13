@@ -16,6 +16,7 @@ const AWAL: SyncCurrent = {
   sourcePrice: null,
   failCount: 0,
   previousStatus: null,
+  sellingPrice: null,
 };
 
 describe("normalizeAvailability", () => {
@@ -188,6 +189,82 @@ describe("decideProductSync — kegagalan", () => {
     expect(d.syncStatus).toBe("ok");
     expect(d.failCount).toBe(0);
     expect(d.event?.type).toBe("recovered");
+  });
+});
+
+describe("decideProductSync — guard margin (dropship)", () => {
+  it("RUGI (modal ≥ jual): auto-sembunyikan produk aktif + event", () => {
+    const d = decideProductSync(
+      { ...AWAL, syncStatus: "ok", sourcePrice: 70000, sellingPrice: 80000 },
+      { ok: true, price: 90000, salePrice: null, availability: "in" },
+    );
+    expect(d.syncStatus).toBe("margin_loss");
+    expect(d.adminStatus).toBe("out_of_stock");
+    expect(d.previousStatus).toBe("active");
+    expect(d.event?.type).toBe("margin_loss");
+  });
+
+  it("RUGI tapi produk draft: lapor, tak ubah status admin", () => {
+    const d = decideProductSync(
+      { ...AWAL, adminStatus: "draft", syncStatus: "ok", sellingPrice: 50000 },
+      { ok: true, price: 60000, salePrice: null, availability: "in" },
+    );
+    expect(d.syncStatus).toBe("margin_loss");
+    expect(d.adminStatus).toBeNull();
+    expect(d.event?.type).toBe("margin_loss");
+  });
+
+  it("margin pulih (modal turun): tampilkan lagi + event margin_ok", () => {
+    const d = decideProductSync(
+      {
+        ...AWAL,
+        adminStatus: "out_of_stock",
+        syncStatus: "margin_loss",
+        previousStatus: "active",
+        sellingPrice: 80000,
+        sourcePrice: 90000,
+      },
+      { ok: true, price: 60000, salePrice: null, availability: "in" },
+    );
+    expect(d.adminStatus).toBe("active");
+    expect(d.previousStatus).toBeNull();
+    expect(d.event?.type).toBe("margin_ok");
+  });
+
+  it("stok habis menang atas margin", () => {
+    const d = decideProductSync(
+      { ...AWAL, syncStatus: "ok", sellingPrice: 80000 },
+      { ok: true, price: 90000, salePrice: null, availability: "out" },
+    );
+    expect(d.syncStatus).toBe("out_of_stock");
+    expect(d.event?.type).toBe("out_of_stock");
+  });
+
+  it("margin tipis (untung tapi < markup min) saat modal berubah: alert saja", () => {
+    const d = decideProductSync(
+      { ...AWAL, syncStatus: "ok", sourcePrice: 80000, sellingPrice: 100000 },
+      { ok: true, price: 95000, salePrice: null, availability: "in" },
+    );
+    expect(d.event?.type).toBe("margin_thin");
+    expect(d.adminStatus).toBeNull(); // TIDAK disembunyikan
+    expect(d.syncStatus).toBe("ok");
+  });
+
+  it("margin sehat: lapor perubahan harga biasa, bukan alert margin", () => {
+    const d = decideProductSync(
+      { ...AWAL, syncStatus: "ok", sourcePrice: 90000, sellingPrice: 200000 },
+      { ok: true, price: 100000, salePrice: null, availability: "in" },
+    );
+    expect(d.event?.type).toBe("price_up");
+  });
+
+  it("tanpa harga jual: margin tak dievaluasi (perilaku lama)", () => {
+    const d = decideProductSync(
+      { ...AWAL, syncStatus: "ok", sourcePrice: 100000, sellingPrice: null },
+      { ok: true, price: 150000, salePrice: null, availability: "in" },
+    );
+    expect(d.event?.type).toBe("price_up");
+    expect(d.adminStatus).toBeNull();
   });
 });
 
