@@ -16,6 +16,11 @@ dist-ssr
 .nitro
 *.local
 
+# Env & backup rahasia — JANGAN pernah di-commit
+# (.env.server.local sudah tercakup *.local; .env & backup .bak tidak)
+.env
+.env.*.bak-*
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
