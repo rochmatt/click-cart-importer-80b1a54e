@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth/middleware.server";
 import { assertAdmin } from "@/lib/admin-access.server";
 import { catatAudit, pelaku } from "@/lib/audit/log.server";
 import { decideOrderFulfill } from "@/lib/product-sync";
+import { type MarginTier } from "@/lib/margin-tiers";
 
 export interface AdminOrder {
   id: string;
@@ -560,6 +561,81 @@ export const updateApifyIntegration = createServerFn({ method: "POST" })
     });
 
     return { ok: true };
+  });
+
+// --- Margin bertingkat dropship (modal → harga jual saran) -----------------
+
+export const getMarginTiers = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<MarginTier[]> => {
+    await assertAdmin(context.db, context.userId);
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const { data, error } = await createServiceClient()
+      .from("store_settings")
+      .select("margin_tiers")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    const raw = (data?.margin_tiers as MarginTier[] | undefined) ?? [];
+    return Array.isArray(raw) ? raw : [];
+  });
+
+const marginTierSchema = z.object({
+  id: z.string().min(1).max(40),
+  maxModal: z.number().int().min(0).max(1_000_000_000).nullable(),
+  marginRp: z.number().int().min(0).max(1_000_000_000),
+});
+const marginTiersSchema = z.object({
+  tiers: z.array(marginTierSchema).max(40),
+});
+
+export const updateMarginTiers = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => marginTiersSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.db, context.userId);
+    const { createServiceClient } = await import("@/lib/db/client.server");
+    const db = createServiceClient();
+    const { data: row, error: readErr } = await db
+      .from("store_settings")
+      .select("id")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (readErr) throw readErr;
+    if (!row) throw new Error("Baris store_settings tidak ditemukan");
+
+    const { error } = await db
+      .from("store_settings")
+      .update({ margin_tiers: data.tiers })
+      .eq("id", row.id);
+    if (error) throw error;
+
+    await catatAudit({
+      ...pelaku(context),
+      entity: "pengaturan",
+      entityId: row.id as string,
+      entityLabel: "Margin bertingkat",
+      action: "ubah",
+      detail: `Menyetel ${data.tiers.length} tingkat margin`,
+    });
+    return { ok: true };
+  });
+
+/** Modal terkini (source_price hasil sinkron) untuk satu produk — dipakai editor. */
+export const getProductModal = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<{ modal: number | null }> => {
+    await assertAdmin(context.db, context.userId);
+    const { run } = await import("@/lib/db/pool.server");
+    const rows = await run<{ source_price: number | null }>(
+      `SELECT source_price FROM public.product_sync_state WHERE product_id = $1 LIMIT 1`,
+      [data.id],
+      { rls: false },
+    );
+    return { modal: rows[0]?.source_price ?? null };
   });
 
 export const listStaff = createServerFn({ method: "GET" })

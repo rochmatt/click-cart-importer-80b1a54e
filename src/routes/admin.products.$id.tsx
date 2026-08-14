@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -16,6 +18,7 @@ import {
   Store,
   Music2,
   Star,
+  Coins,
   Loader2,
 } from "lucide-react";
 import {
@@ -24,9 +27,16 @@ import {
   useSaveProduct,
   uploadProductImages,
   newId,
+  formatRupiah,
   CATEGORIES,
   type AdminProduct,
 } from "@/lib/admin-store";
+import { getMarginTiers, getProductModal } from "@/lib/admin.functions";
+import {
+  type MarginTier,
+  marginForModal,
+  suggestPriceFromModal,
+} from "@/lib/margin-tiers";
 import CategorySelect from "@/components/admin/CategorySelect";
 import SpecificationsCard from "@/components/admin/SpecificationsCard";
 import GrabFromUrl from "@/components/admin/GrabFromUrl";
@@ -139,6 +149,17 @@ function ProductEditor() {
   const isNew = id === "new";
   const query = useAdminProduct(isNew ? "" : id);
   const saveMutation = useSaveProduct();
+  const fetchTiers = useServerFn(getMarginTiers);
+  const fetchModal = useServerFn(getProductModal);
+  const marginTiersQuery = useQuery({
+    queryKey: ["admin", "margin-tiers"],
+    queryFn: () => fetchTiers(),
+  });
+  const modalQuery = useQuery({
+    queryKey: ["admin", "product-modal", id],
+    queryFn: () => fetchModal({ data: { id } }),
+    enabled: !isNew,
+  });
   const [form, setForm] = useState<AdminProduct>(() => emptyProduct());
   const [loaded, setLoaded] = useState(isNew);
   const [errors, setErrors] = useState<Errors>({});
@@ -730,6 +751,13 @@ function ProductEditor() {
                 className={inputClass}
               />
             </Field>
+            {loaded && (
+              <MarginSuggest
+                modalFromSync={modalQuery.data?.modal ?? null}
+                tiers={marginTiersQuery.data ?? []}
+                onApply={(p) => set("price", p)}
+              />
+            )}
             <Field
               label="Sale price (Rp)"
               error={errors.salePrice}
@@ -850,6 +878,67 @@ function ProductEditor() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Helper harga jual dropship: modal (harga beli) + margin tingkatnya → saran harga
+ * jual. Modal diisi otomatis dari sinkron terakhir (bila ada), tetap bisa diubah.
+ */
+function MarginSuggest({
+  modalFromSync,
+  tiers,
+  onApply,
+}: {
+  modalFromSync: number | null;
+  tiers: MarginTier[];
+  onApply: (price: number) => void;
+}) {
+  const [modal, setModal] = useState(modalFromSync != null ? String(modalFromSync) : "");
+  useEffect(() => {
+    if (modalFromSync != null) setModal(String(modalFromSync));
+  }, [modalFromSync]);
+
+  const modalNum = Math.max(0, Math.round(Number(modal) || 0));
+  const jual = modal.trim() ? suggestPriceFromModal(modalNum, tiers) : null;
+  const margin = marginForModal(modalNum, tiers);
+
+  return (
+    <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+        <Coins className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        Hitung harga jual dari modal
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <input
+          type="number"
+          min={0}
+          step={1000}
+          value={modal}
+          onChange={(e) => setModal(e.target.value)}
+          placeholder="modal / harga beli"
+          aria-label="Modal (harga beli)"
+          className="h-9 w-36 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-primary"
+        />
+        <span className="text-muted-foreground">+ margin {formatRupiah(margin)} =</span>
+        <span className="font-semibold text-foreground">
+          {jual != null ? formatRupiah(jual) : "—"}
+        </span>
+        <button
+          type="button"
+          disabled={jual == null}
+          onClick={() => jual != null && onApply(jual)}
+          className="ml-auto inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+        >
+          Pakai
+        </button>
+      </div>
+      {modalFromSync != null && (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Modal dari sinkron terakhir — bisa kamu ubah.
+        </p>
+      )}
     </div>
   );
 }

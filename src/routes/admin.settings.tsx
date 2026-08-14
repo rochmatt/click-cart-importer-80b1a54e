@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Check, Copy, KeyRound, Loader2, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, Coins, Copy, KeyRound, Loader2, Plus, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,14 +11,26 @@ import {
   type StoreSettings,
   getApifyIntegration,
   getGoogleOAuth,
+  getMarginTiers,
   getStoreSettings,
   grantRole,
   listStaff,
   revokeRole,
   updateApifyIntegration,
   updateGoogleOAuth,
+  updateMarginTiers,
   updateStoreSettings,
 } from "@/lib/admin.functions";
+import { formatRupiah, newId } from "@/lib/admin-store";
+import {
+  type MarginTier,
+  DEFAULT_MARGIN_TIERS,
+  marginForModal,
+  sortTiers,
+  suggestPriceFromModal,
+  tierLabel,
+  tiersWithBounds,
+} from "@/lib/margin-tiers";
 
 export const Route = createFileRoute("/admin/settings")({
   head: () => ({
@@ -57,6 +69,7 @@ function AdminSettingsPage() {
       <StoreProfileCard />
       <GoogleOAuthCard />
       <ApifyCard />
+      <MarginTiersCard />
       <StaffCard />
     </div>
   );
@@ -405,6 +418,181 @@ function ApifyCard() {
             Simpan token
           </button>
         </form>
+      )}
+    </section>
+  );
+}
+
+function MarginTiersCard() {
+  const queryClient = useQueryClient();
+  const fetchTiers = useServerFn(getMarginTiers);
+  const save = useServerFn(updateMarginTiers);
+  const [tiers, setTiers] = useState<MarginTier[] | null>(null);
+  const [example, setExample] = useState("100000");
+
+  const tiersQuery = useQuery({ queryKey: ["admin", "margin-tiers"], queryFn: () => fetchTiers() });
+
+  useEffect(() => {
+    if (tiersQuery.data && tiers === null) {
+      const loaded = tiersQuery.data.length
+        ? tiersQuery.data
+        : DEFAULT_MARGIN_TIERS.map((t) => ({ ...t, id: newId() }));
+      setTiers(sortTiers(loaded));
+    }
+  }, [tiersQuery.data, tiers]);
+
+  const saveMutation = useMutation({
+    mutationFn: (input: { tiers: MarginTier[] }) => save({ data: input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "margin-tiers"] });
+      toast.success("Margin bertingkat disimpan");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Gagal menyimpan"),
+  });
+
+  const list = tiers ?? [];
+  const sorted = sortTiers(list);
+  const bounds = new Map(tiersWithBounds(list).map((r) => [r.tier.id, r.lower]));
+
+  const update = (id: string, patch: Partial<MarginTier>) =>
+    setTiers((cur) => (cur ? cur.map((t) => (t.id === id ? { ...t, ...patch } : t)) : cur));
+  const remove = (id: string) =>
+    setTiers((cur) => (cur ? cur.filter((t) => t.id !== id) : cur));
+  const addTier = () =>
+    setTiers((cur) => {
+      if (!cur) return cur;
+      const maxFinite = Math.max(
+        0,
+        ...cur.filter((t) => t.maxModal != null).map((t) => t.maxModal as number),
+      );
+      const next = maxFinite > 0 ? maxFinite * 2 : 50000;
+      return sortTiers([...cur, { id: newId(), maxModal: next, marginRp: 0 }]);
+    });
+
+  const exampleModal = Math.max(0, Math.round(Number(example) || 0));
+  const exampleJual = suggestPriceFromModal(exampleModal, list);
+  const num = "h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:border-primary";
+
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+        <Coins className="h-4 w-4 text-primary" />
+        Margin bertingkat (harga jual dari modal)
+      </h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Isi margin nominal (Rp) per rentang modal. Saat Grab produk atau di editor, harga jual
+        disarankan otomatis = <span className="font-medium text-foreground">modal + margin</span>{" "}
+        tingkatnya. Kamu tetap bisa ubah manual. Tambah tingkat untuk kelipatan berikutnya.
+      </p>
+
+      {tiersQuery.isLoading || tiers === null ? (
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Memuat…
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 space-y-2">
+            <div className="grid grid-cols-[1fr_8rem_2rem] items-center gap-3 px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span>Rentang modal</span>
+              <span>Margin (Rp)</span>
+              <span />
+            </div>
+            {sorted.map((t) => {
+              const lower = bounds.get(t.id) ?? 0;
+              return (
+                <div key={t.id} className="grid grid-cols-[1fr_8rem_2rem] items-center gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                    {t.maxModal === null ? (
+                      <span className="text-foreground">
+                        {tierLabel(t, lower)}{" "}
+                        <span className="text-muted-foreground">(dan seterusnya)</span>
+                      </span>
+                    ) : (
+                      <>
+                        <span>{lower > 0 ? `${formatRupiah(lower)} s.d.` : "di bawah"}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1000}
+                          value={t.maxModal}
+                          onChange={(e) =>
+                            update(t.id, {
+                              maxModal: Math.max(0, Math.round(Number(e.target.value) || 0)),
+                            })
+                          }
+                          aria-label="Batas atas modal"
+                          className={`${num} w-28`}
+                        />
+                      </>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={t.marginRp}
+                    onChange={(e) =>
+                      update(t.id, { marginRp: Math.max(0, Math.round(Number(e.target.value) || 0)) })
+                    }
+                    placeholder="0"
+                    aria-label={`Margin untuk ${tierLabel(t, lower)}`}
+                    className={`${num} w-32`}
+                  />
+                  {t.maxModal === null ? (
+                    <span className="h-8 w-8" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => remove(t.id)}
+                      aria-label="Hapus tingkat"
+                      className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={addTier}
+            className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:border-primary hover:text-primary"
+          >
+            <Plus className="h-4 w-4" /> Tambah tingkat
+          </button>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm">
+            <span className="text-muted-foreground">Contoh: modal</span>
+            <input
+              type="number"
+              min={0}
+              step={1000}
+              value={example}
+              onChange={(e) => setExample(e.target.value)}
+              aria-label="Modal contoh"
+              className={`${num} w-32`}
+            />
+            <span className="text-muted-foreground">→ harga jual</span>
+            <span className="font-semibold text-foreground">
+              {exampleJual != null ? formatRupiah(exampleJual) : "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              (margin {formatRupiah(marginForModal(exampleModal, list))})
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => saveMutation.mutate({ tiers: sorted })}
+            disabled={saveMutation.isPending}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            {saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Simpan margin
+          </button>
+        </>
       )}
     </section>
   );

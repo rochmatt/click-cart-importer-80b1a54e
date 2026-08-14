@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Link2,
@@ -14,8 +15,15 @@ import {
   ArrowRight,
   ListChecks,
   ChevronDown,
+  Coins,
 } from "lucide-react";
 import { grabProductByUrl, type GrabbedProduct } from "@/lib/product-grab.functions";
+import { getMarginTiers } from "@/lib/admin.functions";
+import {
+  hasConfiguredMargins,
+  marginForModal,
+  suggestPriceFromModal,
+} from "@/lib/margin-tiers";
 import { formatRupiah, newId, type AdminProduct } from "@/lib/admin-store";
 import { normalizePrices, parsePriceValue, PRICE_RULES } from "@/lib/price-normalize";
 import {
@@ -51,6 +59,8 @@ export default function GrabFromUrl({
   onApply: (patch: Partial<AdminProduct>) => void;
 }) {
   const grab = useServerFn(grabProductByUrl);
+  const fetchTiers = useServerFn(getMarginTiers);
+  const tiersQuery = useQuery({ queryKey: ["admin", "margin-tiers"], queryFn: () => fetchTiers() });
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +130,14 @@ export default function GrabFromUrl({
     ? normalizePrices(fields.price ? editedPrice : null, fields.salePrice ? editedSalePrice : null)
     : null;
   const allIssues = result ? [...result.priceIssues, ...(priceCheck?.issues ?? [])] : [];
+
+  // Dropship: modal = harga efektif di sumber (salePrice ?? price). Saran harga
+  // jual = modal + margin tingkatnya (lihat Settings → Margin bertingkat).
+  const marginTiers = tiersQuery.data ?? [];
+  const grabModal = result ? (result.salePrice ?? result.price) : null;
+  const dropshipJual = suggestPriceFromModal(grabModal, marginTiers);
+  const showDropship =
+    !!result && grabModal != null && dropshipJual != null && hasConfiguredMargins(marginTiers);
 
   function resetPrices() {
     if (!result) return;
@@ -259,6 +277,33 @@ export default function GrabFromUrl({
               <p className="text-xs text-muted-foreground">
                 Sebagian data dilengkapi otomatis oleh AI — mohon periksa sebelum menyimpan.
               </p>
+            )}
+
+            {showDropship && (
+              <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <Coins className="size-3.5 text-primary" aria-hidden="true" />
+                  Harga jual dropship (modal + margin)
+                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">
+                    modal {formatRupiah(grabModal!)} + margin{" "}
+                    {formatRupiah(marginForModal(grabModal!, marginTiers))} =
+                  </span>
+                  <span className="font-semibold text-foreground">{formatRupiah(dropshipJual!)}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPriceInput(String(dropshipJual));
+                      setSalePriceInput("");
+                      toast.success("Harga jual dropship dipakai");
+                    }}
+                    className="ml-auto inline-flex h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground"
+                  >
+                    Pakai sebagai harga jual
+                  </button>
+                </div>
+              </div>
             )}
 
             {allIssues.length > 0 && (
