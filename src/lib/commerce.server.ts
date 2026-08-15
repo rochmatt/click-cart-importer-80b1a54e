@@ -1,4 +1,4 @@
-import { computeTotals, findPromo, validatePromo } from "./commerce-pricing";
+import { checkoutBlockReason, computeTotals, findPromo, validatePromo } from "./commerce-pricing";
 import type {
   MarketplaceLinks,
   OrderDetail,
@@ -74,6 +74,55 @@ async function resolveMarketplaceLinks(productRefs: string[]): Promise<Marketpla
   };
 }
 
+/**
+ * Guard saat checkout: memastikan tiap item masih layak dijual DETIK pesanan
+ * dibuat — menutup celah antara pembeli memasukkan keranjang dan harga/stok
+ * supplier berubah. Menolak bila produk sudah tak tayang (auto-hide karena
+ * rugi/habis) atau modal terkini ≥ harga yang dibayar. Cepat: hanya baca DB
+ * (product_sync_state hasil sinkron), tanpa panggil Apify. Produk non-katalog
+ * (tak ter-resolve) dianggap aman dan dilewatkan.
+ */
+async function guardCheckout(
+  items: PlaceOrderData["items"],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { run } = await import("@/lib/db/pool.server");
+  const refs = [...new Set(items.map((i) => i.productRef.trim()).filter(Boolean))];
+  if (refs.length === 0) return { ok: true };
+
+  const rows = await run<{
+    id: string;
+    catalog_ref: string | null;
+    status: string;
+    source_price: number | null;
+  }>(
+    `SELECT p.id, p.catalog_ref, p.status, s.source_price
+       FROM public.admin_products p
+       LEFT JOIN public.product_sync_state s ON s.product_id = p.id
+      WHERE p.catalog_ref = ANY($1) OR p.id::text = ANY($1)`,
+    [refs],
+    { rls: false },
+  );
+
+  const byRef = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) {
+    byRef.set(r.id, r);
+    if (r.catalog_ref) byRef.set(r.catalog_ref, r);
+  }
+
+  for (const it of items) {
+    const p = byRef.get(it.productRef.trim());
+    if (!p) continue; // produk non-katalog / demo → lewati
+    const reason = checkoutBlockReason({
+      title: it.title,
+      unitPrice: it.unitPrice,
+      status: p.status,
+      modal: p.source_price,
+    });
+    if (reason) return { ok: false, error: reason };
+  }
+  return { ok: true };
+}
+
 export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResult> {
   // Klien PostgreSQL lokal yang melewati RLS, setara service_role dulu.
   const { createServiceClient } = await import("@/lib/db/client.server");
@@ -81,6 +130,10 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
 
   const subtotal = data.items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
   if (subtotal <= 0) return { ok: false, error: "Order total must be greater than zero." };
+
+  // Cek ulang kelayakan tiap item sebelum menyimpan pesanan.
+  const guard = await guardCheckout(data.items);
+  if (!guard.ok) return { ok: false, error: guard.error };
 
   const code = data.promoCode.trim().toUpperCase();
   if (code) {

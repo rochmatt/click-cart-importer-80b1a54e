@@ -60,6 +60,34 @@ export function validatePromo(
   return { promo: found };
 }
 
+/** Keadaan katalog terkini sebuah item saat checkout (di-resolve dari DB). */
+export interface CheckoutItemState {
+  title: string;
+  /** Harga yang akan DIBAYAR pembeli (dari keranjang klien). */
+  unitPrice: number;
+  /** admin_products.status ('active' | 'draft' | 'out_of_stock'). */
+  status: string;
+  /** Modal terakhir hasil sinkron (product_sync_state.source_price); null bila belum pernah. */
+  modal: number | null;
+}
+
+/**
+ * Alasan sebuah item HARUS ditolak saat checkout, atau null bila aman. Menutup
+ * celah antara pembeli memasukkan keranjang dan harga/stok supplier berubah:
+ * (1) produk sudah tak tayang (mis. auto-hide karena rugi/habis) → tolak;
+ * (2) modal terkini >= harga yang dibayar → fulfill akan RUGI → tolak.
+ * Produk non-katalog (tak ter-resolve) tidak dilewatkan ke fungsi ini.
+ */
+export function checkoutBlockReason(item: CheckoutItemState): string | null {
+  if (item.status !== "active") {
+    return `"${item.title}" sedang tidak tersedia — stok atau harga baru saja berubah. Muat ulang halaman lalu coba lagi.`;
+  }
+  if (item.modal != null && item.unitPrice > 0 && item.modal >= item.unitPrice) {
+    return `Harga "${item.title}" baru saja berubah. Muat ulang halaman untuk harga terbaru sebelum memesan.`;
+  }
+  return null;
+}
+
 /** Deterministic totals used on both sides so the summary always matches. */
 export function computeTotals(subtotal: number, promo: Promo | null) {
   let discount = 0;
