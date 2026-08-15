@@ -63,27 +63,41 @@ export function validatePromo(
 /** Keadaan katalog terkini sebuah item saat checkout (di-resolve dari DB). */
 export interface CheckoutItemState {
   title: string;
-  /** Harga yang akan DIBAYAR pembeli (dari keranjang klien). */
-  unitPrice: number;
+  /** Harga yang dikirim keranjang klien (JANGAN dipercaya sbg nilai final). */
+  clientPrice: number;
+  /** Harga jual katalog terkini (sale_price ?? price) — OTORITATIF. */
+  catalogPrice: number;
   /** admin_products.status ('active' | 'draft' | 'out_of_stock'). */
   status: string;
   /** Modal terakhir hasil sinkron (product_sync_state.source_price); null bila belum pernah. */
   modal: number | null;
 }
 
+function rupiah(n: number): string {
+  return `Rp${Math.round(n).toLocaleString("id-ID")}`;
+}
+
 /**
  * Alasan sebuah item HARUS ditolak saat checkout, atau null bila aman. Menutup
- * celah antara pembeli memasukkan keranjang dan harga/stok supplier berubah:
- * (1) produk sudah tak tayang (mis. auto-hide karena rugi/habis) → tolak;
- * (2) modal terkini >= harga yang dibayar → fulfill akan RUGI → tolak.
- * Produk non-katalog (tak ter-resolve) tidak dilewatkan ke fungsi ini.
+ * celah antara pembeli memasukkan keranjang dan harga/stok berubah, sekaligus
+ * menutup manipulasi harga oleh klien:
+ * (1) produk sudah tak tayang (auto-hide rugi/habis) → tolak;
+ * (2) harga katalog LEBIH TINGGI dari yang dikirim klien (harga naik / klien
+ *     mengirim harga terlalu murah) → tolak, minta muat ulang (jangan diam-diam
+ *     menagih lebih);
+ * (3) modal terkini >= harga katalog → fulfill akan RUGI → tolak (jaring pengaman).
+ * Bila lolos, pemanggil MEMAKAI catalogPrice (otoritatif, selalu <= clientPrice
+ * pada titik ini), bukan harga kiriman klien. Produk non-katalog tak dilewatkan ke sini.
  */
 export function checkoutBlockReason(item: CheckoutItemState): string | null {
   if (item.status !== "active") {
     return `"${item.title}" sedang tidak tersedia — stok atau harga baru saja berubah. Muat ulang halaman lalu coba lagi.`;
   }
-  if (item.modal != null && item.unitPrice > 0 && item.modal >= item.unitPrice) {
-    return `Harga "${item.title}" baru saja berubah. Muat ulang halaman untuk harga terbaru sebelum memesan.`;
+  if (item.catalogPrice > item.clientPrice) {
+    return `Harga "${item.title}" berubah menjadi ${rupiah(item.catalogPrice)}. Muat ulang halaman untuk memesan di harga terbaru.`;
+  }
+  if (item.modal != null && item.catalogPrice > 0 && item.modal >= item.catalogPrice) {
+    return `"${item.title}" sedang tidak tersedia — stok atau harga baru saja berubah. Muat ulang halaman lalu coba lagi.`;
   }
   return null;
 }

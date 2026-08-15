@@ -75,33 +75,37 @@ async function resolveMarketplaceLinks(productRefs: string[]): Promise<Marketpla
 }
 
 /**
- * Guard saat checkout: memastikan tiap item masih layak dijual DETIK pesanan
- * dibuat — menutup celah antara pembeli memasukkan keranjang dan harga/stok
- * supplier berubah. Menolak bila produk sudah tak tayang (auto-hide karena
- * rugi/habis) atau modal terkini ≥ harga yang dibayar. Cepat: hanya baca DB
- * (product_sync_state hasil sinkron), tanpa panggil Apify. Produk non-katalog
- * (tak ter-resolve) dianggap aman dan dilewatkan.
+ * Guard + RE-PRICE saat checkout: DETIK pesanan dibuat, setiap item diverifikasi
+ * ulang terhadap katalog. Harga jual OTORITATIF diambil dari admin_products
+ * (sale_price ?? price) — harga kiriman klien TIDAK dipercaya (mencegah manipulasi
+ * & harga basi). Menolak bila produk tak tayang (auto-hide rugi/habis), harga
+ * katalog lebih tinggi dari kiriman klien (harga naik → minta muat ulang), atau
+ * modal ≥ harga katalog (rugi). Cepat: hanya baca DB (state sinkron), tanpa Apify.
+ * Produk non-katalog (tak ter-resolve) dilewatkan dengan harga kiriman apa adanya.
+ * Mengembalikan daftar item dengan unitPrice yang sudah otoritatif.
  */
-async function guardCheckout(
+async function resolveCheckout(
   items: PlaceOrderData["items"],
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; items: PlaceOrderData["items"] } | { ok: false; error: string }> {
   const { run } = await import("@/lib/db/pool.server");
   const refs = [...new Set(items.map((i) => i.productRef.trim()).filter(Boolean))];
-  if (refs.length === 0) return { ok: true };
-
-  const rows = await run<{
-    id: string;
-    catalog_ref: string | null;
-    status: string;
-    source_price: number | null;
-  }>(
-    `SELECT p.id, p.catalog_ref, p.status, s.source_price
-       FROM public.admin_products p
-       LEFT JOIN public.product_sync_state s ON s.product_id = p.id
-      WHERE p.catalog_ref = ANY($1) OR p.id::text = ANY($1)`,
-    [refs],
-    { rls: false },
-  );
+  const rows = refs.length
+    ? await run<{
+        id: string;
+        catalog_ref: string | null;
+        status: string;
+        price: number | null;
+        sale_price: number | null;
+        source_price: number | null;
+      }>(
+        `SELECT p.id, p.catalog_ref, p.status, p.price, p.sale_price, s.source_price
+           FROM public.admin_products p
+           LEFT JOIN public.product_sync_state s ON s.product_id = p.id
+          WHERE p.catalog_ref = ANY($1) OR p.id::text = ANY($1)`,
+        [refs],
+        { rls: false },
+      )
+    : [];
 
   const byRef = new Map<string, (typeof rows)[number]>();
   for (const r of rows) {
@@ -109,18 +113,27 @@ async function guardCheckout(
     if (r.catalog_ref) byRef.set(r.catalog_ref, r);
   }
 
+  const priced: PlaceOrderData["items"] = [];
   for (const it of items) {
     const p = byRef.get(it.productRef.trim());
-    if (!p) continue; // produk non-katalog / demo → lewati
+    if (!p) {
+      // Non-katalog / demo: tak bisa diverifikasi → pakai harga kiriman apa adanya.
+      priced.push(it);
+      continue;
+    }
+    const catalogPrice = (p.sale_price ?? p.price) ?? 0;
     const reason = checkoutBlockReason({
       title: it.title,
-      unitPrice: it.unitPrice,
+      clientPrice: it.unitPrice,
+      catalogPrice,
       status: p.status,
       modal: p.source_price,
     });
     if (reason) return { ok: false, error: reason };
+    // Pakai harga OTORITATIF katalog (selalu <= harga kiriman klien di titik ini).
+    priced.push({ ...it, unitPrice: catalogPrice });
   }
-  return { ok: true };
+  return { ok: true, items: priced };
 }
 
 export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResult> {
@@ -128,12 +141,14 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
   const { createServiceClient } = await import("@/lib/db/client.server");
   const db = createServiceClient();
 
-  const subtotal = data.items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
-  if (subtotal <= 0) return { ok: false, error: "Order total must be greater than zero." };
+  // Verifikasi + harga OTORITATIF dari katalog sebelum apa pun disimpan. Sejak
+  // titik ini `items` (bukan data.items) yang dipakai untuk harga.
+  const resolved = await resolveCheckout(data.items);
+  if (!resolved.ok) return { ok: false, error: resolved.error };
+  const items = resolved.items;
 
-  // Cek ulang kelayakan tiap item sebelum menyimpan pesanan.
-  const guard = await guardCheckout(data.items);
-  if (!guard.ok) return { ok: false, error: guard.error };
+  const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.qty, 0);
+  if (subtotal <= 0) return { ok: false, error: "Order total must be greater than zero." };
 
   const code = data.promoCode.trim().toUpperCase();
   if (code) {
@@ -152,8 +167,8 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
       order_number: orderNumber,
       user_id: userId,
       customer_email: data.email.toLowerCase(),
-      product_name: data.items[0].title,
-      quantity: data.items.reduce((sum, i) => sum + i.qty, 0),
+      product_name: items[0].title,
+      quantity: items.reduce((sum, i) => sum + i.qty, 0),
       status: "processing",
       destination_city: data.city,
       last_update: "Order placed and awaiting confirmation",
@@ -180,7 +195,7 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
   }
 
   const { error: itemsError } = await db.from("order_items").insert(
-    data.items.map((i) => ({
+    items.map((i) => ({
       order_id: order.id,
       product_ref: i.productRef,
       title: i.title,
@@ -226,7 +241,7 @@ export async function createOrder(data: PlaceOrderData): Promise<PlaceOrderResul
     orderNumber: order.order_number,
     email: data.email.toLowerCase(),
     customerName: data.name,
-    items: data.items.map((i) => ({
+    items: items.map((i) => ({
       title: i.title,
       quantity: i.qty,
       lineTotal: i.unitPrice * i.qty,
