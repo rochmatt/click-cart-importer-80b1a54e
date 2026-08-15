@@ -106,6 +106,21 @@ function columnList(columns: string): string {
     .join(", ");
 }
 
+/**
+ * Nilai untuk INSERT/UPDATE. node-pg menserialisasi array JS sebagai array-literal
+ * Postgres (`{...}`) — benar untuk kolom `text[]`/`int[]` (elemen primitif), tapi
+ * RUSAK untuk kolom `jsonb` yang isinya array objek (mis. variations, margin_tiers):
+ * pg menolaknya sebagai JSON. Karena array-berisi-objek selalu menuju kolom jsonb,
+ * kita stringify-kan jadi JSON supaya diterima seperti nilai objek biasa. Array
+ * primitif dan objek polos dibiarkan (node-pg sudah menanganinya dengan benar).
+ */
+function serializeValue(value: unknown): unknown {
+  if (Array.isArray(value) && value.some((el) => el !== null && typeof el === "object")) {
+    return JSON.stringify(value);
+  }
+  return value;
+}
+
 function toPostgrestError(error: unknown): PostgrestError {
   const e = error as { message?: string; code?: string; detail?: string };
   return {
@@ -286,7 +301,7 @@ export class QueryBuilder<T = any> implements PromiseLike<Result<T>> {
 
       const tuples = this.payload.map((row) => {
         const placeholders = cols.map((c) => {
-          values.push(row[c] ?? null);
+          values.push(serializeValue(row[c] ?? null));
           return `$${values.length}`;
         });
         return `(${placeholders.join(", ")})`;
@@ -324,7 +339,7 @@ export class QueryBuilder<T = any> implements PromiseLike<Result<T>> {
       const cols = Object.keys(row);
       if (cols.length === 0) throw new Error("update tanpa kolom");
       const assignments = cols.map((c) => {
-        values.push(row[c]);
+        values.push(serializeValue(row[c]));
         return `${ident(c)} = $${values.length}`;
       });
       let text = `UPDATE ${table} SET ${assignments.join(", ")}`;

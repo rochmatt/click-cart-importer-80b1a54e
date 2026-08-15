@@ -595,27 +595,27 @@ export const updateMarginTiers = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => marginTiersSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.db, context.userId);
-    const { createServiceClient } = await import("@/lib/db/client.server");
-    const db = createServiceClient();
-    const { data: row, error: readErr } = await db
-      .from("store_settings")
-      .select("id")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (readErr) throw readErr;
-    if (!row) throw new Error("Baris store_settings tidak ditemukan");
+    // Tulis lewat run() + cast ::jsonb: shim menserialisasi array JS sebagai
+    // array-literal Postgres (bukan JSON) sehingga gagal untuk kolom jsonb-array.
+    const { run } = await import("@/lib/db/pool.server");
+    const rows = await run<{ id: string }>(
+      `SELECT id FROM public.store_settings ORDER BY created_at ASC LIMIT 1`,
+      [],
+      { rls: false },
+    );
+    if (!rows.length) throw new Error("Baris store_settings tidak ditemukan");
+    const id = rows[0].id;
 
-    const { error } = await db
-      .from("store_settings")
-      .update({ margin_tiers: data.tiers })
-      .eq("id", row.id);
-    if (error) throw error;
+    await run(
+      `UPDATE public.store_settings SET margin_tiers = $1::jsonb, updated_at = now() WHERE id = $2`,
+      [JSON.stringify(data.tiers), id],
+      { rls: false },
+    );
 
     await catatAudit({
       ...pelaku(context),
       entity: "pengaturan",
-      entityId: row.id as string,
+      entityId: id,
       entityLabel: "Margin bertingkat",
       action: "ubah",
       detail: `Menyetel ${data.tiers.length} tingkat margin`,
